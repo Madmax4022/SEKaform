@@ -3,167 +3,1048 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEKaform - Panel de Formularios e Inspección</title>
+    <title>SEKaform - Centros de Estética e Inspección Ambiental</title>
     <style>
         :root {
-            --bg-principal: #0f172a;
-            --bg-tarjeta: #1e293b;
-            --azul-acento: #2563eb;
-            --azul-hover: #3b82f6;
-            --texto-claro: #f8fafc;
-            --texto-mutado: #94a3b8;
-            --borde: #334155;
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --primary: #2563eb;
+            --primary-hover: #3b82f6;
+            --accent-success: #1abc9c;
+            --accent-danger: #ef4444;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-principal);
-            color: var(--texto-claro);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-light);
             margin: 0;
-            padding: 0;
-            display: block;
+            padding: 20px;
         }
 
-        .wrapper {
-            max-width: 1000px;
+        .container {
+            max-width: 850px;
             margin: 0 auto;
-            padding: 60px 20px;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-        }
-
-        header h1 {
-            font-size: 2.5rem;
-            margin: 0 0 10px 0;
-            color: var(--texto-claro);
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        header p {
-            color: var(--texto-mutado);
-            font-size: 1.1rem;
-            margin: 0;
-        }
-
-        .grid-formularios {
-            display: block;
-            margin-top: 20px;
-        }
-
-        .tarjeta-formulario {
-            background-color: var(--bg-tarjeta);
-            border: 1px solid var(--borde);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 20px;
-            position: relative;
-            transition: border-color 0.2s ease, transform 0.2s ease;
+            padding: 30px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
 
-        .tarjeta-formulario:hover {
-            border-color: var(--azul-acento);
-            transform: translateY(-2px);
+        .header-form {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
         }
 
-        .meta-codigo {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--azul-acento);
+        .meta-code {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
         }
 
-        .titulo-formulario {
+        .title-form {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin: 5px 0 0 0;
+        }
+
+        /* Acordeón Optimizado */
+        .accordion-section {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            background-color: #131c2e;
+            padding: 16px 20px;
+            font-weight: bold;
+            font-size: 1.05rem;
+            color: var(--text-light);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .accordion-header:hover {
+            background-color: #17223b;
+        }
+
+        .accordion-content {
+            padding: 24px;
+            background-color: var(--bg-card);
+            display: none;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .accordion-section.active .accordion-content {
+            display: block;
+        }
+
+        .accordion-header::after {
+            content: '+';
             font-size: 1.3rem;
-            font-weight: 600;
-            margin: 0 0 12px 0;
-            color: var(--texto-claro);
+            color: var(--primary);
         }
 
-        .descripcion-formulario {
-            color: var(--texto-mutado);
-            font-size: 0.95rem;
-            line-height: 1.5;
+        .accordion-section.active .accordion-header::after {
+            content: '−';
+        }
+
+        /* Elementos de Formulario Inteligentes */
+        .form-group {
             margin-bottom: 20px;
         }
 
-        .btn-enlace {
-            display: inline-block;
-            background-color: var(--azul-acento);
-            color: var(--texto-claro);
-            text-decoration: none;
-            padding: 12px 24px;
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-col {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .sub-label {
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 15px 0 8px 0;
+        }
+
+        .normative-banner {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            background-color: #0f172a;
+            padding: 8px 12px;
+            border-left: 4px solid var(--primary);
+            margin-bottom: 12px;
+            font-weight: 600;
+            border-radius: 0 4px 4px 0;
+        }
+
+        input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
-            transition: background-color 0.2s ease;
-            text-align: center;
-            border: none;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            background-color: #0f172a;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Bloques de Opciones Optimizados */
+        .options-box {
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 5px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
             cursor: pointer;
         }
 
-        .btn-enlace:hover {
-            background-color: var(--azul-hover);
+        .option-item input {
+            margin-right: 8px;
+            cursor: pointer;
         }
 
-        footer {
+        /* Canvas de Firma Profesional */
+        .signature-container {
+            margin-top: 8px;
+        }
+
+        .signature-canvas {
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            background-color: #0f172a;
+            width: 100%;
+            height: 130px;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .btn-clear-sig {
+            background-color: #334155;
+            color: var(--text-light);
+            border: none;
+            padding: 5px 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 6px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .btn-clear-sig:hover {
+            background-color: #475569;
+        }
+
+        /* Área de Arrastre de Archivos Avanzada (Drag & Drop) */
+        .drag-drop-zone {
+            border: 2px dashed var(--primary);
+            background-color: #0f172a;
+            border-radius: 8px;
+            padding: 30px;
             text-align: center;
-            margin-top: 60px;
-            font-size: 0.85rem;
-            color: var(--texto-mutado);
-            border-top: 1px solid var(--borde);
-            padding-top: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .drag-drop-zone:hover {
+            background-color: #131e36;
+        }
+
+        .drag-drop-zone p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .drag-drop-zone span {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .preview-thumbnails {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .preview-item {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Barra de Envíos Inferior */
+        .actions-panel {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            background-color: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+        }
+
+        .btn-cancel {
+            background-color: var(--accent-danger);
+            color: var(--text-light);
+        }
+
+        .btn-submit {
+            background-color: var(--accent-success);
+            color: var(--text-light);
         }
     </style>
 </head>
 <body>
 
-    <div class="wrapper">
-        <header>
-            <h1>SEKaform</h1>
-            <p>Selecciona el formulario que deseas diligenciar para iniciar el proceso de captura e inspección</p>
-        </header>
+    <div class="container">
+        
+        <div class="header-form">
+            <div class="meta-code">CÓDIGO: COLMULTI-SG-SGA-FT 15</div>
+            <div class="title-form">SEKaform — Centros de Estética y Similares</div>
+        </div>
 
-        <main class="grid-formularios">
-            
-            <div class="tarjeta-formulario">
-                <div class="meta-codigo">CÓDIGO: BCC-SG-SST-FT-02</div>
-                <h2 class="titulo-formulario">Control de Asistencia</h2>
-                <p class="descripcion-formulario">
-                    Registro individual obligatorio de control de ingreso, datos del trabajador, asistencia y firmas de validación técnica del personal asignado.
-                </p>
-                <a href="control_asistencia.html" class="btn-enlace">Abrir Formulario</a>
+        <form id="mainInspectionForm">
+
+            <div class="accordion-section active">
+                <div class="accordion-header">1. INFORMACIÓN GENERAL DEL LOCAL</div>
+                <div class="accordion-content">
+                    <div class="form-group">
+                        <label for="locacion_nombre">LOCACION - Nombre local</label>
+                        <select id="locacion_nombre" required>
+                            <option value="">Seleccione un local...</option>
+                            <option value="local_01">Centro de Estética Spa Real</option>
+                            <option value="local_02">Barbería & Estética Premium</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label for="razon_social">RAZON SOCIAL</label>
+                            <input type="text" id="razon_social" required>
+                        </div>
+                        <div class="form-col">
+                            <label for="nit_local">NIT</label>
+                            <input type="text" id="nit_local" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="cuenta_contrato">NUMERO CUENTA CONTRATO (MEDIDOR AGUA)</label>
+                        <input type="text" id="cuenta_contrato" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label for="correo_electronico">CORREO</label>
+                            <input type="email" id="correo_electronico" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label for="nombre_atiende">NOMBRE DE QUIEN ATIENDE LA VISITA</label>
+                            <input type="text" id="nombre_atiende" required>
+                        </div>
+                        <div class="form-col">
+                            <label for="cargo_atiende">CARGO</label>
+                            <input type="text" id="cargo_atiende" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="fecha_hora_visita">FECHA Y HORA (Registro Automático)</label>
+                        <input type="datetime-local" id="fecha_hora_visita" required>
+                    </div>
+                </div>
             </div>
 
-            <div class="tarjeta-formulario">
-                <div class="meta-codigo">CÓDIGO: COLMULTI-SG-SGA-FT 15</div>
-                <h2 class="titulo-formulario">Locales Peluquerías, Barberías y Salones de Belleza</h2>
-                <p class="descripcion-formulario">
-                    Evaluación integral de condiciones sanitarias, infraestructura locativa, verificación de aspectos biológicos y ambientales específicos para salones de corte y barbería.
-                </p>
-                <a href="locales_peluquerias.html" class="btn-enlace">Abrir Formulario</a>
+            <div class="accordion-section">
+                <div class="accordion-header">2. DATOS DEL ESTABLECIMIENTO</div>
+                <div class="accordion-content">
+                    <div class="form-group">
+                        <label for="actividad_desarrollada">ACTIVIDAD DESARROLLADA:</label>
+                        <input type="text" id="actividad_desarrollada">
+                    </div>
+                    <div class="form-group">
+                        <label>HORAS FUNCIONAMIENTO DÍA</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label class="option-item"><input type="checkbox" id="chk_horas_admin"> Administrativas (hrs):</label>
+                                <input type="text" id="txt_horas_admin" placeholder="Ej: 8 horas">
+                            </div>
+                            <div class="form-col">
+                                <label class="option-item"><input type="checkbox" id="chk_horas_oper"> Operativas (hrs):</label>
+                                <input type="text" id="txt_horas_oper" placeholder="Ej: 12 horas">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="observaciones_establecimiento">OBSERVACIONES GENERALES</label>
+                        <textarea id="observaciones_establecimiento" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="option-item">Días de funcionamiento/ atención:</label>
+                            <input type="text" id="dias_atencion" placeholder="Ej: Lunes a Sábado">
+                        </div>
+                        <div class="form-col">
+                            <label class="option-item">CANTIDAD DE PRODUCCIÓN Y/O SERVICIOS:</label>
+                            <input type="text" id="cantidad_produccion">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="option-item">NÚMERO DE EMPLEADOS:</label>
+                            <input type="number" id="numero_empleados">
+                        </div>
+                        <div class="form-col">
+                            <label class="option-item">TURNOS LABORALES:</label>
+                            <input type="text" id="turnos_laborales">
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="tarjeta-formulario">
-                <div class="meta-codigo">CÓDIGO: COLMULTI-SG-SGA-FT 15</div>
-                <h2 class="titulo-formulario">Centros de Estética y Similares</h2>
-                <p class="descripcion-formulario">
-                    Formato avanzado unificado para la verificación de aspectos ambientales, vertimientos, almacenamiento de RESPEL, gestión de cortopunzantes y fichas técnicas de insumos.
-                </p>
-                <a href="formulario_centros_estetica_unificado_final.html" class="btn-enlace">Abrir Formulario</a>
+            <div class="accordion-section">
+                <div class="accordion-header">3. ASPECTOS A VERIFICAR</div>
+                <div class="accordion-content">
+                    <div class="form-group">
+                        <label for="fecha_aspectos">FECHA ENFOQUE</label>
+                        <input type="date" id="fecha_aspectos">
+                    </div>
+
+                    <div class="form-group">
+                        <label>CONCEPTO SANITARIO</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_concepto_sanitario" value="favorable"> FAVORABLE</label>
+                            <label class="option-item"><input type="radio" name="rad_concepto_sanitario" value="no_favorable"> NO FAVORABLE</label>
+                            <label class="option-item"><input type="radio" name="rad_concepto_sanitario" value="favorable_req"> FAVORABLE CON REQUERIMIENTOS</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de concepto sanitario..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>RESIDUOS PELIGROSOS</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_res_peligrosos" value="genera"> GENERA</label>
+                            <label class="option-item"><input type="radio" name="rad_res_peligrosos" value="no_genera"> NO GENERA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de residuos peligrosos..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>VERTIMIENTOS:</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_vertimientos" value="genera"> GENERA</label>
+                            <label class="option-item"><input type="radio" name="rad_vertimientos" value="no_genera"> NO GENERA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de vertimientos..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>REGISTRO DE HABILITACIÓN</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_habilitacion" value="requiere"> REQUIERE</label>
+                            <label class="option-item"><input type="radio" name="rad_habilitacion" value="no_requiere"> NO REQUIERE</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de habilitación..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ACEITE VEGETAL USADO</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_aceite_vegetal" value="genera"> GENERA</label>
+                            <label class="option-item"><input type="radio" name="rad_aceite_vegetal" value="no_genera"> NO GENERA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de aceite vegetal..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ALMACENAMIENTO DE SUSTANCIAS PELIGROSAS</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_sustancias_peligrosas" value="emplea"> EMPLEA</label>
+                            <label class="option-item"><input type="radio" name="rad_sustancias_peligrosas" value="no_emplea"> NO EMPLEA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de almacenamiento..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txt_negocio_saludable">REGISTRO NEGOCIO SALUDABLE NEGOCIO RENTABLE:</label>
+                        <input type="text" id="txt_negocio_saludable">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label for="txt_registro_generador">Registro Generador:</label>
+                            <input type="text" id="txt_registro_generador">
+                        </div>
+                        <div class="form-col">
+                            <label for="txt_transportador">Transportador:</label>
+                            <input type="text" id="txt_transportador">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="txt_dispositor_final">Dispositor Final:</label>
+                        <input type="text" id="txt_dispositor_final">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Lodos</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_lodos" value="genera"> GENERA</label>
+                            <label class="option-item"><input type="radio" name="rad_lodos" value="no_genera"> NO GENERA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de lodos..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>RESIDUOS ESPECIALES</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_res_especiales" value="genera"> GENERA</label>
+                            <label class="option-item"><input type="radio" name="rad_res_especiales" value="no_genera"> NO GENERA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2" placeholder="Observaciones de residuos especiales..."></textarea>
+                    </div>
+                </div>
             </div>
 
-        </main>
+            <div class="accordion-section">
+                <div class="accordion-header">ANEXO 1: VERIFICACIÓN ASPECTOS SANITARIOS</div>
+                <div class="accordion-content">
+                    <div class="form-group">
+                        <label>CONCEPTO SANITARIO (Una vez al año)</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_anexo_concepto" value="favorable"> FAVORABLE</label>
+                            <label class="option-item"><input type="radio" name="rad_anexo_concepto" value="favorable_req"> FAVORABLE CON REQUERIMIENTOS</label>
+                            <label class="option-item"><input type="radio" name="rad_anexo_concepto" value="desfavorable"> DESFAVORABLE</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="fecha_anexo_1">FECHA REVISIÓN ANUAL</label>
+                        <input type="date" id="fecha_anexo_1">
+                    </div>
 
-        <footer>
-            &copy; 2026 SEKapp Platform. Todos los derechos reservados.
-        </footer>
+                    <div class="sub-label">1. DOCUMENTACIÓN</div>
+                    
+                    <div class="form-group">
+                        <label>Plan de Saneamiento Básico. Plan de Gestión Integral de Residuos Sólidos</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_doc_saneamiento" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_saneamiento" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_saneamiento" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Protocolo de limpieza y desinfección y soportes</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_doc_limpieza" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_limpieza" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_limpieza" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Plan de Manejo Integral de Plagas/ soportes</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_doc_plagas" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_plagas" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_plagas" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Programa de agua potable/ soporte lavado de tanques</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_doc_agua" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_agua" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_doc_agua" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+                    <div class="normative-banner" style="margin-top: 5px;">Nota: (Resolución 2117 de 2010, El control de roedores NO podrá ser menor a 1 (una) vez al año.</div>
+
+                    <div class="sub-label">2. CONDICIONES SANITARIAS DEL LOCAL Y LAS INSTALACIONES (Infraestructura)</div>
+
+                    <div class="form-group">
+                        <label>Pisos, paredes y techos: (Resolución 2117 de 2010 Artículo 3)</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_pisos" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_pisos" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_pisos" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Drenajes:(Resolución 2117 de 2010 Artículo 3).</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_drenajes" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_drenajes" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_drenajes" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Poceta: (Resolución 2117 de 2010 Artículo 3)</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_poceta" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_poceta" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_poceta" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Iluminación: ((Resolución 2117 de 2010 Artículo 3)</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_iluminacion" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_iluminacion" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_iluminacion" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Señalización y demarcación de las áreas: Resolución 2117 de 2010, artículo 3.</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_senalizacion" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_senalizacion" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_senalizacion" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sistema Eléctrico: Resolución 2117 de 2010, artículo 3.</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_electrico" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_electrico" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_electrico" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Botiquín de primeros auxilios: Resolución 2117 de 2010, Artículo 3.</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_botiquin" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_botiquin" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_botiquin" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Manejo de residuos: Resolución 2117 de 2010, Artículo 3.</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_infra_residuos" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_residuos" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_infra_residuos" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-section">
+                <div class="accordion-header">ANEXO 2: VERIFICACIÓN ASPECTOS AMBIENTALES</div>
+                <div class="accordion-content">
+                    <div class="sub-label">1. VERTIMIENTOS (U.T.A.R. Instaladas)</div>
+                    
+                    <div class="form-group">
+                        <label style="font-weight: normal; color: var(--text-muted);">PRELIMINAR</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="checkbox" id="chk_ut_rejillas"> Rejillas</label>
+                            <label class="option-item"><input type="checkbox" id="chk_ut_trampa"> Trampa de grasa</label>
+                            <label class="option-item"><input type="checkbox" id="chk_ut_desarenador"> desarenador</label>
+                            <label class="option-item"><input type="checkbox" id="chk_ut_presedimentador"> presedimentador</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: normal; color: var(--text-muted);">SECUNDARIO</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="checkbox" id="chk_ut_biodiscos"> Biodiscos</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Trampa de grasa o unidad de pre tratamiento</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_amb_trampa" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_trampa" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_trampa" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="area_insumos_empleados">Insumos empleados</label>
+                        <textarea id="area_insumos_empleados" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cuenta con fichas técnicas de los insumos empleados en procesos de limpieza y desinfección</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_amb_fichas" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_fichas" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_fichas" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Área de toma de muestras</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_amb_muestras" value="caja"> Caja de aforo</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_muestras" value="bypass"> Bypass</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_muestras" value="ninguno"> Ninguno</label>
+                        </div>
+                    </div>
+
+                    <div class="sub-label">DESCRIPCIÓN DEL PROCESO / CARACTERIZACIÓN</div>
+                    <div class="form-group">
+                        <label for="txt_procedimiento" style="font-weight: normal;">PROCEDIMIENTO</label>
+                        <textarea id="txt_procedimiento" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="txt_sustancia_cosmetica" style="font-weight: normal;">SUSTANCIA COSMETICA</label>
+                        <textarea id="txt_sustancia_cosmetica" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="sub-label" style="color: var(--text-light);">Monitoreo y Control</label>
+                        <div class="normative-banner">Decreto Unico Reglamentario 1076 de 2015, Resolución 3957 de 2009, Resolución 631 de 2015.</div>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label for="date_caract_fecha">FECHA CARACTERIZACIÓN</label>
+                                <input type="date" id="date_caract_fecha">
+                            </div>
+                            <div class="form-col">
+                                <label for="txt_caract_laboratorio">LABORATORIO</label>
+                                <input type="text" id="txt_caract_laboratorio">
+                            </div>
+                        </div>
+                        <label style="font-weight: normal; margin-top: 8px;">ANALISIS DE RESULTADOS:</label>
+                        <textarea id="txt_analisis_resultados" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="sub-label" style="color: var(--text-light);">Registro de Caracterización Oficial</label>
+                        <div class="normative-banner">Decreto Unico Reglamentario 1076 de 2015, Resolución 3957 de 2009, Resolución 631 de 2015.</div>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label for="txt_reg_radicado">N° RADICADO</label>
+                                <input type="text" id="txt_reg_radicado">
+                            </div>
+                            <div class="form-col">
+                                <label for="date_reg_fecha">FECHA RADICACIÓN</label>
+                                <input type="date" id="date_reg_fecha">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txt_insumos_esterilizacion">Identifique con que insumos se realizan los procesos de esteriliozación y el procedimiento</label>
+                        <textarea id="txt_insumos_esterilizacion" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="txt_eliminacion_sustancias">Proceso de eliminación de sustancias empleadas para actividades de esterilización</label>
+                        <textarea id="txt_eliminacion_sustancias" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Implementación código de colores</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_amb_colores" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_colores" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_colores" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Separación en la fuente</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_amb_separacion" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_separacion" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_amb_separacion" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="sub-label">2. RESIDUOS PELIGROSOS</div>
+                    <div class="form-group">
+                        <label>Cuenta con Plan de Gestión Integral de Residuos Peligrosos RESPEL</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_respel_plan" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_plan" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_plan" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Maneja de manera cuidadosa los elementos cortopunzantes de acuerdo con la resolución 1164 de 2002</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_respel_corto" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_corto" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_corto" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Implementa sistemas de desactivación, tratamiento y disposición de residuos hospitalarios y similares de acuerdo con lo establecido.</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_respel_desact" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_desact" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_desact" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color: var(--primary);">Disposición final de residuos peligrosos (Último manifiesto de carga)</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label for="date_manif_fecha" style="font-weight: normal;">FECHA</label>
+                                <input type="date" id="date_manif_fecha">
+                            </div>
+                            <div class="form-col">
+                                <label for="txt_manif_consecutivo" style="font-weight: normal;">CONSECUTIVO</label>
+                                <input type="text" id="txt_manif_consecutivo">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label for="txt_manif_gestor" style="font-weight: normal;">GESTOR AUTORIZADO</label>
+                            <input type="text" id="txt_manif_gestor">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Media móvil</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_respel_media" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_media" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_media" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Registro como generador (Resolución 5262 de 2021)</label>
+                        <div class="options-box">
+                            <label class="option-item"><input type="radio" name="rad_respel_registro" value="cumple"> CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_registro" value="no_cumple"> NO CUMPLE</label>
+                            <label class="option-item"><input type="radio" name="rad_respel_registro" value="no_aplica"> NO APLICA</label>
+                        </div>
+                        <textarea class="obs-area" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-section">
+                <div class="accordion-header">FIRMAS DE CONFORMIDAD Y REGISTRO FOTOGRÁFICO</div>
+                <div class="accordion-content">
+                    
+                    <div class="form-group" style="border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+                        <label class="sub-label" style="color: var(--text-light);">PERSONA QUE ATENDIO LA VISITA</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label for="txt_atendio_nombre" style="font-weight: normal;">NOMBRE COMPLETO</label>
+                                <input type="text" id="txt_atendio_nombre">
+                            </div>
+                            <div class="form-col">
+                                <label for="txt_atendio_cargo" style="font-weight: normal;">CARGO</label>
+                                <input type="text" id="txt_atendio_cargo">
+                            </div>
+                        </div>
+                        <div class="signature-container">
+                            <label style="font-weight: normal;">Trazar Firma Digital</label>
+                            <canvas id="sig-canvas-atendio" class="signature-canvas"></canvas>
+                            <button type="button" class="btn-clear-sig" id="sig-clear-atendio">Limpiar Trazo</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="padding-top: 10px;">
+                        <label class="sub-label" style="color: var(--text-light);">PROFESIONAL QUE REALIZO LA VISITA</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label for="txt_profesional_nombre" style="font-weight: normal;">NOMBRE COMPLETO</label>
+                                <input type="text" id="txt_profesional_nombre">
+                            </div>
+                            <div class="form-col">
+                                <label for="txt_profesional_cargo" style="font-weight: normal;">CARGO / TARJETA PROFESIONAL</label>
+                                <input type="text" id="txt_profesional_cargo">
+                            </div>
+                        </div>
+                        <div class="signature-container">
+                            <label style="font-weight: normal;">Trazar Firma Digital</label>
+                            <canvas id="sig-canvas-profesional" class="signature-canvas"></canvas>
+                            <button type="button" class="btn-clear-sig" id="sig-clear-profesional">Limpiar Trazo</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 30px;">
+                        <label class="sub-label" style="color: var(--text-light);">FOTOGRAFÍAS / EVIDENCIAS</label>
+                        <div class="drag-drop-zone" id="drop-zone">
+                            <p>Arrastra tus evidencias fotográficas aquí o haz clic para <span>Examinar Archivos</span></p>
+                            <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
+                        </div>
+                        <div class="preview-thumbnails" id="preview-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions-panel">
+                <button type="button" class="btn-action btn-cancel" id="btnCancel">Cancelar</button>
+                <button type="submit" class="btn-action btn-submit">Mandar respuestas</button>
+            </div>
+
+        </form>
     </div>
 
+    <script>
+        // 1. Automatización de Fecha y Hora local actual
+        window.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('fecha_hora_visita').value = now.toISOString().slice(0,16);
+        });
+
+        // 2. Control de Apertura Dinámica del Acordeón
+        const headers = document.querySelectorAll('.accordion-header');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const parent = header.parentElement;
+                parent.classList.toggle('active');
+            });
+        });
+
+        // 3. Alertas en Áreas de Observación según respuesta crítica
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const group = e.target.closest('.form-group');
+                const textarea = group.querySelector('textarea');
+                if (textarea) {
+                    if (e.target.value === 'no_cumple' || e.target.value === 'no_favorable' || e.target.value === 'desfavorable') {
+                        textarea.style.borderColor = 'var(--accent-danger)';
+                    } else {
+                        textarea.style.borderColor = 'var(--border-color)';
+                    }
+                }
+            });
+        });
+
+        // 4. Inicializador Funcional de Firmas Digitales (Canvas Táctil/Mouse)
+        function initSignaturePad(canvasId, clearId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+
+            // Ajustar dimensiones lógicas al tamaño del layout real
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            ctx.strokeStyle = "#38bdf8"; 
+            ctx.lineWidth = 2;
+
+            function getMousePos(e) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: (e.clientX || e.touches[0].clientX) - rect.left,
+                    y: (e.clientY || e.touches[0].clientY) - rect.top
+                };
+            }
+
+            function startDrawing(e) {
+                drawing = true;
+                const pos = getMousePos(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                e.preventDefault();
+            }
+
+            function draw(e) {
+                if (!drawing) return;
+                const pos = getMousePos(e);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                e.preventDefault();
+            }
+
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            window.addEventListener('mouseup', () => drawing = false);
+
+            canvas.addEventListener('touchstart', startDrawing);
+            canvas.addEventListener('touchmove', draw);
+            window.addEventListener('touchend', () => drawing = false);
+
+            document.getElementById(clearId).addEventListener('click', () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+        }
+
+        // Ejecutar configuración de áreas táctiles tras renderizar la vista
+        setTimeout(() => {
+            initSignaturePad('sig-canvas-atendio', 'sig-clear-atendio');
+            initSignaturePad('sig-canvas-profesional', 'sig-clear-profesional');
+        }, 500);
+
+        // 5. Automatización e interactividad del gestor Drag & Drop para Fotos
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewContainer = document.getElementById('preview-container');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = '#131e36';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.backgroundColor = '#0f172a';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = '#0f172a';
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                // Validación estricta del peso del archivo (50MB máximo)
+                if (file.size > 50 * 1024 * 1024) {
+                    alert(`El archivo ${file.name} supera el límite de 50MB.`);
+                    continue;
+                }
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'preview-item';
+                        previewContainer.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
+
+        // Acción de Botón Cancelar (Redirección nativa a la Landing)
+        document.getElementById('btnCancel').addEventListener('click', () => {
+            if(confirm('¿Seguro que deseas salir? Los cambios no guardados se perderán.')) {
+                window.location.href = 'landing_page_sekdocs.html';
+            }
+        });
+    </script>
 </body>
 </html>
