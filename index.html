@@ -1,1 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEKaform - Panel de Formularios e Inspección</title>
+    <style>
+        :root {
+            --bg-principal: #0f172a;
+            --bg-tarjeta: #1e293b;
+            --azul-acento: #2563eb;
+            --azul-hover: #3b82f6;
+            --texto-claro: #f8fafc;
+            --texto-mutado: #94a3b8;
+            --borde: #334155;
+        }
 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-principal);
+            color: var(--texto-claro);
+            margin: 0;
+            padding: 0;
+            display: block;
+        }
+
+        .wrapper {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            color: var(--texto-claro);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--texto-mutado);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .grid-formularios {
+            display: block;
+            margin-top: 20px;
+        }
+
+        .tarjeta-formulario {
+            background-color: var(--bg-tarjeta);
+            border: 1px solid var(--borde);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            position: relative;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .tarjeta-formulario:hover {
+            border-color: var(--azul-acento);
+            transform: translateY(-2px);
+        }
+
+        .meta-codigo {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--azul-acento);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .titulo-formulario {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: var(--texto-claro);
+        }
+
+        .descripcion-formulario {
+            color: var(--texto-mutado);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .btn-enlace {
+            display: inline-block;
+            background-color: var(--azul-acento);
+            color: var(--texto-claro);
+            text-decoration: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-enlace:hover {
+            background-color: var(--azul-hover);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            font-size: 0.85rem;
+            color: var(--texto-mutado);
+            border-top: 1px solid var(--borde);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <header>
+            <h1>SEKaform</h1>
+            <p>Selecciona el formulario que deseas diligenciar para iniciar el proceso de captura e inspección</p>
+        </header>
+
+        <main class="grid-formularios">
+            
+            <div class="tarjeta-formulario">
+                <div class="meta-codigo">CÓDIGO: BCC-SG-SST-FT-02</div>
+                <h2 class="titulo-formulario">Control de Asistencia</h2>
+                <p class="descripcion-formulario">
+                    Registro individual obligatorio de control de ingreso, datos del trabajador, asistencia y firmas de validación técnica del personal asignado.
+                </p>
+                <a href="control_asistencia.html" class="btn-enlace">Abrir Formulario</a>
+            </div>
+
+            <div class="tarjeta-formulario">
+                <div class="meta-codigo">CÓDIGO: COLMULTI-SG-SGA-FT 15</div>
+                <h2 class="titulo-formulario">Locales Peluquerías, Barberías y Salones de Belleza</h2>
+                <p class="descripcion-formulario">
+                    Evaluación integral de condiciones sanitarias, infraestructura locativa, verificación de aspectos biológicos y ambientales específicos para salones de corte y barbería.
+                </p>
+                <a href="locales_peluquerias.html" class="btn-enlace">Abrir Formulario</a>
+            </div>
+
+            <div class="tarjeta-formulario">
+                <div class="meta-codigo">CÓDIGO: COLMULTI-SG-SGA-FT 15</div>
+                <h2 class="titulo-formulario">Centros de Estética y Similares</h2>
+                <p class="descripcion-formulario">
+                    Formato avanzado unificado para la verificación de aspectos ambientales, vertimientos, almacenamiento de RESPEL, gestión de cortopunzantes y fichas técnicas de insumos.
+                </p>
+                <a href="formulario_centros_estetica_unificado_final.html" class="btn-enlace">Abrir Formulario</a>
+            </div>
+
+        </main>
+
+        <footer>
+            &copy; 2026 SEKapp Platform. Todos los derechos reservados.
+        </footer>
+    </div>
+
+</body>
+</html>
