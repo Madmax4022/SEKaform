@@ -1312,22 +1312,44 @@ async function submitToSupabase(payload) {
         throw new Error('Configura las credenciales de Supabase primero.');
     }
 
-    const endpoint = `${supabaseURL}/rest/v1/${SUPABASE_TABLE}`;
+    // Limpiar URL base (quitar slash final si existe)
+    const baseURL  = supabaseURL.replace(/\/$/, '');
+    const endpoint = `${baseURL}/rest/v1/${SUPABASE_TABLE}`;
+
+    // Detectar tipo de key automáticamente
+    const isPublishable = supabaseKey.startsWith('sb_publishable_');
+    const isSecret      = supabaseKey.startsWith('sb_secret_');
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Prefer':        'return=representation'
+    };
+
+    if (isPublishable || isSecret) {
+        // Nueva API Supabase 2025
+        headers['Authorization'] = `Bearer ${supabaseKey}`;
+        headers['apikey']        = supabaseKey;
+    } else {
+        // anon key legacy (eyJ...)
+        headers['apikey']        = supabaseKey;
+        headers['Authorization'] = `Bearer ${supabaseKey}`;
+    }
 
     const response = await fetch(endpoint, {
         method:  'POST',
-        headers: {
-            'Content-Type':  'application/json',
-            'apikey':         supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Prefer':         'return=representation'
-        },
-        body: JSON.stringify(payload)
+        headers: headers,
+        body:    JSON.stringify(payload)
     });
 
     if (!response.ok) {
-        const errBody = await response.text();
-        throw new Error(`Supabase ${response.status}: ${errBody}`);
+        let errMsg = `Supabase ${response.status}`;
+        try {
+            const errBody = await response.json();
+            errMsg += ': ' + (errBody.message || errBody.error || JSON.stringify(errBody));
+        } catch {
+            errMsg += ': ' + response.statusText;
+        }
+        throw new Error(errMsg);
     }
 
     const result = await response.json();
