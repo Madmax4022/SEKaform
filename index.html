@@ -1,172 +1,1136 @@
-// 1. Automatización de Fecha y Hora local actual
-window.addEventListener('DOMContentLoaded', () => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('fecha_hora_visita').value = now.toISOString().slice(0,16);
-    inyectarModalConfirmacion(); // Prepara el modal en el DOM
-});
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SEKapp Mosler Premium — Diagnóstico Estratégico</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700&display=swap');
 
-// 2. Control de Apertura Dinámica del Acordeón
-const headers = document.querySelectorAll('.accordion-header');
-headers.forEach(header => {
-    header.addEventListener('click', () => {
-        header.parentElement.classList.toggle('active');
-    });
-});
+  :root {
+    --teal:   #0d9488;
+    --teal-l: rgba(13,148,136,0.07);
+    --teal-b: rgba(13,148,136,0.22);
+    --bg:     #f0f2f5;
+    --card:   #ffffff;
+    --card2:  #f5f7fa;
+    --bord:   rgba(0,0,0,0.07);
+    --text:   #0f1923;
+    --muted:  #64748b;
+    --red:    #dc2626;
+    --amber:  #d97706;
+    --green:  #059669;
+    --mono:   'IBM Plex Mono', monospace;
+    --sans:   'DM Sans', sans-serif;
+    --safe:   env(safe-area-inset-bottom, 0px);
+    --radius: 12px;
+  }
 
-// 3. Alertas Visuales en áreas de observación según respuesta crítica
-document.querySelectorAll('input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-        const group = e.target.closest('.form-group');
-        const textarea = group.querySelector('textarea');
-        if (textarea) {
-            if (['no_cumple', 'no_favorable', 'desfavorable'].includes(e.target.value)) {
-                textarea.style.borderColor = 'var(--accent-danger)';
-            } else {
-                textarea.style.borderColor = 'var(--border-color)';
-            }
-        }
-    });
-});
+  body.dark {
+    --bg:     #080c12;
+    --card:   #0e1420;
+    --card2:  #131b28;
+    --bord:   rgba(255,255,255,0.06);
+    --text:   #e2e8f0;
+    --muted:  #64748b;
+  }
 
-// 4. Inicializador de Firmas Digitales (Canvas)
-let ctxAtendio, ctxProfesional;
-function initSignaturePad(canvasId, clearId) {
-    const canvas = document.getElementById(canvasId);
-    const ctx = canvas.getContext('2d');
-    let drawing = false;
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    overscroll-behavior: none;
+    transition: background .3s, color .3s;
+  }
 
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    ctx.strokeStyle = "#38bdf8"; 
-    ctx.lineWidth = 2;
+  /* ─── PANTALLA DE CONTROL INICIAL (SETUP) ─── */
+  #setup-screen {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg); overflow-y: auto;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: 24px 16px calc(24px + var(--safe));
+  }
 
-    function getMousePos(e) {
-        const rect = canvas.getBoundingClientRect();
-        return {
-            x: (e.clientX || e.touches[0].clientX) - rect.left,
-            y: (e.clientY || e.touches[0].clientY) - rect.top
-        };
-    }
+  .setup-wrap { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 0; }
 
-    function startDrawing(e) {
-        drawing = true;
-        const pos = getMousePos(e);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-        e.preventDefault();
-    }
+  .setup-masthead {
+    background: var(--text); border-radius: var(--radius) var(--radius) 0 0;
+    padding: 28px 28px 24px; display: flex; align-items: center; gap: 16px;
+  }
+  body.dark .setup-masthead { background: #0a1628; border: 1px solid var(--bord); border-bottom: none; }
 
-    function draw(e) {
-        if (!drawing) return;
-        const pos = getMousePos(e);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-        e.preventDefault();
-    }
+  .setup-shield {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: rgba(13,148,136,0.2); border: 1px solid rgba(13,148,136,0.4);
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+  }
+  .setup-title { font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -.3px; line-height: 1.2; }
+  .setup-title em { font-style: normal; color: var(--teal); }
+  .setup-subtitle { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; font-weight: 600; }
 
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', draw);
-    window.addEventListener('mouseup', () => drawing = false);
-    canvas.addEventListener('touchstart', startDrawing);
-    canvas.addEventListener('touchmove', draw);
-    window.addEventListener('touchend', () => drawing = false);
+  .setup-body {
+    background: var(--card); border: 1px solid var(--bord); border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius); padding: 24px 28px 28px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
 
-    document.getElementById(clearId).addEventListener('click', () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
+  .setup-section-title {
+    font-size: 9px; font-weight: 700; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-bottom: 1px solid var(--bord); padding-bottom: 8px; margin-bottom: 4px;
+  }
 
-    return ctx;
-}
+  .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .setup-field { display: flex; flex-direction: column; gap: 5px; }
+  .setup-field.full { grid-column: span 2; }
+  .setup-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
 
-setTimeout(() => {
-    ctxAtendio = initSignaturePad('sig-canvas-atendio', 'sig-clear-atendio');
-    ctxProfesional = initSignaturePad('sig-canvas-profesional', 'sig-clear-profesional');
-}, 500);
+  .setup-select, .setup-input {
+    background: var(--card2); border: 1px solid var(--bord); color: var(--text); border-radius: 8px; padding: 10px 12px;
+    font-size: 14px; outline: none; width: 100%; font-family: var(--sans); transition: border-color .2s; -webkit-appearance: none;
+  }
+  .setup-select:focus, .setup-input:focus { border-color: var(--teal); }
 
-// 5. Gestor Drag & Drop para Fotos (Límite 50MB)
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
-const previewContainer = document.getElementById('preview-container');
+  .country-wrap { position: relative; }
+  .country-suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--card); border: 1px solid var(--bord); border-top: none;
+    border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto;
+    display: none; box-shadow: 0 8px 24px rgba(0,0,0,.1);
+  }
+  .country-suggestions.open { display: block; }
+  .cs-item { padding: 9px 12px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background .15s; }
+  .cs-item:hover { background: var(--teal-l); }
+  .cs-item .cs-flag { font-size: 16px; }
+  .cs-item .cs-name { font-weight: 500; color: var(--text); }
+  .cs-item .cs-idx { font-size: 11px; color: var(--muted); margin-left: auto; font-family: var(--mono); }
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor = '#131e36'; });
-dropZone.addEventListener('dragleave', () => { dropZone.style.backgroundColor = '#0f172a'; });
-dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.backgroundColor = '#0f172a'; handleFiles(e.dataTransfer.files); });
-fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+  .intel-panel { background: var(--card2); border: 1px solid var(--bord); border-radius: var(--radius); overflow: hidden; display: none; }
+  .intel-panel.visible { display: block; }
+  .intel-header { background: rgba(13,148,136,0.08); border-bottom: 1px solid var(--teal-b); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .intel-header-title { font-size: 9px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 1.5px; }
+  .intel-header-country { font-size: 12px; font-weight: 700; color: var(--text); }
+  .intel-cols { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .intel-col { padding: 12px 14px; border-right: 1px solid var(--bord); display: flex; flex-direction: column; gap: 4px; }
+  .intel-col:last-child { border-right: none; }
+  .intel-col-label { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .intel-col-val { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .intel-col-desc { font-size: 10px; color: var(--muted); line-height: 1.4; }
+  .intel-col-bar { height: 3px; border-radius: 2px; margin-top: 4px; background: var(--bord); overflow: hidden; }
+  .intel-col-bar-fill { height: 100%; border-radius: 2px; }
+  .intel-pest { padding: 12px 14px; border-top: 1px solid var(--bord); display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pest-item { background: var(--card); border: 1px solid var(--bord); border-radius: 8px; padding: 8px 10px; }
+  .pest-key { font-size: 8px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 1px; }
+  .pest-desc { font-size: 10px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
 
-function handleFiles(files) {
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.size > 50 * 1024 * 1024) {
-            alert(`El archivo ${file.name} supera el límite de 50MB.`);
-            continue;
-        }
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.className = 'preview-item';
-                previewContainer.appendChild(img);
-            }
-            reader.readAsDataURL(file);
-        }
-    }
-}
+  .maps-wrap { width: 100%; height: 160px; border-radius: 8px; overflow: hidden; border: 1px solid var(--bord); background: var(--card2); }
+  .maps-wrap iframe { width: 100%; height: 100%; border: none; }
 
-// 6. Inyección del Estilo y HTML del Modal de Confirmación
-function inyectarModalConfirmacion() {
-    const modalStyle = document.createElement('style');
-    modalStyle.innerHTML = `
-        .seka-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.85); display: flex;
-            justify-content: center; align-items: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-        }
-        .seka-modal-overlay.show { opacity: 1; pointer-events: auto; }
-        .seka-modal {
-            background: #1e293b; border: 1px solid #334155; padding: 35px; border-radius: 12px;
-            max-width: 450px; width: 90%; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
-        }
-        .seka-modal h3 { margin: 0 0 10px 0; color: #1abc9c; font-size: 1.5rem; }
-        .seka-modal p { color: #94a3b8; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px; }
-        .btn-modal-home {
-            background-color: #2563eb; color: #f8fafc; border: none; padding: 12px 24px;
-            font-weight: bold; font-size: 0.95rem; border-radius: 6px; cursor: pointer; transition: background 0.2s; text-decoration: none; display: inline-block;
-        }
-        .btn-modal-home:hover { background-color: #3b82f6; }
-    `;
-    document.head.appendChild(modalStyle);
+  .input-btn-row { display: flex; gap: 8px; }
+  .btn-geo { background: var(--teal-l); border: 1px solid var(--teal-b); color: var(--teal); border-radius: 8px; padding: 0 14px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: var(--sans); height: 100%; display: flex; align-items: center; gap: 6px; }
+  .btn-mapa { background: var(--teal-l); border: 1px solid var(--teal-b); color: var(--teal); border-radius: 8px; padding: 0 14px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: var(--sans); }
+  .geo-status { font-size: 10px; color: var(--muted); margin-top: 4px; min-height: 14px; }
 
-    const modalHtml = document.createElement('div');
-    modalHtml.id = 'sekaModal';
-    modalHtml.className = 'seka-modal-overlay';
-    modalHtml.innerHTML = `
-        <div class="seka-modal">
-            <h3>¡Registro Exitoso!</h3>
-            <p>Los datos de inspección ambiental se han procesado y guardado correctamente en la base de datos de SEKaform.</p>
-            <a href="index.html" class="btn-modal-home">Volver al Panel Principal</a>
+  /* VAlIDACIONES Y SUGERENCIAS */
+  .field-error { border-color: var(--red) !important; background: rgba(220,38,38,.05) !important; }
+  .field-error-msg { font-size: 10px; color: var(--red); font-weight: 600; margin-top: 3px; display: none; }
+  .field-error-msg.show { display: block; }
+  .validation-toast { display: none; background: rgba(220,38,38,.95); color: white; border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-size: 12px; font-weight: 600; line-height: 1.6; border: 1px solid rgba(220,38,38,.3); }
+  .validation-toast.show { display: block; }
+  .geo-model-suggestion { display: none; background: rgba(13,148,136,.07); border: 1px solid var(--teal-b); border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: 11px; color: var(--text); line-height: 1.5; }
+  .geo-model-suggestion.show { display: flex; align-items: center; gap: 10px; }
+  .geo-model-suggestion b { color: var(--teal); }
+  .btn-accept-model { background: var(--teal); color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: var(--sans); white-space: nowrap; flex-shrink: 0; }
+  .btn-keep-model { background: transparent; border: 1px solid var(--bord); color: var(--muted); border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: var(--sans); white-space: nowrap; flex-shrink: 0; }
+
+  /* ─── TOPBAR CALCULADORA ─── */
+  .topbar { background: var(--card); border-bottom: 1px solid var(--bord); padding: 12px 16px; position: sticky; top: 0; z-index: 200; }
+  .top-row { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 8px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--teal-l); border: 1px solid var(--teal-b); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .bname { font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
+  .bname em { font-style: normal; color: var(--teal); }
+  .pill { font-size: 8px; letter-spacing: .1em; background: var(--text); color: var(--bg); border-radius: 4px; padding: 2px 6px; font-weight: 700; }
+  .formula { font-size: 10px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+
+  /* ─── BOTONES DE ACCIÓN MÓVIL ─── */
+  .action-row { display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto; scrollbar-width: none; }
+  .action-row::-webkit-scrollbar { display: none; }
+  .btn { flex-shrink: 0; border: none; border-radius: 10px; cursor: pointer; font-family: var(--sans); font-size: 13px; font-weight: 700; padding: 9px 14px; display: inline-flex; align-items: center; gap: 6px; transition: opacity .15s, transform .1s; }
+  .btn:active { opacity: .75; transform: scale(.97); }
+  .btn-add   { background: var(--teal); color: #fff; flex: 1; justify-content: center; }
+  .btn-pdf   { background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.2); color: var(--red); }
+  .btn-excel { background: rgba(13,148,136,.07); border: 1px solid var(--teal-b); color: var(--teal); }
+  .btn-clear { background: rgba(100,116,139,.07); border: 1px solid rgba(100,116,139,.15); color: var(--muted); }
+  .btn-guide { background: var(--card2); border: 1px solid var(--bord); color: var(--muted); }
+  .btn-theme { background: transparent; border: none; font-size: 18px; cursor: pointer; padding: 2px 6px; }
+
+  /* ─── INTEL BANNER (PDF) ─── */
+  .report-intel { margin: 0 16px 12px; background: var(--card); border: 1px solid var(--bord); border-radius: var(--radius); overflow: hidden; }
+  .ri-header { background: rgba(13,148,136,0.07); border-bottom: 1px solid var(--teal-b); padding: 8px 14px; font-size: 9px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; justify-content: space-between; }
+  .ri-country-badge { font-size: 11px; font-weight: 700; color: var(--text); text-transform: none; letter-spacing: 0; }
+  .ri-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .ri-cell { padding: 10px 12px; border-right: 1px solid var(--bord); }
+  .ri-cell:last-child { border-right: none; }
+  .ri-cell-lbl { font-size: 8px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .ri-cell-val { font-size: 17px; font-weight: 700; font-family: var(--mono); margin: 2px 0; }
+  .ri-cell-desc { font-size: 10px; color: var(--muted); }
+  .ri-pest { display: grid; grid-template-columns: repeat(6, 1fr); border-top: 1px solid var(--bord); }
+  .rip-item { padding: 8px 10px; border-right: 1px solid var(--bord); }
+  .rip-item:last-child { border-right: none; }
+  .rip-key { font-size: 8px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 1px; }
+  .rip-val { font-size: 12px; font-weight: 700; color: var(--text); margin-top: 1px; }
+  .rip-desc { font-size: 9px; color: var(--muted); margin-top: 1px; line-height: 1.3; }
+
+  /* ─── GUIDE ─── */
+  .guide { display: none; padding: 0 16px 12px; }
+  .guide.open { display: block; }
+  .guide-inner { background: var(--teal-l); border: 1px solid var(--teal-b); border-radius: var(--radius); padding: 14px; }
+  .g-title { font-size: 9px; font-weight: 700; color: var(--teal); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .g-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .g-item { background: var(--card); border: 1px solid var(--bord); border-radius: 8px; padding: 8px 10px; }
+  .g-key { font-size: 13px; font-weight: 800; color: var(--teal); font-family: var(--mono); }
+  .g-name { font-size: 11px; font-weight: 700; color: var(--text); }
+  .g-desc { font-size: 10px; color: var(--muted); line-height: 1.3; margin-top: 2px; }
+  .g-scale { font-size: 9px; color: var(--muted); font-family: var(--mono); margin-top: 4px; border-top: 1px dashed var(--bord); padding-top: 4px; }
+
+  /* ─── CONTEXT + METRICS ─── */
+  .ctx-metrics { display: flex; flex-direction: column; gap: 0; }
+  .context { background: var(--card); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--bord); }
+  .ctx-field { display: flex; flex-direction: column; gap: 4px; }
+  .ctx-label { font-size: 9px; letter-spacing: .1em; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+  .ctx-input { background: var(--card2); border: 1px solid var(--bord); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; width: 100%; font-family: var(--sans); transition: border-color .2s; -webkit-appearance: none; }
+  .ctx-input:focus { border-color: var(--teal); }
+  .ctx-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .signature-area { background: var(--card2); border: 1px dashed var(--bord); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .sig-hdr { display: flex; justify-content: space-between; align-items: center; }
+  .sig-canvas { background: var(--card); border: 1px solid var(--bord); border-radius: 8px; width: 100%; height: 100px; cursor: crosshair; touch-action: none; display: block; }
+  .btn-sig-clear { background: transparent; border: none; color: var(--muted); font-size: 11px; text-decoration: underline; cursor: pointer; font-family: var(--sans); }
+
+  .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--bord); background: var(--card); }
+  .metric { background: var(--card2); border: 1px solid var(--bord); border-radius: 10px; padding: 12px 8px; text-align: center; }
+  .mv { font-size: 26px; font-weight: 800; line-height: 1; font-family: var(--mono); }
+  .ml { font-size: 9px; color: var(--muted); margin-top: 3px; line-height: 1.3; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* ─── PARETO BANNER ─── */
+  .pareto-banner { margin: 0 16px 4px; background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; display: none; }
+  .pareto-banner.visible { display: flex; }
+  .pareto-icon { font-size: 18px; flex-shrink: 0; }
+  .pareto-text { font-size: 12px; color: var(--text); line-height: 1.5; }
+  .pareto-text b { color: var(--red); }
+
+  /* ─── RISK CARDS ─── */
+  .cards { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; font-style: italic; line-height: 1.7; }
+
+  .risk-card { background: var(--card); border: 1px solid var(--bord); border-radius: var(--radius); overflow: hidden; animation: fadeSlide .25s ease; }
+  .risk-card.alto  { border-left: 3px solid var(--red); }
+  .risk-card.medio { border-left: 3px solid var(--amber); }
+  .risk-card.bajo  { border-left: 3px solid var(--green); }
+  .pareto-flag { background: rgba(220,38,38,0.06); border-bottom: 1px solid rgba(220,38,38,0.15); padding: 4px 14px; font-size: 9px; font-weight: 700; color: var(--red); letter-spacing: 1px; text-transform: uppercase; display: none; }
+  .risk-card.pareto-critical .pareto-flag { display: block; }
+
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--bord); }
+  .card-num { width: 22px; height: 22px; border-radius: 6px; background: var(--teal-l); border: 1px solid var(--teal-b); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--teal); flex-shrink: 0; font-family: var(--mono); }
+  .card-desc-inp { flex: 1; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-weight: 600; min-width: 0; font-family: var(--sans); }
+  .card-desc-inp::placeholder { color: var(--muted); font-weight: 400; }
+  .card-rm { background: transparent; border: none; color: var(--red); font-size: 18px; cursor: pointer; opacity: .4; padding: 2px 6px; flex-shrink: 0; transition: opacity .15s; }
+  .card-rm:hover { opacity: .8; }
+
+  .crit-grid { display: grid; grid-template-columns: repeat(6,1fr); }
+  .crit-cell { background: var(--card); padding: 8px 6px; text-align: center; border-right: 1px solid var(--bord); }
+  .crit-cell:last-child { border-right: none; }
+  .crit-key  { font-size: 11px; font-weight: 800; color: var(--teal); font-family: var(--mono); }
+  .crit-name { font-size: 8px; color: var(--muted); margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .crit-sel { background: var(--card2); border: 1px solid var(--bord); color: var(--text); border-radius: 7px; padding: 5px 3px; font-size: 14px; width: 100%; text-align: center; cursor: pointer; outline: none; font-weight: 700; font-family: var(--mono); -webkit-appearance: none; transition: border-color .2s; }
+  .crit-sel:focus { border-color: var(--teal); }
+  .crit-sel.empty-v { border-color: var(--amber); background: rgba(217,119,6,.07); }
+
+  .card-result { padding: 10px 14px; display: flex; align-items: center; gap: 12px; background: var(--card2); border-top: 1px solid var(--bord); }
+  .result-formula { font-size: 10px; color: var(--muted); flex: 1; font-family: var(--mono); line-height: 1.7; }
+  .result-formula b { color: var(--text); }
+  .result-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .er-number { font-size: 26px; font-weight: 800; line-height: 1; font-family: var(--mono); }
+  .er-pct { font-size: 10px; font-weight: 700; font-family: var(--mono); }
+  .er-bar-wrap { width: 72px; }
+  .bar-bg { background: var(--bord); border-radius: 3px; height: 4px; overflow: hidden; }
+  .bar-fg { height: 100%; border-radius: 3px; transition: width .4s ease; }
+  .badge { font-size: 9px; font-weight: 800; letter-spacing: .1em; padding: 2px 8px; border-radius: 20px; border: 1px solid transparent; text-transform: uppercase; }
+
+  /* ─── RANKING ─── */
+  .rank-section { padding: 0 16px 16px; }
+  .rank-card { background: var(--card); border: 1px solid var(--bord); border-radius: var(--radius); padding: 16px; }
+  .rank-title { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; }
+  .rank-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--bord); }
+  .rank-item:last-child { border-bottom: none; }
+  .rn     { font-size: 10px; color: var(--muted); width: 18px; text-align: right; flex-shrink: 0; font-family: var(--mono); }
+  .rdot   { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .rdesc  { flex: 1; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-weight: 500; }
+  .rpct   { font-size: 10px; font-weight: 700; color: var(--muted); font-family: var(--mono); width: 36px; text-align: right; flex-shrink: 0; }
+  .rbar   { width: 52px; flex-shrink: 0; }
+  .rval   { font-size: 13px; font-weight: 800; width: 36px; text-align: right; flex-shrink: 0; font-family: var(--mono); }
+  .r-pareto-line { font-size: 9px; color: var(--red); font-weight: 700; text-align: center; padding: 5px; border-top: 1px dashed rgba(220,38,38,0.4); border-bottom: 1px dashed rgba(220,38,38,0.4); letter-spacing: 1px; text-transform: uppercase; margin: 2px 0; }
+
+  /* ─── DASHBOARD ─── */
+  .dashboard { padding: 0 16px 32px; }
+  .dash-title { font-size: 9px; font-weight: 700; color: var(--teal); letter-spacing: 1.5px; text-transform: uppercase; padding: 16px 0 12px; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .chart-box { background: var(--card); border: 1px solid var(--bord); border-radius: var(--radius); padding: 14px; }
+  .chart-box-wide { grid-column: span 2; }
+  .chart-box h4 { font-size: 9px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .canvas-wrap { position: relative; width: 100%; height: 180px; }
+
+  /* ─── CIERRE ESTRATÉGICO B2B (IEC Y MITIGACIÓN) ─── */
+  .cierre-section { padding: 0 16px 24px; }
+  .cierre-card { background: var(--card); border: 1px solid var(--bord); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  .cierre-title { font-size: 11px; font-weight: 700; color: var(--teal); letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid var(--bord); padding-bottom: 8px; }
+  
+  .iec-banner { border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .iec-banner.resiliente { background: rgba(5,150,105,0.06); border: 1px solid rgba(5,150,105,0.2); color: var(--green); }
+  .iec-banner.preventivo { background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.2); color: var(--amber); }
+  .iec-banner.reactivo   { background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.2); color: var(--red); }
+  .iec-header-row { display: flex; justify-content: space-between; align-items: center; }
+  .iec-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .iec-num { font-size: 28px; font-weight: 800; font-family: var(--mono); line-height: 1; }
+  .iec-status-title { font-size: 13px; font-weight: 700; margin-top: 4px; }
+  .iec-desc { font-size: 12px; color: var(--text); opacity: 0.85; line-height: 1.5; }
+
+  .horizontes-grid { display: flex; flex-direction: column; gap: 14px; }
+  .horizonte-box { background: var(--card2); border: 1px solid var(--bord); border-radius: 8px; padding: 14px; }
+  .horizonte-hdr { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .horizonte-list { padding-left: 18px; font-size: 12px; line-height: 1.6; display: flex; flex-direction: column; gap: 4px; color: var(--text); }
+  
+  /* ─── BLOQUE DE DIRECCIÓN EN REPORTE PDF (UX LIMPIA, SIN MAPAS EN CALCULADORA) ─── */
+  .report-map-box { margin: 0 16px 12px; background: var(--card); border: 1px solid var(--bord); border-radius: var(--radius); overflow: hidden; display: none; }
+  .report-map-box.visible { display: block; }
+  .report-map-header { background: rgba(13,148,136,0.07); border-bottom: 1px solid var(--teal-b); padding: 8px 14px; font-size: 9px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 1.5px; }
+  .report-map-fallback { padding: 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--teal); background: var(--card2); display: block; }
+
+  @media (min-width: 700px) {
+    .setup-grid { grid-template-columns: repeat(3, 1fr); }
+    .setup-field.full { grid-column: span 3; }
+    .intel-cols { grid-template-columns: repeat(4, 1fr); }
+    .ctx-metrics { flex-direction: row; }
+    .context { flex: 1.3; border-bottom: none; border-right: 1px solid var(--bord); }
+    .metrics { flex: 1; align-content: center; }
+    .crit-grid { grid-template-columns: repeat(6,1fr); }
+  }
+  @media (max-width: 480px) {
+    .intel-cols { grid-template-columns: 1fr 1fr; }
+    .ri-grid     { grid-template-columns: 1fr 1fr; }
+    .ri-pest     { grid-template-columns: repeat(3, 1fr); }
+    .intel-pest { grid-template-columns: repeat(3, 1fr); }
+    .crit-grid  { grid-template-columns: repeat(3, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-box-wide { grid-column: span 1; }
+    .g-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media print {
+    body { background: white !important; color: black !important; max-width: 100% !important; }
+    .topbar, .action-row, .btn, .card-rm, .footer, .toast { display: none !important; }
+    #setup-screen { display: none !important; }
+    .risk-card, .rank-card, .chart-box, .report-intel, .report-map-box, .cierre-card { page-break-inside: avoid; background: white !important; border: 1px solid #bbb !important; box-shadow: none !important; }
+    .ctx-input, .card-desc-inp, .crit-sel, .horizonte-box { background: transparent !important; color: black !important; }
+    .er-number, .mv, .iec-num { color: black !important; }
+    .report-map-box.visible { display: block !important; margin-top: 15px !important; }
+    .dashboard, .cierre-section { page-break-before: always; padding: 0 !important; }
+    .charts-grid { display: block !important; }
+    .chart-box { margin-bottom: 16px !important; width: 100% !important; page-break-inside: avoid; }
+    .chart-box-wide { width: 100% !important; }
+    .canvas-wrap { height: 160px !important; max-width: 100% !important; overflow: hidden !important; }
+    .canvas-wrap canvas { max-width: 100% !important; height: 160px !important; }
+    .print-hdr { display: block !important; text-align: center; padding: 20px; border-bottom: 2px solid black; margin-bottom: 20px; }
+  }
+  .print-hdr { display: none; }
+</style>
+</head>
+<body>
+
+<div id="setup-screen">
+  <div class="setup-wrap">
+    <div class="setup-masthead">
+      <div class="setup-shield">🛡️</div>
+      <div class="setup-masthead-text">
+        <div class="setup-title">SEKapp <em>Mosler</em> <span style="font-size:12px;background:rgba(13,148,136,.3);border-radius:4px;padding:2px 7px;vertical-align:middle;color:#fff;letter-spacing:.5px">PREMIUM</span></div>
+        <div class="setup-subtitle">Diagnóstico Estratégico de Riesgos · Doctrina ASIS / Método Mosler</div>
+      </div>
+    </div>
+
+    <div class="setup-body">
+      <div>
+        <div class="setup-section-title">01 — Entorno y Geopolítica</div>
+        <div class="setup-grid" style="margin-top:12px">
+          <div class="setup-field full">
+            <label class="setup-label">País / Región de Operación</label>
+            <div class="country-wrap">
+              <input class="setup-input" id="setup-country-input" type="text" placeholder="Escriba el nombre del país..." autocomplete="off" oninput="filtrarPaises(this.value)" onblur="cerrarSugerencias()" onfocus="filtrarPaises(this.value)">
+              <div class="country-suggestions" id="country-suggestions"></div>
+            </div>
+            <div class="field-error-msg" id="err-pais">⚠ Seleccione un país de la lista antes de continuar.</div>
+            <div class="no-data-note" id="no-data-note" style="display:none;margin-top:6px">⚠️ Este país no tiene índices precargados. Los campos A y V quedarán vacíos para que el evaluador los defina in situ.</div>
+          </div>
+
+          <div class="setup-field full">
+            <div class="intel-panel" id="intel-panel">
+              <div class="intel-header">
+                <span class="intel-header-title">📊 Línea Base de Inteligencia (ASIS Assessment)</span>
+                <span class="intel-header-country" id="intel-country-name"></span>
+              </div>
+              <div class="intel-cols" id="intel-cols"></div>
+              <div class="intel-pest" id="intel-pest"></div>
+            </div>
+          </div>
+
+          <div class="setup-field full">
+            <label class="setup-label">📍 Dirección / Instalación Georreferenciada</label>
+            <div class="input-btn-row">
+              <input class="setup-input" id="setup-ub" type="text" placeholder="Ej: Multiplaza, Ciudad de Panamá">
+              <button class="btn-geo" onclick="usarGeolocalizacion()" title="Usar mi ubicación actual">
+                📡 Mi Ubicación
+              </button>
+              <button class="btn-mapa" onclick="cargarMapa()">🗺️ Mapa</button>
+            </div>
+            <div class="field-error-msg" id="err-ub">⚠ Ingrese la dirección o use geolocalización.</div>
+            <div class="geo-status" id="geo-status"></div>
+            <div class="geo-model-suggestion" id="geo-model-suggestion">
+              <span id="geo-model-text"></span>
+              <button class="btn-accept-model" onclick="aceptarModeloGeo()">Usar este modelo</button>
+              <button class="btn-keep-model" onclick="ignorarModeloGeo()">Mantener selección</button>
+            </div>
+          </div>
+
+          <div class="setup-field full">
+            <div class="maps-wrap"><iframe id="setup-map" src="about:blank"></iframe></div>
+          </div>
         </div>
-    `;
-    document.body.appendChild(modalHtml);
+      </div>
+
+      <div>
+        <div class="setup-section-title">02 — Modelo de Operación y Madurez</div>
+        <div class="setup-grid" style="margin-top:12px">
+          <div class="setup-field full">
+            <label class="setup-label">Modelo de Negocio / Tipo de Instalación</label>
+            <select class="setup-select" id="setup-modelo">
+              <option value="corp">Sedes Corporativas y Oficinas</option>
+              <option value="mall_comun">C.C. — Áreas Comunes y Estacionamientos</option>
+              <option value="mall_ancla">C.C. — Locales Grandes (Retail / Anclas)</option>
+              <option value="mall_boutique">C.C. — Comercio General (Boutiques / Restaurantes)</option>
+              <option value="industrial">Industrial y Manufactura</option>
+              <option value="logistica">Logística y Almacenamiento (CEDIS)</option>
+              <option value="hoteleria">Hotelería y Turismo</option>
+              <option value="salud">Centros de Salud y Hospitales</option>
+              <option value="mineria">Minería y Recursos Naturales</option>
+              <option value="banca">Banca y Servicios Financieros</option>
+              <option value="gobierno">Instalaciones de Gobierno</option>
+              <option value="transporte">Transporte Masivo y Terminales</option>
+              <option value="agroindustria">Agroindustria y Campo</option>
+              <option value="educacion">Instituciones Educativas</option>
+              <option value="deportivo">Complejo Deportivo y Recreativo</option>
+              <option value="residencial">Edificio o Barrio Residencial</option>
+            </select>
+          </div>
+
+          <div class="setup-field full">
+            <label class="setup-label">🛡️ Madurez de Controles de Seguridad Existentes</label>
+            <select class="setup-select" id="setup-madurez">
+              <option value="bajo">Bajo — Reactivo / Sin estructura formal</option>
+              <option value="medio" selected>Medio — Normativo / Tecnología estándar</option>
+              <option value="alto">Alto — Resiliente / ISO 27001 · SOC · BASC</option>
+            </select>
+          </div>
+
+          <div class="setup-field full">
+            <label class="setup-label">👤 Director de Seguridad / Consultor CPP Evaluador</label>
+            <input class="setup-input" id="setup-ev" type="text" placeholder="Nombre, credenciales y número de certificación">
+            <div class="field-error-msg" id="err-ev">⚠ Ingrese el nombre del evaluador responsable.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="validation-toast" id="validation-toast"></div>
+      <button class="btn-start" onclick="iniciarMatriz()">Iniciar Matriz de Riesgo Personalizada →</button>
+    </div>
+  </div>
+</div>
+
+<div class="print-hdr">
+  <h2>REPORTE CORPORATIVO — ANÁLISIS DE RIESGOS MÉTODO MOSLER</h2>
+  <p style="font-size:12px;margin-top:6px">SEKapp Mosler Premium · KANAN SENTINEL INC. · 2026</p>
+</div>
+
+<div class="report-map-box" id="report-map-box">
+  <div class="report-map-header">📍 Certificación y Georreferenciación Formal del Activo</div>
+  <div class="report-map-fallback" id="report-map-fallback"></div>
+</div>
+
+<div class="topbar">
+  <div class="top-row">
+    <div class="brand">
+      <div class="logo">🛡️</div>
+      <span class="bname">SEKapp <em>Mosler</em></span>
+      <span class="pill">PREMIUM</span>
+    </div>
+    <button class="btn-theme" onclick="toggleTema()" id="theme-btn">🌙</button>
+  </div>
+  <div class="formula">ER = [(F×S)+(P×E)] × (A×V) · Escala 1–5 · Máx. 1,250</div>
+</div>
+
+<div class="action-row">
+  <button class="btn btn-add"   onclick="agregarFila()">+ Nuevo Riesgo</button>
+  <button class="btn btn-pdf"   onclick="exportarPDF()">📕 PDF</button>
+  <button class="btn btn-excel" onclick="copiarExcel()">📋 Excel</button>
+  <button class="btn btn-clear" onclick="volverSetup()">⚙ Reconfigurar</button>
+  <button class="btn btn-guide" onclick="toggleGuide()">📖 Criterios</button>
+</div>
+
+<div class="guide" id="guide">
+  <div class="guide-inner">
+    <div class="g-title">Guía de Criterios — Escala 1 al 5</div>
+    <div class="g-grid">
+      <div class="g-item"><div class="g-key">F</div><div class="g-name">Función</div><div class="g-desc">Criticidad de la función operativa afectada</div></div>
+      <div class="g-item"><div class="g-key">S</div><div class="g-name">Sustitución</div><div class="g-desc">Dificultad para reemplazar el activo comprometido</div></div>
+      <div class="g-item"><div class="g-key">P</div><div class="g-name">Profundidad</div><div class="g-desc">Daño psicológico, reputacional o institucional</div></div>
+      <div class="g-item"><div class="g-key">E</div><div class="g-name">Extensión</div><div class="g-desc">Alcance geográfico o humano del daño potencial</div></div>
+      <div class="g-item" style="border:1px solid rgba(217,119,6,.3)"><div class="g-key" style="color:var(--amber)">A</div><div class="g-name">Agresión</div><div class="g-desc">Probabilidad de ocurrencia — informada por índices de entorno</div></div>
+      <div class="g-item" style="border:1px solid rgba(217,119,6,.3)"><div class="g-key" style="color:var(--amber)">V</div><div class="g-name">Vulnerabilidad</div><div class="g-desc">⚠ Definida por el evaluador tras la inspección física in situ</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="report-intel" id="report-intel">
+  <div class="ri-header">
+    <span>📊 Línea Base de Inteligencia de Entorno — ASIS Assessment</span>
+    <span class="ri-country-badge" id="ri-country"></span>
+  </div>
+  <div class="ri-grid" id="ri-grid"></div>
+  <div class="ri-pest" id="ri-pest"></div>
+</div>
+
+<div class="ctx-metrics">
+  <div class="context">
+    <div class="ctx-field">
+      <span class="ctx-label">📍 Instalación, Zona y Modelo Técnico</span>
+      <input class="ctx-input" id="ubicacion" type="text" onchange="guardar()">
+    </div>
+    <div class="ctx-row">
+      <div class="ctx-field">
+        <span class="ctx-label">📅 Fecha de Evaluación</span>
+        <input class="ctx-input" id="fecha" type="date" onchange="guardar()">
+      </div>
+      <div class="ctx-field">
+        <span class="ctx-label">👤 Evaluador / CPP</span>
+        <input class="ctx-input" id="evaluador" type="text" onchange="guardar()">
+      </div>
+    </div>
+    <div class="signature-area">
+      <div class="sig-hdr">
+        <span class="ctx-label" style="color:var(--teal)">✍️ Firma Digital del Evaluador</span>
+        <button class="btn-sig-clear" onclick="limpiarFirma()">Borrar</button>
+      </div>
+      <canvas class="sig-canvas" id="firma-canvas"></canvas>
+    </div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><div class="mv" id="cnt-total" style="color:var(--teal)">0</div><div class="ml">Total</div></div>
+    <div class="metric"><div class="mv" id="cnt-alto"  style="color:var(--red)">0</div><div class="ml">Alto ≥601</div></div>
+    <div class="metric"><div class="mv" id="cnt-medio" style="color:var(--amber)">0</div><div class="ml">Medio</div></div>
+    <div class="metric"><div class="mv" id="cnt-bajo"  style="color:var(--green)">0</div><div class="ml">Bajo ≤200</div></div>
+  </div>
+</div>
+
+<div class="pareto-banner" id="pareto-banner">
+  <span class="pareto-icon">⚡</span>
+  <span class="pareto-text" id="pareto-text"></span>
+</div>
+
+<div class="cards" id="cards">
+  <div class="empty-state">No hay riesgos registrados.<br>Presione <b>+ Nuevo Riesgo</b> para comenzar.</div>
+</div>
+
+<div class="rank-section">
+  <div class="rank-card">
+    <div class="rank-title">Ranking — Mayor a Menor Exposición al Riesgo (ER) + Distribución Pareto</div>
+    <div id="ranking"></div>
+  </div>
+</div>
+
+<div class="dashboard">
+  <div class="dash-title">📊 Apreciación Estratégica de Vulnerabilidad</div>
+  <div class="charts-grid">
+    <div class="chart-box">
+      <h4>Distribución de Severidad (Mosler)</h4>
+      <div class="canvas-wrap"><canvas id="chartDona"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h4>Perfil de Debilidad Promedio (Criterios)</h4>
+      <div class="canvas-wrap"><canvas id="chartRadar"></canvas></div>
+    </div>
+    <div class="chart-box chart-box-wide">
+      <h4>Análisis Comparativo del Riesgo (ER) — Top 8</h4>
+      <div class="canvas-wrap" style="height:200px"><canvas id="chartBarras"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="cierre-section" id="cierre-ejecutivo">
+  <div class="cierre-card">
+    <div class="cierre-title">Conclusiones del Análisis de Riesgo y Plan de Acción Estratégico</div>
+    
+    <div class="iec-banner" id="iec-banner-box">
+      <div class="iec-header-row">
+        <span class="iec-lbl">Índice de Exposición Corporativa (IEC)</span>
+        <span class="iec-num" id="iec-value">0%</span>
+      </div>
+      <div class="iec-status-title" id="iec-status-title">Calculando postura estratégica...</div>
+      <div class="iec-desc" id="iec-status-desc">Complete y evalúe los riesgos de la matriz para generar el diagnóstico corporativo unificado.</div>
+    </div>
+
+    <div class="horizontes-grid">
+      <div class="horizonte-box" style="border-left: 3px solid var(--red);">
+        <div class="horizonte-hdr" style="color: var(--red);">🚨 Prioridad Alta: Mitigación Inmediata (Foco Pareto · 24-48 Horas)</div>
+        <ul class="horizonte-list" id="rec-inmediata">
+          <li>Focalice acciones de contención táctica inmediata en los activos perimetrales y críticos del negocio.</li>
+        </ul>
+      </div>
+
+      <div class="horizonte-box" style="border-left: 3px solid var(--amber);">
+        <div class="horizonte-hdr" style="color: var(--amber);">📅 Prioridad Media: Planificación Táctica (1 Semana a 30 Días)</div>
+        <ul class="horizonte-list">
+          <li>Estandarice y audite los Procedimientos Operativos Normalizados (SOPs) del área afectada.</li>
+          <li>Calibre, integre y verifique el mantenimiento predictivo de los sistemas de CCTV y control de accesos electrónicos.</li>
+        </ul>
+      </div>
+
+      <div class="horizonte-box" style="border-left: 3px solid var(--teal);">
+        <div class="horizonte-hdr" style="color: var(--teal);">📐 Prioridad Baja: Planificación Estratégica (30 a 90 Días)</div>
+        <ul class="horizonte-list">
+          <li>Estructure comités de gestión de crisis permanentes alineados a las directrices globales de gobernanza corporativa ISO 31000.</li>
+          <li>Evalúe esquemas financieros de transferencia residual de riesgos mediante la optimización de pólizas de seguros corporativas.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">SEKapp Mosler Add-on PREMIUM · KANAN SENTINEL INC. · 2026 · Doctrina ASIS / ISO 31000 / Método Mosler</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const LATAM = {
+  panama:       { name:"Panamá",             flag:"🇵🇦", crime:46.2, crimeL:"Moderado",  econ:36, econL:"Bajo-Mod",  clim:42, climL:"Mod",       a:2, v:null, pest:{P:"Estable democrático",E:"Dolarización, Hub logístico",S:"Tendencias laborales moderadas",T:"Conectividad alta",En:"Lluvias estacionales, inundaciones",L:"Marco legal sólido"} },
+  colombia:     { name:"Colombia",            flag:"🇨🇴", crime:61.8, crimeL:"Alto",      econ:39, econL:"Moderado",  clim:72, climL:"Alto",       a:4, v:null, pest:{P:"Post-conflicto, tensión rural",E:"Economía diversificada, extorsión",S:"Movilización social activa",T:"Expansión digital",En:"Alta sismicidad, inundaciones",L:"Reforma policial en curso"} },
+  elsalvador:   { name:"El Salvador",          flag:"🇸🇻", crime:22.1, crimeL:"Bajo",      econ:34, econL:"Bajo",      clim:85, climL:"Muy Alto",    a:2, v:null, pest:{P:"Gobierno autoritario centralizado",E:"Bitcoin legal, remesas 25% PIB",S:"Migración masiva constante",T:"Plan Ciberseguridad Nacional",En:"Cinturón de Fuego, sismos",L:"Suspensión garantías constitucionales"} },
+  guatemala:    { name:"Guatemala",            flag:"🇬🇹", crime:60.4, crimeL:"Alto",      econ:24, econL:"Bajo",      clim:88, climL:"Extremo",      a:4, v:null, pest:{P:"Alta inestabilidad institucional",E:"Economía informal 70%, extorsión",S:"Alta desigualdad socioeconómica",T:"Baja penetración digital",En:"Volcanes activos, deslaves",L:"Impunidad judicial elevada"} },
+  costarica:    { name:"Costa Rica",           flag:"🇨🇷", crime:48.9, crimeL:"Moderado",  econ:56, econL:"Moderado",  clim:58, climL:"Mod-Alto",    a:3, v:null, pest:{P:"Democracia consolidada",E:"Economía servicios, turismo",S:"Clase media sólida",T:"Alta penetración tecnológica",En:"Pluviosidad destructiva, sismos",L:"Estado de derecho estable"} },
+  mexico:       { name:"México",               flag:"🇲🇽", crime:67.3, crimeL:"Alto",      econ:28, econL:"Bajo",      clim:65, climL:"Alto",       a:4, v:null, pest:{P:"Influencia del crimen organizado",E:"Economía emergente, nearshoring",S:"Alta desigualdad, movimientos sociales",T:"Hub tecnológico en expansión",En:"Sismos, huracanes, sequías",L:"Marco legal variable por estado"} },
+  peru:         { name:"Perú",                 flag:"🇵🇪", crime:65.1, crimeL:"Alto",      econ:32, econL:"Bajo",      clim:78, climL:"Alto",       a:4, v:null, pest:{P:"Alta inestabilidad política, golpes",E:"Minería, agro, remesas",S:"Conflictos sociales mineros",T:"Expansión digital moderada",En:"Sismos, El Niño, inundaciones",L:"Corrupción judicial extendida"} },
+  chile:        { name:"Chile",                flag:"🇨🇱", crime:52.3, crimeL:"Moderado",  econ:67, econL:"Alto",      clim:61, climL:"Mod-Alto",    a:3, v:null, pest:{P:"Tensión post-estallido social",E:"Economía estable, minería",S:"Movimientos sociales activos",T:"Alta adopción tecnológica",En:"Sismos, tsunamis, incendios",L:"Reforma constitucional en proceso"} },
+  argentina:    { name:"Argentina",            flag:"🇦🇷", crime:55.6, crimeL:"Moderado",  econ:18, econL:"Muy Bajo",  clim:55, climL:"Mod",        a:3, v:null, pest:{P:"Ajustes macroeconómicos",E:"Inflación volátil",S:"Alta fuerza sindical",T:"Ecosistema unicornio tech",En:"Inundaciones pampeanas",L:"Restricciones cambiarias"} },
+  brasil:       { name:"Brasil",               flag:"🇧🇷", crime:71.2, crimeL:"Muy Alto",  econ:38, econL:"Bajo",      clim:68, climL:"Alto",       a:5, v:null, pest:{P:"Polarización política extrema",E:"Mayor economía Latam, desigualdad",S:"Alta criminalidad organizada",T:"Liderazgo regional en fintech",En:"Deforestación, inundaciones",L:"Marco legal complejo, burocracia"} },
+  venezuela:    { name:"Venezuela",            flag:"🇻🇪", crime:83.7, crimeL:"Extremo",   econ:10, econL:"Crítico",   clim:58, climL:"Mod-Alto",    a:5, v:null, pest:{P:"Régimen autoritario",E:"Hiperinflación, colapso económico",S:"Migración masiva, escasez",T:"Infraestructura digital deteriorada",En:"Lluvias, deslaves recurrentes",L:"Estado de derecho colapsado"} },
+  bolivia:      { name:"Bolivia",              flag:"🇧🇴", crime:57.2, crimeL:"Moderado",  econ:31, econL:"Bajo",      clim:75, climL:"Alto",       a:3, v:null, pest:{P:"Polarización política intensa",E:"Economía en contracción",S:"Alta conflictividad social",T:"Baja adopción digital",En:"Inundaciones, sequías altiplano",L:"Institucionalidad debilitada"} },
+  ecuador:      { name:"Ecuador",              flag:"🇪🇨", crime:68.4, crimeL:"Alto",      econ:33, econL:"Bajo",      clim:71, climL:"Alto",       a:4, v:null, pest:{P:"Conflicto armado interno",E:"Dolarización comercial",S:"Inseguridad urbana alta",T:"Digitalización estándar",En:"Sismos costeros, volcanes",L:"Estado de derecho idoneo"} },
+  uruguay:      { name:"Uruguay",              flag:"🇺🇾", crime:41.8, crimeL:"Moderado",  econ:72, econL:"Alto",      clim:44, climL:"Mod",        a:2, v:null, pest:{P:"Democracia estable",E:"Hub logístico y de software",S:"Equidad social alta",T:"Penetración digital total",En:"Sequías severas",L:"Seguridad jurídica total"} },
+  paraguay:     { name:"Paraguay",             flag:"🇵🇾", crime:52.1, crimeL:"Moderado",  econ:38, econL:"Bajo",      clim:60, climL:"Mod-Alto",    a:3, v:null, pest:{P:"Dominio unipartidista",E:"Energía limpia y agro",S:"Tensiones rurales",T:"Inversión digital baja",En:"Desbordes de ríos",L:"Contrabando fronterizo"} },
+  honduras:     { name:"Honduras",             flag:"🇭🇳", crime:72.5, crimeL:"Muy Alto",  econ:22, econL:"Muy Bajo",  clim:82, climL:"Muy Alto",    a:5, v:null, pest:{P:"Alta corrupción, gobernanza débil",E:"Extorsión sistémica, remesas",S:"Migración masiva, desempleo",T:"Baja infraestructura tecnológica",En:"Zonas vulnerables a huracán",L:"Poder judicial permeable"} },
+  nicaragua:    { name:"Nicaragua",            flag:"🇳🇮", crime:38.1, crimeL:"Moderado",  econ:25, econL:"Bajo",      clim:74, climL:"Alto",       a:3, v:null, pest:{P:"Régimen autoritario cerrado",E:"Base agrícola",S:"Restricción ciudadana",T:"Redes limitadas",En:"Rutas sísmicas, volcanes",L:"Estado de derecho inexistente"} },
+  dominicanarep:{ name:"Rep. Dominicana",      flag:"🇩🇴", crime:58.3, crimeL:"Moderado",  econ:45, econL:"Moderado",  clim:67, climL:"Alto",       a:3, v:null, pest:{P:"Estabilidad política",E:"Turismo y zonas francas",S:"Presión migratoria",T:"Telecomunicaciones fuertes",En:"Trayectoria de huracanes",L:"Modernización legal"} },
+  cuba:         { name:"Cuba",                 flag:"🇨🇺", crime:28.6, crimeL:"Bajo",      econ:12, econL:"Crítico",   clim:62, climL:"Mod-Alto",    a:2, v:null, pest:{P:"Estado totalitario",E:"Crisis de divisas y energía",S:"Migración masiva",T:"Internet controlado",En:"Huracanes destructivos",L:"Sin propiedad privada formal"} },
+  trinidad:     { name:"Trinidad y Tobago",    flag:"🇹🇹", crime:69.4, crimeL:"Alto",      econ:48, econL:"Moderado",  clim:52, climL:"Mod",        a:4, v:null, pest:{P:"Gangs urbanas activas",E:"Petróleo y gas natural",S:"Violencia pandillas",T:"Conectividad alta",En:"Tormentas del Caribe",L:"Derecho anglosajón"} },
+  guyana:       { name:"Guyana",               flag:"🇬🇾", crime:55.7, crimeL:"Moderado",  econ:52, econL:"Moderado",  clim:60, climL:"Mod-Alto",    a:3, v:null, pest:{P:"Tensiones étnicas",E:"Boom petrolero récord mundial",S:"Rápida urbanización",T:"Redes en despliegue",En:"Inundaciones costeras",L:"Leyes comerciales"} }
+};
+
+const PRECARGA = {
+  corp:        [{desc:"Intrusión física no autorizada a instalaciones corporativas (ASIS)",f:4,s:3,p:3,e:2},{desc:"Exfiltración de información confidencial / Activos digitales (ISO 27001)",f:5,s:4,p:4,e:3},{desc:"Falla en sistemas de evacuación y seguridad humana en horas laborales (NFPA 101)",f:3,s:2,p:3,e:4}],
+  mall_comun: [{desc:"Hurto o robo de vehículos en estacionamientos y áreas perimetrales (ASIS)",f:2,s:3,p:3,e:3},{desc:"Intrusión no autorizada en áreas técnicas críticas (NFPA 730)",f:5,s:4,p:4,e:2},{desc:"Incendio estructural en muelles de carga o pasillos de servicio (NFPA 1)",f:4,s:4,p:4,e:4},{desc:"Accidentes masivos por fallas en escaleras mecánicas o ascensores (OSHA)",f:3,s:3,p:3,e:3}],
+  mall_ancla: [{desc:"Pérdida por bandas organizadas de hurto en piso de venta (ASIS)",f:3,s:2,p:2,e:3},{desc:"Intrusión forzada nocturna a bóveda de efectivo (ASIS)",f:4,s:4,p:3,e:2},{desc:"Incendio en bodegas internas por almacenamiento compacto (NFPA 70/13)",f:4,s:4,p:4,e:3}],
+  mall_boutique:[{desc:"Robo con violencia en cajas durante operación comercial (ASIS)",f:3,s:3,p:4,e:2},{desc:"Amago de incendio por fallas en extracción de cocina (NFPA 96)",f:4,s:3,p:3,e:2},{desc:"Parálisis operativa por corte de servicios críticos (ISO 22301)",f:4,s:4,p:3,e:2}],
+  industrial: [{desc:"Accidente operativo grave por atrapamiento en maquinaria (OSHA/ISO 45001)",f:4,s:3,p:4,e:3},{desc:"Sabotaje interno o vandalismo externo a líneas de producción (ASIS)",f:5,s:4,p:4,e:2},{desc:"Hurto sistemático de materia prima en patios perimetrales (ASIS)",f:3,s:3,p:2,e:2}],
+  logistica:  [{desc:"Intrusión armada y asalto en andenes de carga (ASIS/BASC)",f:4,s:4,p:4,e:3},{desc:"Colapso de racks por sobrecarga o impacto de montacargas (OSHA)",f:3,s:3,p:3,e:2},{desc:"Afectación a cadena de suministro por bloqueos climáticos (ISO 22301)",f:4,s:4,p:3,e:4}],
+  hoteleria:  [{desc:"Acceso no autorizado a habitaciones privadas de huéspedes (ASIS)",f:3,s:3,p:5,e:2},{desc:"Brote epidemiológico por contaminación en agua o alimentos (ISO 22000)",f:4,s:4,p:5,e:4},{desc:"Incendio estructural en piso de habitaciones (NFPA 101/13)",f:5,s:4,p:5,e:4}],
+  salud:      [{desc:"Falla catastrófica en suministro eléctrico de áreas críticas / Soporte vital (NFPA 99)",f:5,s:5,p:5,e:3},{desc:"Sustracción ilícita de medicamentos controlados (OSHA)",f:3,s:4,p:4,e:2},{desc:"Intrusión violenta a áreas restringidas o laboratorios (ASIS)",f:4,s:3,p:3,e:2}],
+  mineria:    [{desc:"Accidente masivo en túneles o frentes de extracción (OSHA/ISO 45001)",f:5,s:5,p:5,e:3},{desc:"Bloqueo de acceso a mina por conflicto social o protesta (ASIS)",f:4,s:4,p:3,e:4},{desc:"Derrame de materiales peligrosos en área de procesamiento (EPA/ISO 14001)",f:4,s:3,p:4,e:5}],
+  banca:      [{desc:"Asalto armado a oficina bancaria o cajero automático (ASIS)",f:4,s:3,p:4,e:2},{desc:"Fraude electrónico y ataque cibernético a sistemas core (ISO 27001)",f:5,s:5,p:5,e:4},{desc:"Secuestro express de ejecutivos en proximidades de sucursales (ASIS)",f:3,s:4,p:5,e:2}],
+  gobierno:   [{desc:"Intrusión a instalaciones de gobierno con fines hostiles (ASIS)",f:5,s:4,p:5,e:3},{desc:"Ataque a infraestructura crítica o sistemas de información (ISO 27001)",f:5,s:5,p:5,e:5},{desc:"Manifestación violenta o toma de instalaciones (Gestión Crisis)",f:3,s:3,p:4,e:4}],
+  transporte: [{desc:"Asalto masivo en unidades de transporte o estaciones (ASIS)",f:4,s:3,p:4,e:4},{desc:"Falla técnica estructural en infraestructura de tránsito (NFPA 130)",f:5,s:5,p:5,e:5},{desc:"Pánico masivo por amenaza real o percibida en terminal (Gestión Crisis)",f:3,s:3,p:4,e:4}],
+  agroindustria:[{desc:"Hurto nocturno de maquinaria agrícola de alto valor (ASIS)",f:3,s:4,p:2,e:2},{desc:"Contaminación deliberada de cultivos o reservorios de agua (ISO 22000)",f:4,s:4,p:4,e:4},{desc:"Bloqueo de rutas de acceso por conflictos de tierras (ASIS)",f:4,s:3,p:3,e:3}],
+  educacion:  [{desc:"Intrusión violenta a instalaciones educativas (ASIS)",f:4,s:3,p:5,e:4},{desc:"Incendio en aulas o laboratorios por fallas eléctricas (NFPA 101)",f:4,s:3,p:4,e:3},{desc:"Ciberataque a sistemas de información académica (ISO 27001)",f:3,s:4,p:3,e:2}],
+  deportivo:  [{desc:"Disturbios masivos o violencia entre espectadores en eventos masivos (ASIS)",f:4,s:2,p:4,e:5},{desc:"Intrusión no autorizada a instalaciones restringidas — vestuarios/bodegas (ASIS)",f:3,s:3,p:3,e:2},{desc:"Incendio o colapso de estructura temporal en graderías (NFPA 101/102)",f:5,s:4,p:5,e:5}],
+  residencial:[{desc:"Intrusión domiciliaria forzada en unidades habitacionales — robo con violencia (ASIS)",f:3,s:3,p:5,e:2},{desc:"Violencia o agresión física en áreas comunes o estacionamientos (ASIS)",f:3,s:2,p:4,e:3},{desc:"Incendio en unidad residencial por fallas eléctricas o gas (NFPA 1/101)",f:5,s:5,p:5,e:4}]
+};
+
+const GEO_MODELO_KEYWORDS = {
+  deportivo:    ['estadio','arena','complejo deportivo','polideportivo','gimnasio','cancha'],
+  residencial:  ['residencial','condominio','apartamento','edificio','conjunto','barrio','urbanización'],
+  hoteleria:    ['hotel','resort','hostal','suites'],
+  salud:        ['hospital','clínica','centro médico'],
+  mall_comun:   ['mall','centro comercial','plaza comercial','multiplaza'],
+  corp:         ['corporativo','oficinas','sede','tower','centro empresarial'],
+  industrial:   ['planta','fábrica','industria','zona industrial'],
+  logistica:    ['bodega','almacén','cedis','logística'],
+  banca:        ['banco','financiera','sucursal bancaria'],
+  gobierno:     ['alcaldía','ministerio','gobernación','municipio'],
+  educacion:    ['colegio','escuela','universidad','instituto'],
+  transporte:   ['aeropuerto','terminal','estación','puerto'],
+  agroindustria:['finca','hacienda','granja','campo'],
+  mineria:      ['mina','minera','extracción']
+};
+
+function detectarModeloPorDireccion(addr){
+  const lower = addr.toLowerCase();
+  for(const [modelo, keywords] of Object.entries(GEO_MODELO_KEYWORDS)){
+    if(keywords.some(k => lower.includes(k))) return modelo;
+  }
+  return null;
 }
 
-// 7. Automatización del Envío (Captura, Guardado Simulado y Lanzamiento de Modal)
-document.getElementById('mainInspectionForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+function sugerirModeloGeo(modelo, addr){
+  if(!modelo) return;
+  const select = document.getElementById('setup-modelo');
+  const opcion = Array.from(select.options).find(o => o.value === modelo);
+  if(!opcion) return;
+  geoModeloSugerido = modelo;
+  const box = document.getElementById('geo-model-suggestion');
+  document.getElementById('geo-model-text').innerHTML = `📍 Instalación detectada como <b>${opcion.text}</b> según la dirección. ¿Usar este modelo?`;
+  box.classList.add('show');
+}
 
-    // Aquí los datos se empaquetan listos para persistencia estructurada
-    const formData = new FormData(this);
-    console.log("SEKaform Data - Datos listos para almacenamiento relacional:", Object.fromEntries(formData));
+function aceptarModeloGeo(){
+  if(geoModeloSugerido){ document.getElementById('setup-modelo').value = geoModeloSugerido; }
+  document.getElementById('geo-model-suggestion').classList.remove('show');
+  geoModeloSugerido = null;
+}
 
-    // Desplegamos el modal de éxito para el flujo del Test Drive
-    document.getElementById('sekaModal').classList.add('show');
-});
+function ignorarModeloGeo(){
+  document.getElementById('geo-model-suggestion').classList.remove('show');
+  geoModeloSugerido = null;
+}
 
-// Acción de Botón Cancelar
-document.getElementById('btnCancel').addEventListener('click', () => {
-    if(confirm('¿Seguro que deseas salir? Los cambios no guardados se perderán.')) {
-        window.location.href = 'landing_page_sekdocs.html';
-    }
-});
+function filtrarPaises(q){
+  const box = document.getElementById('country-suggestions');
+  const keys = Object.keys(LATAM);
+  const matches = q.length < 1 ? keys.slice(0,8) : keys.filter(k => LATAM[k].name.toLowerCase().includes(q.toLowerCase()));
+  if(!matches.length){ box.classList.remove('open'); return; }
+  box.innerHTML = matches.map(k=>{
+    const p = LATAM[k];
+    return `<div class='cs-item' onmousedown='seleccionarPais("${k}")'><span class='cs-flag'>${p.flag}</span> <span class='cs-name'>${p.name}</span><span class='cs-idx'>Crime ${p.crime} · IPC ${p.econ}</span></div>`;
+  }).join('');
+  box.classList.add('open');
+}
+
+function cerrarSugerencias(){ setTimeout(()=>{ document.getElementById('country-suggestions').classList.remove('open'); }, 200); }
+
+function seleccionarPais(key){
+  paisActActive = key; const p = LATAM[key];
+  document.getElementById('setup-country-input').value = p.name;
+  document.getElementById('country-suggestions').classList.remove('open');
+  document.getElementById('no-data-note').style.display = 'none';
+  renderIntelPanel(key);
+}
+
+function renderIntelPanel(key){
+  const p = LATAM[key]; const panel = document.getElementById('intel-panel');
+  document.getElementById('intel-country-name').textContent = p.flag + " " + p.name;
+  const colorFor = (val, max) => { const pct = val/max; if(pct > .66) return '#dc2626'; if(pct > .33) return '#d97706'; return '#059669'; };
+
+  document.getElementById('intel-cols').innerHTML = `
+    <div class="intel-col">
+      <div class="intel-col-label">🔴 Índice Delincuencial Civil</div>
+      <div class="intel-col-val" style="color:${colorFor(p.crime,100)}">${p.crime}</div>
+      <div class="intel-col-desc">Numbeo Crime Index · ${p.crimeL}</div>
+      <div class="intel-col-bar"><div class="intel-col-bar-fill" style="width:${p.crime}%;background:${colorFor(p.crime,100)}"></div></div>
+    </div>
+    <div class="intel-col">
+      <div class="intel-col-label">💼 Índice Económico / Corrupción</div>
+      <div class="intel-col-val" style="color:${colorFor(100-p.econ,100)}">${p.econ}/100</div>
+      <div class="intel-col-desc">IPC · Transparencia Int. · ${p.econL}</div>
+      <div class="intel-col-bar"><div class="intel-col-bar-fill" style="width:${p.econ}%;background:#059669"></div></div>
+    </div>
+    <div class="intel-col">
+      <div class="intel-col-label">🌪️ Riesgo Climático Global</div>
+      <div class="intel-col-val" style="color:${colorFor(p.clim,100)}">${p.clim}</div>
+      <div class="intel-col-desc">Germanwatch CRI · ${p.climL}</div>
+      <div class="intel-col-bar"><div class="intel-col-bar-fill" style="width:${p.clim}%;background:${colorFor(p.clim,100)}"></div></div>
+    </div>
+    <div class="intel-col">
+      <div class="intel-col-label">⚡ Agresión Base Sugerida (A)</div>
+      <div class="intel-col-val" style="color:${colorFor(p.a,5)}">${p.a}/5</div>
+      <div class="intel-col-desc">Informado por índices · Evaluador define V in situ</div>
+      <div class="intel-col-bar"><div class="intel-col-bar-fill" style="width:${p.a/5*100}%;background:${colorFor(p.a,5)}"></div></div>
+    </div>`;
+
+  document.getElementById('intel-pest').innerHTML = Object.entries(p.pest).map(([k,v])=>`
+    <div class="pest-item">
+      <div class="pest-key">${k === 'P' ? 'Político' : k === 'E' ? 'Económico' : k === 'S' ? 'Social' : k === 'T' ? 'Tecnológico' : k === 'En' ? 'Ambiental' : 'Legal'}</div>
+      <div class="pest-desc">${v}</div>
+    </div>`).join('');
+  panel.classList.add('visible');
+}
+
+function cargarMapa(){
+  const ub = document.getElementById('setup-ub').value; if(!ub) return;
+  const url = `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(ub)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  document.getElementById('setup-map').src = url; mapUrl = url;
+}
+
+function calc(r){
+  const I=r.f*r.s, D=r.p*r.e, C=I+D;
+  const aVal = r.a || 0, vVal = r.v || 0;
+  const PR = aVal * vVal; const ER = C * PR;
+  return {I,D,C,PR,ER};
+}
+
+function nivel(ER){
+  if(ER>=601) return {label:"ALTO",  col:"#dc2626", bg:"rgba(220,38,38,.08)",  bd:"rgba(220,38,38,.3)",  cls:"alto"};
+  if(ER>=201) return {label:"MEDIO", col:"#d97706", bg:"rgba(217,119,6,.08)",  bd:"rgba(217,119,6,.3)",  cls:"medio"};
+  return              {label:"BAJO",  col:"#059669", bg:"rgba(5,150,105,.08)",  bd:"rgba(5,150,105,.3)",  cls:"bajo"};
+}
+
+function mkSel(id, key, val, isEmpty){
+  const emptyClass = isEmpty ? ' empty-v' : '';
+  let s = `<select class="crit-sel${emptyClass}" onchange="onSel(${id},'${key}',this.value)" id="sel_${id}_${key}">`;
+  if(isEmpty) s += `<option value="" selected>—</option>`;
+  for(let i=1;i<=5;i++) s+=`<option value="${i}"${i==val&&!isEmpty?' selected':''}>${i}</option>`;
+  return s+'</select>';
+}
+
+function resultHTML(r){
+  const {I,D,C,PR,ER} = calc(r); const nv = nivel(ER); const pct = ER > 0 ? Math.min(ER/1250*100,100) : 0; const pending = (!r.a || !r.v);
+  return `<div class="result-formula">
+    <b>I</b>=${I} · <b>D</b>=${D} · <b>C</b>=${C} · <b>PR</b>=${PR||'?×?'}
+    ${pending ? '<br><span style="color:var(--amber);font-size:9px">⚠ Defina A y/o V para calcular ER</span>' : ''}
+  </div>
+  <div class="result-right">
+    <span class="er-number" style="color:${ER>0?nv.col:'var(--muted)'}">${ER>0?ER:'—'}</span>
+    ${erPctSpan(r)}
+    <div class="er-bar-wrap"><div class="bar-bg"><div class="bar-fg" style="width:${pct}%;background:${nv.col}"></div></div></div>
+    <span class="badge" style="background:${nv.bg};color:${nv.col};border-color:${nv.bd}">${ER>0?nv.label:'PENDIENTE'}</span>
+  </div>`;
+}
+
+function erPctSpan(r){
+  const {ER} = calc(r); const totalER = rows.reduce((s,x)=>s+calc(x).ER,0); if(!ER || !totalER) return '';
+  const pct = (ER/totalER*100).toFixed(1); return `<span class='er-pct' style='color:var(--muted)'>${pct}% del total</span>`;
+}
+
+function agregarFila(d={}){
+  const id=uid++; const p = paisActActive ? LATAM[paisActActive] : null; const baseA = p ? p.a : null;
+  const r = {id, desc:d.desc||"", f:d.f||3, s:d.s||3, p:d.p||3, e:d.e||3, a:d.a!==undefined?d.a:baseA, v:d.v!==undefined?d.v:null};
+  rows.push(r);
+
+  const card = document.createElement('div'); card.className='risk-card'; card.id='card_'+id;
+  const aIsEmpty = !r.a; const vIsEmpty = !r.v;
+
+  card.innerHTML=`
+    <div class="pareto-flag">⚡ CRÍTICO — Grupo Pareto (80% Exposición)</div>
+    <div class="card-head">
+      <div class="card-num">${rows.length}</div>
+      <input class="card-desc-inp" placeholder="Describa el riesgo evaluado..." value="${r.desc.replace(/"/g,'&quot;')}" oninput="setDesc(${id},this.value)" id="desc_${id}">
+      <button class="card-rm" onclick="eliminar(${id})">✕</button>
+    </div>
+    <div class="crit-grid">
+      ${CRIT.map(c=>{ const isEmpty = (c.k==='a'&&aIsEmpty)||(c.k==='v'&&vIsEmpty); return `<div class="crit-cell"><div class="crit-key">${c.label}</div><div class="crit-name">${c.name}</div>${mkSel(id,c.k,r[c.k],isEmpty)}</div>`; }).join('')}
+    </div>
+    <div class="card-result" id="result_${id}">${resultHTML(r)}</div>`;
+
+  const cards = document.getElementById('cards'); const empty = cards.querySelector('.empty-state'); if(empty) empty.remove();
+  cards.appendChild(card); card.classList.add(nivel(calc(r).ER).cls); recalcMetrics(); guardar();
+  const inp = document.getElementById('desc_'+id); if(inp) inp.focus({preventScroll:false});
+}
+
+function onSel(id,key,val){
+  const r=rows.find(r=>r.id===id); if(!r) return; r[key] = val===''?null:+val;
+  const res=document.getElementById('result_'+id); if(res) res.innerHTML=resultHTML(r);
+  const card=document.getElementById('card_'+id); if(card){ card.classList.remove('alto','medio','bajo'); card.classList.add(nivel(calc(r).ER).cls); }
+  const sel=document.getElementById(`sel_${id}_${key}`); if(sel){ sel.classList.toggle('empty-v', !r[key]); }
+  recalcMetrics(); guardar();
+}
+
+// Resanado de fugas en la actualización en tiempo real de los reportes
+function setDesc(id,v){ const r=rows.find(r=>r.id===id); if(r) r.desc=v; updateRanking(rows.map(x=>({...x,...calc(x)}))); guardar(); }
+
+function eliminar(id){
+  rows=rows.filter(r=>r.id!==id); document.getElementById('card_'+id)?.remove();
+  if(!rows.length){ document.getElementById('cards').innerHTML='<div class="empty-state">No hay riesgos registrados.<br>Presione <b>+ Nuevo Riesgo</b> para comenzar.</div>'; }
+  rows.forEach((r,i)=>{ const n=document.querySelector(`#card_${r.id} .card-num`); if(n) n.textContent=i+1; });
+  recalcMetrics(); guardar();
+}
+
+function recalcMetrics(){
+  const res=rows.map(r=>({...r,...calc(r)}));
+  document.getElementById('cnt-total').textContent=rows.length;
+  document.getElementById('cnt-alto').textContent =res.filter(r=>r.ER>=601).length;
+  document.getElementById('cnt-medio').textContent=res.filter(r=>r.ER>=201&&r.ER<601).length;
+  document.getElementById('cnt-bajo').textContent =res.filter(r=>r.ER<201).length;
+
+  rows.forEach(r=>{
+    const el=document.getElementById('result_'+r.id); if(el) el.innerHTML=resultHTML(r);
+    const card=document.getElementById('card_'+r.id); if(card){ card.classList.remove('alto','medio','bajo'); card.classList.add(nivel(calc(r).ER).cls); }
+  });
+
+  const paretoIds = actualizarPareto(res);
+  updateRanking(res);
+  actualizarGraficos(res);
+  actualizarCierreEjecutivo(res, paretoIds);
+}
+
+function actualizarPareto(res){
+  const sorted=[...res].sort((a,b)=>b.ER-a.ER).filter(r=>r.ER>0);
+  const totalER=sorted.reduce((s,r)=>s+r.ER,0);
+  const banner=document.getElementById('pareto-banner');
+  const ptxt=document.getElementById('pareto-text');
+
+  document.querySelectorAll('.risk-card').forEach(c=>c.classList.remove('pareto-critical'));
+  if(!sorted.length||!totalER){ banner.classList.remove('visible'); return []; }
+
+  let acum=0, paretoIds=[];
+  for(const r of sorted){
+    acum+=r.ER; paretoIds.push(r.id);
+    if(acum/totalER>=0.8) break;
+  }
+
+  paretoIds.forEach(id=>{ const c=document.getElementById('card_'+id); if(c) c.classList.add('pareto-critical'); });
+  const pct=(acum/totalER*100).toFixed(0);
+  ptxt.innerHTML = `<b>Grupo Pareto Crítico:</b> ${paretoIds.length} riesgo${paretoIds.length>1?'s':''} concentra el <b>${pct}%</b> de la exposición total (ER: <b>${acum}</b> de ${totalER}).`;
+  banner.classList.add('visible');
+  return paretoIds;
+}
+
+function updateRanking(res){
+  const sorted=[...res].sort((a,b)=>b.ER-a.ER);
+  const maxER=sorted.length?sorted[0].ER:1;
+  const totalER=sorted.reduce((s,r)=>s+r.ER,0);
+  const el=document.getElementById('ranking');
+  if(!sorted.length){ el.innerHTML='<div style="color:var(--muted);font-size:13px;font-style:italic">Sin datos aún.</div>'; return; }
+
+  let acum=0, paretoLine=false, html='';
+  sorted.forEach((r,i)=>{
+    const nv=nivel(r.ER), pct=Math.min(r.ER/maxER*100,100);
+    const pctTotal=totalER?((r.ER/totalER)*100).toFixed(1):'0';
+    const prevAcum=acum; acum+=r.ER;
+    const cruzaPareto=!paretoLine&&prevAcum<(totalER*0.8)&&acum>=(totalER*0.8);
+    html+=`<div class="rank-item">
+      <span class="rn">#${i+1}</span>
+      <span class="rdot" style="background:${nv.col}"></span>
+      <span class="rdesc">${r.desc||'Sin descripción'}</span>
+      <span class="rpct">${r.ER>0?pctTotal+'%':''}</span>
+      <div class="rbar"><div class="bar-bg"><div class="bar-fg" style="width:${pct}%;background:${nv.col}"></div></div></div>
+      <span class="rval" style="color:${r.ER>0?nv.col:'var(--muted)'}">${r.ER>0?r.ER:'—'}</span>
+    </div>`;
+    if(cruzaPareto){ html+=`<div class="r-pareto-line">─── Corte Pareto 80% ───</div>`; paretoLine=true; }
+  });
+  el.innerHTML=html;
+}
+
+function actualizarGraficos(res){
+  if(!chartDona) return;
+  const computed=res.filter(r=>r.ER>0);
+  chartDona.data.datasets[0].data=[computed.filter(r=>r.ER>=601).length,computed.filter(r=>r.ER>=201&&r.ER<601).length,computed.filter(r=>r.ER<201).length];
+  chartDona.update();
+
+  const sorted=[...computed].sort((a,b)=>b.ER-a.ER).slice(0,8);
+  chartBarras.data.labels=sorted.map(r=>(r.desc||'Sin nombre').substring(0,14)+'…');
+  chartBarras.data.datasets[0].data=sorted.map(r=>r.ER);
+  chartBarras.data.datasets[0].backgroundColor=sorted.map(r=>nivel(r.ER).col);
+  chartBarras.update();
+
+  if(res.length>0){
+    const avg=k=>+(res.reduce((s,r)=>s+(r[k]||0),0)/res.length).toFixed(2);
+    chartRadar.data.datasets[0].data=[avg('f'),avg('s'),avg('p'),avg('e'),avg('a'),avg('v')];
+  } else { chartRadar.data.datasets[0].data=[0,0,0,0,0,0]; }
+  chartRadar.update();
+}
+
+function actualizarCierreEjecutivo(res, paretoIds){
+  const computed = res.filter(r => r.ER > 0); const totalER = computed.reduce((s, r) => s + r.ER, 0); const maxTeorico = res.length * 1250;
+  const iecVal = maxTeorico > 0 ? Math.round((totalER / maxTeorico) * 100) : 0;
+  const iecBox = document.getElementById('iec-banner-box'); const iecNum = document.getElementById('iec-value');
+  const iecTitle = document.getElementById('iec-status-title'); const iecDesc = document.getElementById('iec-status-desc'); const recInmediata = document.getElementById('rec-inmediata');
+
+  iecNum.textContent = `${iecVal}%`; iecBox.className = 'iec-banner';
+  if(!computed.length){
+    iecBox.classList.add('resiliente'); iecTitle.textContent = "Calculando postura estratégica...";
+    iecDesc.textContent = "Complete la evaluación de los criterios A y V en la matriz para generar el diagnóstico corporativo unificado.";
+    recInmediata.innerHTML = "<li>Focalice acciones de contención táctica inmediata en los activos perimetrales y críticos del negocio.</li>"; return;
+  }
+  if(iecVal <= 20){
+    iecBox.classList.add('resiliente'); iecTitle.textContent = "Nivel I: Postura Resiliente / Controlada";
+    iecDesc.textContent = "La instalación presenta un ecosistema de mitigación robusto. Se recomienda mantener auditorías de ciclo cerrado de forma trimestral.";
+  } else if(iecVal <= 50){
+    iecBox.classList.add('preventivo'); iecTitle.textContent = "Nivel II: Postura Preventiva / En Riesgo Moderado";
+    iecDesc.textContent = "Se detectan brechas parciales en la infraestructura. Existe riesgo latente de parálisis operativa o pérdidas financieras acotadas.";
+  } else {
+    iecBox.classList.add('reactivo'); iecTitle.textContent = "Nivel III: Postura Reactiva / En Estado Crítico";
+    iecDesc.textContent = "La organización opera bajo un nivel de riesgo asumido inaceptable. Requiere intervención e inyección presupuestaria inmediata.";
+  }
+  const riesgosCriticos = res.filter(r => paretoIds.includes(r.id));
+  if(riesgosCriticos.length > 0){
+    recInmediata.innerHTML = riesgosCriticos.map(r => `<li><b>Intervención Inmediata:</b> Ejecutar contención de fallas y endurecimiento de blancos (*Target Hardening*) en: <i>"${r.desc || 'Riesgo sin descripción'}"</i>.</li>`).join('');
+  } else { recInmediata.innerHTML = "<li>No se registran riesgos críticos activos en el grupo de priorización Pareto.</li>"; }
+}
+
+function validarSetup(){
+  let errores = [];
+  const limpiar = (id, errId) => { document.getElementById(id).classList.remove('field-error'); document.getElementById(errId).classList.remove('show'); };
+  const marcar = (id, errId, msg) => { document.getElementById(id).classList.add('field-error'); const el = document.getElementById(errId); if(el) el.classList.add('show'); errores.push(msg); };
+
+  limpiar('setup-country-input','err-pais'); const paisInput = document.getElementById('setup-country-input').value.trim();
+  if(!paisInput){ marcar('setup-country-input','err-pais','País requerido'); }
+  else if(!paisActActive){
+    const matchKey = Object.keys(LATAM).find(k=> LATAM[k].name.toLowerCase() === paisInput.toLowerCase());
+    if(matchKey){ seleccionarPais(matchKey); } else { marcar('setup-country-input','err-pais','Seleccione el país de la lista'); }
+  }
+
+  limpiar('setup-ub','err-ub'); const ubInput = document.getElementById('setup-ub').value.trim(); if(!ubInput){ marcar('setup-ub','err-ub','Dirección requerida'); }
+  limpiar('setup-ev','err-ev'); const evInput = document.getElementById('setup-ev').value.trim(); if(!evInput){ marcar('setup-ev','err-ev','Nombre del evaluador requerido'); }
+
+  const toast = document.getElementById('validation-toast');
+  if(errores.length){
+    toast.innerHTML = `⛔ Complete los campos requeridos antes de continuar:<br>• ${errores.join('<br>• ')}`;
+    toast.classList.add('show'); document.querySelector('.field-error')?.scrollIntoView({behavior:'smooth', block:'center'}); return false;
+  }
+  toast.classList.remove('show'); return true;
+}
+
+function iniciarMatriz(){
+  if(!validarSetup()) return;
+  const modeloKey=document.getElementById('setup-modelo').value; const madurez=document.getElementById('setup-madurez').value;
+  const ub=document.getElementById('setup-ub').value.trim(); const ev=document.getElementById('setup-ev').value.trim();
+  const selectMod=document.getElementById('setup-modelo'); const modTxt=selectMod.options[selectMod.selectedIndex].text;
+
+  document.getElementById('ubicacion').value= `${ub} — [${modTxt}]`;
+  document.getElementById('evaluador').value=ev; document.getElementById('fecha').valueAsDate=new Date();
+
+  if(paisActActive) renderReportIntel(paisActActive);
+  sincronizarMapaReporte(ub);
+
+  rows=[]; document.getElementById('cards').innerHTML='';
+  const p=LATAM[paisActActive]; let baseA=p?p.a:null;
+  if(madurez==='bajo'&&p) baseA=Math.min(baseA+1,5); if(madurez==='alto'&&p) baseA=Math.max(baseA-1,1);
+
+  if(PRECARGA[modeloKey]){
+    PRECARGA[modeloKey].forEach(item=>{ agregarFila({desc:item.desc,f:item.f,s:item.s,p:item.p,e:item.e,a:baseA,v:null}); });
+  }
+  document.getElementById('setup-screen').style.display='none'; recalcMetrics(); guardar();
+}
+
+function volverSetup(){
+  if(rows.length&&!confirm('¿Volver al panel inicial? El progreso se guardará en localStorage.')) return;
+  document.getElementById('setup-screen').style.display='flex';
+}
+
+function toggleTema(){
+  document.body.classList.toggle('dark'); const dark=document.body.classList.contains('dark');
+  document.getElementById('theme-btn').textContent=dark?'☀️':'🌙'; localStorage.setItem('mosler_tema',dark?'dark':'light'); actualizarTemaGraficos(dark);
+}
+
+function actualizarTemaGraficos(dark){
+  if(!chartBarras) return;
+  const gc=dark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)';
+  chartBarras.options.scales.y.grid.color=gc; chartRadar.options.scales.r.angleLines.color=dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)';
+  chartRadar.options.scales.r.grid.color=dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'; chartRadar.options.scales.r.pointLabels.color=dark?'#94a3b8':'#475569';
+  chartBarras.update(); chartRadar.update();
+}
+
+function initSignature(){
+  sigCanvas=document.getElementById('firma-canvas'); sigCtx=sigCanvas.getContext('2d');
+  sigCanvas.width=sigCanvas.offsetWidth; sigCanvas.height=sigCanvas.offsetHeight;
+  sigCtx.strokeStyle='#0d9488'; sigCtx.lineWidth=2.5; sigCtx.lineCap='round';
+  sigCanvas.addEventListener('mousedown',e=>{drawing=true;sigDraw(e);}); sigCanvas.addEventListener('mousemove',sigDraw);
+  window.addEventListener('mouseup',()=>{drawing=false;sigCtx.beginPath();guardar();});
+  sigCanvas.addEventListener('touchstart',e=>{drawing=true;sigDrawT(e.touches[0]);},{passive:true});
+  sigCanvas.addEventListener('touchmove',e=>{if(!drawing)return;sigDrawT(e.touches[0]);e.preventDefault();},{passive:false});
+  sigCanvas.addEventListener('touchend',()=>{drawing=false;sigCtx.beginPath();guardar();});
+}
+function sigDraw(e){ if(!drawing)return; const r=sigCanvas.getBoundingClientRect(); sigCtx.lineTo(e.clientX-r.left,e.clientY-r.top); sigCtx.stroke(); sigCtx.beginPath(); sigCtx.moveTo(e.clientX-r.left,e.clientY-r.top); }
+function sigDrawT(t){ const r=sigCanvas.getBoundingClientRect(); sigCtx.lineTo(t.clientX-r.left,t.clientY-r.top); sigCtx.stroke(); sigCtx.beginPath(); sigCtx.moveTo(t.clientX-r.left,t.clientY-r.top); }
+function limpiarFirma(){ sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height); guardar(); }
+
+function guardar(){
+  try {
+    const data={ubicacion:document.getElementById('ubicacion').value,fecha:document.getElementById('fecha').value,evaluador:document.getElementById('evaluador').value,intelKey:paisActActive,firma:sigCanvas.toDataURL(),rows};
+    localStorage.setItem('mosler_v2',JSON.stringify(data));
+  } catch(e){}
+}
+
+function cargar(){
+  try {
+    const raw=localStorage.getItem('mosler_v2'); if(!raw) return false; const data=JSON.parse(raw);
+    document.getElementById('ubicacion').value=data.ubicacion||''; document.getElementById('fecha').value=data.fecha||''; document.getElementById('evaluador').value=data.evaluador||'';
+    if(data.intelKey){ paisActActive=data.intelKey; renderReportIntel(data.intelKey); }
+    if(data.firma){ const img=new Image(); img.src=data.firma; img.onload=()=>sigCtx.drawImage(img,0,0); }
+    if(data.rows&&data.rows.length>0){ document.getElementById('cards').innerHTML=''; data.rows.forEach(r=>agregarFila(r)); document.getElementById('setup-screen').style.display='none'; }
+    if(localStorage.getItem('mosler_tema')==='dark'){ document.body.classList.add('dark'); document.getElementById('theme-btn').textContent='☀️'; actualizarTemaGraficos(true); }
+    return true;
+  } catch(e){ return false; }
+}
+
+function copiarExcel(){
+  if(!rows.length){ showToast('⚠️ Sin datos.'); return; } const totalER=rows.reduce((s,r)=>s+calc(r).ER,0);
+  let txt='N°\tDescripción\tF\tS\tP\tE\tA\tV\tI\tD\tC\tPR\tER\t% del Total\tNivel\n';
+  rows.forEach((r,i)=>{
+    const {I,D,C,PR,ER}=calc(r); const pct=totalER?((ER/totalER)*100).toFixed(1):'—';
+    txt+= `${i+1}\t${r.desc}\t${r.f}\t${r.s}\t${r.p}\t${r.e}\t${r.a||'—'}\t${r.v||'—'}\t${I}\t${D}\t${C}\t${PR}\t${ER||'—'}\t${pct}%\t${ER>0?nivel(ER).label:'PENDIENTE'}\n`;
+  });
+  navigator.clipboard.writeText(txt).then(()=>showToast('✅ Copiado para Excel.'));
+}
+
+function usarGeolocalizacion(){
+  const status = document.getElementById('geo-status'); if(!navigator.geolocation){ status.textContent='⚠️ Tu navegador no soporta geolocalización.'; return; }
+  status.textContent='📡 Obteniendo ubicación...';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const {latitude: lat, longitude: lng} = pos.coords; geoLat = lat; geoLng = lng;
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=es`)
+        .then(r=>r.json()).then(data=>{
+          const addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          document.getElementById('setup-ub').value = addr; document.getElementById('setup-ub').classList.remove('field-error');
+          document.getElementById('err-ub').classList.remove('show'); status.textContent = `✅ ${(data.address?.city||data.address?.town||data.address?.county||'')}, ${(data.address?.country||'')}`;
+          const countryRaw = (data.address?.country||'').toLowerCase();
+          const matchKey = Object.keys(LATAM).find(k=> LATAM[k].name.toLowerCase().includes(countryRaw) || countryRaw.includes(LATAM[k].name.toLowerCase().substring(0,5)));
+          if(matchKey){ seleccionarPais(matchKey); }
+          const modeloDetectado = detectarModeloPorDireccion(addr); if(modeloDetectado) sugerirModeloGeo(modeloDetectado, addr);
+          cargarMapaConCoords(lat, lng);
+        }).catch(()=>{
+          const coords = `${lat.toFixed(5)}, ${lng.toFixed(5)}`; document.getElementById('setup-ub').value = coords; status.textContent = `✅ Coordenadas: ${coords}`; cargarMapaConCoords(lat, lng);
+        });
+    },
+    err => { const msgs = {1:'Permiso denegado.',2:'Posición no disponible.',3:'Tiempo agotado.'}; status.textContent = `⚠️ ${msgs[err.code]||'Error desconocido.'}`; },
+    {timeout:10000, enableHighAccuracy:true}
+  );
+}
+
+function cargarMapaConCoords(lat, lng){
+  const url = `http://googleusercontent.com/maps.google.com/?q=${lat},${lng}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+  document.getElementById('setup-map').src = url; mapUrl = url;
+}
+
+function sincronizarMapaReporte(ubText){
+  if(!ubText && !mapUrl) return;
+  const box = document.getElementById('report-map-box'); const fallbackBox = document.getElementById('report-map-fallback');
+  mapUrl = mapUrl || `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(ubText)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  fallbackBox.innerHTML = `🗺️ <b>Cartografía e Inspección Formalizada:</b> ${ubText} ${geoLat ? `[Lat: ${geoLat.toFixed(4)}, Lng: ${geoLng.toFixed(4)}]` : ''}`;
+  box.classList.add('visible');
+}
+
+async function exportarPDF(){ window.print(); }
+
+let toastTimer; function showToast(msg){ clearTimeout(toastTimer); const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); toastTimer=setTimeout(()=>t.classList.remove('show'),2800); }
+function toggleGuide(){ document.getElementById('guide').classList.toggle('open'); }
+
+function initCharts(){
+  chartDona=new Chart(document.getElementById('chartDona'),{type:'doughnut',data:{labels:['Alto','Medio','Bajo'],datasets:[{data:[0,0,0],backgroundColor:['#dc2626','#d97706','#059669'],borderWidth:2,borderColor:'var(--card)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10,font:{size:9,family:'DM Sans'}}}}}});
+  chartBarras=new Chart(document.getElementById('chartBarras'),{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:'#0d9488',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#64748b',font:{size:9}}},x:{ticks:{color:'#64748b',font:{size:9},maxRotation:30}}},plugins:{legend:{display:false}}}});
+  chartRadar=new Chart(document.getElementById('chartRadar'),{type:'radar',data:{labels:['F','S','P','E','A','V'],datasets:[{label:'Promedio',data:[0,0,0,0,0,0],fill:true,backgroundColor:'rgba(13,148,136,0.1)',borderColor:'#0d9488',pointBackgroundColor:'#0d9488',pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{angleLines:{color:'rgba(0,0,0,0.06)'},grid:{color:'rgba(0,0,0,0.06)'},pointLabels:{color:'#475569',font:{size:10,weight:'bold'}},ticks:{display:false},min:0,max:5}},plugins:{legend:{display:false}}}});
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ initCharts(); initSignature(); if(!cargar()){ document.getElementById('setup-country-input').value='Panamá'; seleccionarPais('panama'); } });
+</script>
+</body>
+</html>
