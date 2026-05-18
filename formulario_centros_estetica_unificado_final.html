@@ -479,18 +479,7 @@
         <div class="title-form">SEKaform — Centros de Estética y Similares</div>
     </div>
 
-    <!-- ── CONFIGURACIÓN SUPABASE (solo visible en pruebas) ── -->
-    <div class="config-banner" id="supabaseConfig">
-        <strong>⚙️ Configuración Supabase (Test Drive)</strong> — Ingresa tus credenciales una sola vez. Se guardan en esta sesión.
-        <div class="config-row">
-            <input type="text" id="sb_url" placeholder="https://xxxx.supabase.co" title="Supabase Project URL">
-            <input type="text" id="sb_key" placeholder="eyJ... (anon public key)" title="Supabase Anon Key">
-        </div>
-        <div style="margin-top:8px; display:flex; gap:10px; align-items:center;">
-            <button type="button" onclick="saveSupabaseConfig()" style="padding:6px 14px; background:#1d4ed8; color:white; border:none; border-radius:5px; font-size:0.82rem; cursor:pointer; font-weight:600;">Guardar Config</button>
-            <span id="configStatus" style="font-size:0.78rem; color:#6b7280;"></span>
-        </div>
-    </div>
+
 
     <form id="mainInspectionForm" novalidate>
 
@@ -1117,8 +1106,8 @@
 <script>
 /* ─── 0. CONSTANTES Y ESTADO ─── */
 const SUPABASE_TABLE = 'inspecciones_estetica';
-let supabaseURL = '';
-let supabaseKey = '';
+const supabaseURL = 'https://bdfppxvinyoszcfsvbcx.supabase.co';
+const supabaseKey = 'sb_publishable_fet4FKrvN60SoZtZa_2ylg_2PkhWIWU';
 let uploadedImages = [];
 
 /* ─── 1. AUTO-FECHA ─── */
@@ -1126,36 +1115,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('fecha_hora_visita').value = now.toISOString().slice(0,16);
-    loadSupabaseConfig();
 });
-
-/* ─── 2. CONFIGURACIÓN SUPABASE ─── */
-function saveSupabaseConfig() {
-    const url = document.getElementById('sb_url').value.trim();
-    const key = document.getElementById('sb_key').value.trim();
-    if (!url || !key) {
-        showToast('Completa URL y Key de Supabase', 'error');
-        return;
-    }
-    supabaseURL = url;
-    supabaseKey = key;
-    sessionStorage.setItem('sb_url', url);
-    sessionStorage.setItem('sb_key', key);
-    document.getElementById('configStatus').textContent = '✅ Credenciales guardadas en sesión';
-    showToast('Configuración Supabase guardada', 'success');
-}
-
-function loadSupabaseConfig() {
-    const url = sessionStorage.getItem('sb_url');
-    const key = sessionStorage.getItem('sb_key');
-    if (url && key) {
-        supabaseURL = url;
-        supabaseKey = key;
-        document.getElementById('sb_url').value = url;
-        document.getElementById('sb_key').value = key;
-        document.getElementById('configStatus').textContent = '✅ Credenciales cargadas de sesión';
-    }
-}
 
 /* ─── 3. ACORDEÓN ─── */
 document.querySelectorAll('.accordion-header').forEach(header => {
@@ -1418,7 +1378,7 @@ function showErrorModal(message) {
 }
 
 document.getElementById('btnModalHome').addEventListener('click', () => {
-    window.location.href = 'landing.html';
+    window.location.href = 'index.html';
 });
 
 document.getElementById('btnModalNew').addEventListener('click', () => {
@@ -1439,7 +1399,7 @@ document.getElementById('btnModalNew').addEventListener('click', () => {
 /* ─── 11. CANCELAR ─── */
 document.getElementById('btnCancel').addEventListener('click', () => {
     if (confirm('¿Seguro que deseas salir? Los cambios no guardados se perderán.')) {
-        window.location.href = 'landing.html';
+        window.location.href = 'index.html';
     }
 });
 
