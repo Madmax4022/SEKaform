@@ -397,19 +397,6 @@
         <div class="title-form">SEKaform — Peluquerías, Barberías y Salones de Belleza</div>
     </div>
 
-    <!-- CONFIG SUPABASE -->
-    <div class="config-banner">
-        <strong>⚙️ Configuración Supabase (Test Drive)</strong> — Ingresa tus credenciales una sola vez.
-        <div class="config-row">
-            <input type="text" id="sb_url" placeholder="https://xxxx.supabase.co">
-            <input type="text" id="sb_key" placeholder="eyJ... (anon key)">
-        </div>
-        <div style="margin-top:8px; display:flex; gap:10px; align-items:center;">
-            <button type="button" onclick="saveSupabaseConfig()" style="padding:6px 14px; background:#1d4ed8; color:white; border:none; border-radius:5px; font-size:0.82rem; cursor:pointer; font-weight:600;">Guardar Config</button>
-            <span id="configStatus" style="font-size:0.78rem; color:#6b7280;"></span>
-        </div>
-    </div>
-
     <form id="barberForm" novalidate>
 
         <!-- SECCIÓN 1 -->
@@ -624,15 +611,14 @@
 
 <script>
 const SUPABASE_TABLE = 'inspecciones_peluquerias';
-let supabaseURL = '';
-let supabaseKey = '';
+const supabaseURL = 'https://bdfppxvinyoszcfsvbcx.supabase.co';
+const supabaseKey = 'sb_publishable_fet4FKrvN60SoZtZa_2ylg_2PkhWIWU';
 
 /* ─── AUTO FECHA ─── */
 window.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('fecha_hora').value = now.toISOString().slice(0,16);
-    loadSupabaseConfig();
     setTimeout(() => initSignaturePad('sig-canvas-f2', 'sig-clear-f2'), 400);
 });
 
@@ -653,31 +639,6 @@ document.querySelectorAll('input[type="radio"]').forEach(radio => {
         }
     });
 });
-
-/* ─── SUPABASE CONFIG ─── */
-function saveSupabaseConfig() {
-    const url = document.getElementById('sb_url').value.trim();
-    const key = document.getElementById('sb_key').value.trim();
-    if (!url || !key) { showToast('Completa URL y Key', 'error'); return; }
-    supabaseURL = url;
-    supabaseKey = key;
-    sessionStorage.setItem('sb_url', url);
-    sessionStorage.setItem('sb_key', key);
-    document.getElementById('configStatus').textContent = '✅ Credenciales guardadas';
-    showToast('Configuración Supabase guardada', 'success');
-}
-
-function loadSupabaseConfig() {
-    const url = sessionStorage.getItem('sb_url');
-    const key = sessionStorage.getItem('sb_key');
-    if (url && key) {
-        supabaseURL = url;
-        supabaseKey = key;
-        document.getElementById('sb_url').value = url;
-        document.getElementById('sb_key').value = key;
-        document.getElementById('configStatus').textContent = '✅ Credenciales cargadas';
-    }
-}
 
 /* ─── FIRMA DIGITAL ─── */
 function initSignaturePad(canvasId, clearId) {
