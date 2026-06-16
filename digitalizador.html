@@ -664,7 +664,7 @@ function clearSrc(src) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// FORM TEMPLATE LIBRARY (14 common Latin American B2B form types)
+// FORM TEMPLATE LIBRARY (20 templates — 14 generales + 6 SST Ley 1562/2012)
 // ══════════════════════════════════════════════════════════════════
 const FORM_LIBRARY = [
   {id:'asistencia',nombre:'Registro de Asistencia a Capacitación',
@@ -811,6 +811,97 @@ const FORM_LIBRARY = [
     {etiqueta:'Resultado de la calibración',tipo:'select',opciones:['Conforme','No conforme','Fuera de tolerancia']},
     {etiqueta:'Próxima calibración',tipo:'fecha'},{etiqueta:'Observaciones técnicas',tipo:'textarea'},
     {etiqueta:'Técnico responsable',tipo:'texto'},{etiqueta:'Firma del técnico',tipo:'firma'},
+  ]},
+
+  // ── SST Verticales (Ley 1562/2012 · Decreto 1072/2015) ─────────
+  {id:'matriz_peligros',nombre:'Matriz de Identificación de Peligros y Valoración de Riesgos (GTC-45)',
+   keywords:['matriz','peligro','riesgo','gtc','valoracion','control','consecuencia','probabilidad','nivel de riesgo','intervencion'],
+   campos_clave:[
+    {etiqueta:'Proceso / Actividad',tipo:'texto'},{etiqueta:'Área / Lugar',tipo:'select',opciones:['Producción','Almacén','Oficinas','Mantenimiento','Exteriores','Otro']},
+    {etiqueta:'Tipo de peligro',tipo:'select',opciones:['Físico','Químico','Biológico','Biomecánico','Psicosocial','Condiciones de seguridad','Fenómenos naturales']},
+    {etiqueta:'Fuente del peligro',tipo:'texto'},{etiqueta:'Descripción del peligro',tipo:'textarea'},
+    {etiqueta:'Efectos posibles',tipo:'textarea'},
+    {etiqueta:'Nivel de deficiencia',tipo:'radio',opciones:['MA - Muy alto (10)','A - Alto (6)','M - Medio (2)','B - Bajo (0)']},
+    {etiqueta:'Nivel de exposición',tipo:'radio',opciones:['EC - Continua (4)','EF - Frecuente (3)','EO - Ocasional (2)','EE - Esporádica (1)']},
+    {etiqueta:'Nivel de consecuencia',tipo:'radio',opciones:['Catastrófico (100)','Muy grave (60)','Grave (25)','Leve (10)']},
+    {etiqueta:'¿Existen controles actuales?',tipo:'si_no'},{etiqueta:'Medidas de intervención',tipo:'textarea'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Fecha de ejecución',tipo:'fecha_auto'},
+    {etiqueta:'Ubicación GPS',tipo:'ubicacion'},{etiqueta:'Fotografía del riesgo',tipo:'foto'},
+  ]},
+
+  {id:'acta_copasst',nombre:'Acta de Reunión COPASST',
+   keywords:['copasst','copasos','comite paritario','representante empleador','representante trabajadores','presidente copasst','secretario copasst','sgsst'],
+   campos_clave:[
+    {etiqueta:'Número de acta',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora_auto'},
+    {etiqueta:'Tipo de reunión',tipo:'select',opciones:['Ordinaria mensual','Extraordinaria']},
+    {etiqueta:'Presidente del COPASST',tipo:'texto'},{etiqueta:'Secretario del COPASST',tipo:'texto'},
+    {etiqueta:'Representante del empleador',tipo:'texto'},{etiqueta:'Representante de los trabajadores',tipo:'texto'},
+    {etiqueta:'Orden del día',tipo:'textarea'},{etiqueta:'Temas tratados y decisiones',tipo:'textarea'},
+    {etiqueta:'Compromisos / Responsables',tipo:'textarea'},{etiqueta:'Fecha de seguimiento',tipo:'fecha_auto'},
+    {etiqueta:'Firma del presidente',tipo:'firma'},{etiqueta:'Firma del secretario',tipo:'firma'},
+  ]},
+
+  {id:'entrega_epp',nombre:'Entrega de Elementos de Protección Personal (EPP)',
+   keywords:['epp','elementos de proteccion personal','dotacion','casco','botas de seguridad','arnés','proteccion personal','kit epp','recibido conforme','entrega dotacion'],
+   campos_clave:[
+    {etiqueta:'Fecha de entrega',tipo:'fecha_auto'},{etiqueta:'Nombre del trabajador',tipo:'texto'},
+    {etiqueta:'Cargo',tipo:'select',opciones:['Operario','Técnico','Supervisor','Coordinador','Inspector','Otro']},
+    {etiqueta:'Área',tipo:'select',opciones:['Producción','Almacén','Mantenimiento','Obra','Laboratorio','Otro']},
+    {etiqueta:'Elemento de protección entregado',tipo:'select',opciones:['Casco','Guantes de vaqueta','Guantes de nitrilo','Botas de seguridad','Gafas de seguridad','Protección auditiva','Tapabocas','Arnés','Overol','Otro']},
+    {etiqueta:'Talla / Referencia',tipo:'texto'},{etiqueta:'Cantidad',tipo:'numero'},
+    {etiqueta:'Motivo de entrega',tipo:'select',opciones:['Primera entrega','Reposición por desgaste','Reposición por pérdida','Cambio de cargo']},
+    {etiqueta:'Fecha de vencimiento del EPP',tipo:'fecha'},
+    {etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Firma del trabajador (recibí conforme)',tipo:'firma'},
+    {etiqueta:'Firma del responsable de entrega',tipo:'firma'},
+  ]},
+
+  {id:'investigacion_at',nombre:'Investigación de Accidente de Trabajo (Res. 1401/2007)',
+   keywords:['causas basicas','causas inmediatas','accion correctiva','plan de accion','factores contribuyentes','causas raiz','resolucion 1401','investigacion de accidente'],
+   campos_clave:[
+    {etiqueta:'Fecha del accidente',tipo:'fecha_auto'},{etiqueta:'Hora del accidente',tipo:'hora_auto'},
+    {etiqueta:'Fecha de investigación',tipo:'fecha_auto'},{etiqueta:'Trabajador accidentado',tipo:'texto'},
+    {etiqueta:'Cargo',tipo:'select'},{etiqueta:'ARL',tipo:'select',opciones:['Positiva','Sura','Colmena','Axa Colpatria','Bolívar','Liberty','Otro']},
+    {etiqueta:'Días de incapacidad',tipo:'numero'},
+    {etiqueta:'Descripción detallada del accidente',tipo:'textarea'},
+    {etiqueta:'Causas inmediatas — actos inseguros',tipo:'textarea'},
+    {etiqueta:'Causas inmediatas — condiciones inseguras',tipo:'textarea'},
+    {etiqueta:'Causas básicas — factores personales',tipo:'textarea'},
+    {etiqueta:'Causas básicas — factores del trabajo',tipo:'textarea'},
+    {etiqueta:'Plan de acción correctiva',tipo:'textarea'},{etiqueta:'Responsable del plan',tipo:'texto'},
+    {etiqueta:'Fecha límite de acción',tipo:'fecha_auto'},{etiqueta:'¿Se reportó a la ARL?',tipo:'si_no'},
+    {etiqueta:'Fotografía de la escena',tipo:'foto'},{etiqueta:'Ubicación GPS',tipo:'ubicacion'},
+    {etiqueta:'Firma del investigador',tipo:'firma'},{etiqueta:'Firma del representante legal',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_botiquin',nombre:'Inspección de Botiquín y Brigada de Emergencias',
+   keywords:['botiquin','brigada','emergencia','extintor','primeros auxilios','camilla','kit de emergencia','evacuacion','punto de encuentro'],
+   campos_clave:[
+    {etiqueta:'Fecha de inspección',tipo:'fecha_auto'},{etiqueta:'Área / Ubicación',tipo:'texto'},
+    {etiqueta:'Inspector',tipo:'texto'},
+    {etiqueta:'¿Botiquín visible y accesible?',tipo:'si_no'},
+    {etiqueta:'¿Analgésicos disponibles?',tipo:'si_no'},{etiqueta:'¿Vendas y gasas?',tipo:'si_no'},
+    {etiqueta:'¿Antisépticos (alcohol, agua oxigenada)?',tipo:'si_no'},
+    {etiqueta:'¿Guantes desechables?',tipo:'si_no'},{etiqueta:'¿Extintor cercano y vigente?',tipo:'si_no'},
+    {etiqueta:'Fecha de vencimiento del elemento más próximo a vencer',tipo:'fecha'},
+    {etiqueta:'Elementos faltantes o vencidos',tipo:'textarea'},
+    {etiqueta:'Observaciones generales',tipo:'textarea'},
+    {etiqueta:'Fotografía del botiquín',tipo:'foto'},
+    {etiqueta:'Firma del inspector',tipo:'firma'},
+  ]},
+
+  {id:'examen_medico_sst',nombre:'Remisión / Resultado de Examen Médico Ocupacional',
+   keywords:['examen medico','medico ocupacional','profesiograma','aptitud','ingreso','periodico','retiro','apto','restriccion','eps'],
+   campos_clave:[
+    {etiqueta:'Nombre del trabajador',tipo:'texto'},{etiqueta:'Número de cédula',tipo:'numero'},
+    {etiqueta:'Cargo',tipo:'select'},{etiqueta:'Área',tipo:'select'},
+    {etiqueta:'Tipo de examen',tipo:'select',opciones:['Ingreso','Periódico','Retiro','Post-incapacidad','Reubicación laboral','Cambio de cargo']},
+    {etiqueta:'Fecha de remisión',tipo:'fecha_auto'},{etiqueta:'IPS / Médico ocupacional',tipo:'texto'},
+    {etiqueta:'Resultado',tipo:'select',opciones:['Apto','Apto con restricciones','No apto temporalmente','No apto permanentemente']},
+    {etiqueta:'Restricciones / Recomendaciones médicas',tipo:'textarea'},
+    {etiqueta:'Fecha del próximo examen',tipo:'fecha'},
+    {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del responsable SST',tipo:'firma'},
   ]},
 ];
 
