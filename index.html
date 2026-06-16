@@ -1,222 +1,93 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEKaform - Panel de Control e Inspección</title>
-    <style>
-        :root {
-            --bg-principal: #0f172a;
-            --bg-tarjeta: #1e293b;
-            --azul-acento: #2563eb;
-            --azul-hover: #3b82f6;
-            --texto-claro: #f8fafc;
-            --texto-mutado: #94a3b8;
-            --borde: #334155;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEKaform — Digitalización de Documentos</title>
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b;
+      --pri: #2563eb; --pri-h: #3b82f6;
+      --ok: #1abc9c;
+      --txt: #f8fafc; --mut: #94a3b8; --bor: #334155;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); margin: 0; padding: 0; }
 
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-principal);
-            color: var(--texto-claro);
-            margin: 0;
-            padding: 0;
-        }
+    .wrapper { max-width: 900px; margin: 0 auto; padding: 60px 20px; }
 
-        .wrapper {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 60px 20px;
-        }
+    header { text-align: center; margin-bottom: 56px; }
+    header h1 { font-size: 2.6rem; margin: 0 0 10px; font-weight: 900; letter-spacing: -1px; }
+    header p { color: var(--mut); font-size: 1.05rem; margin: 0; line-height: 1.6; }
 
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-        }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
-        header h1 {
-            font-size: 2.8rem;
-            margin: 0 0 10px 0;
-            color: var(--texto-claro);
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
+    .card {
+      background: var(--card); border: 1px solid var(--bor); border-radius: 16px;
+      padding: 32px; display: flex; flex-direction: column; gap: 20px;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+      text-decoration: none; color: inherit;
+    }
+    .card:hover { border-color: var(--pri); transform: translateY(-3px); box-shadow: 0 12px 24px -6px rgba(0,0,0,.4); }
+    .card.accent { border-color: var(--ok); }
+    .card.accent:hover { border-color: var(--ok); box-shadow: 0 12px 24px -6px rgba(26,188,156,.2); }
 
-        header p {
-            color: var(--texto-mutado);
-            font-size: 1.15rem;
-            margin: 0;
-        }
+    .card-ico { font-size: 2.8rem; }
+    .card-tag { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--mut); }
+    .card.accent .card-tag { color: var(--ok); }
+    .card h2 { font-size: 1.3rem; font-weight: 800; margin: 0; }
+    .card p { color: var(--mut); font-size: 0.9rem; line-height: 1.6; margin: 0; flex: 1; }
+    .card-cta {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      background: var(--pri); color: #fff; padding: 12px 22px;
+      border-radius: 8px; font-weight: 700; font-size: 0.9rem; transition: background .2s;
+      text-decoration: none;
+    }
+    .card.accent .card-cta { background: var(--ok); }
+    .card:hover .card-cta { background: var(--pri-h); }
+    .card.accent:hover .card-cta { background: #17a589; }
 
-        .grid-formularios {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-top: 30px;
-        }
+    footer { text-align: center; margin-top: 80px; font-size: 0.82rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 24px; }
 
-        .tarjeta-formulario {
-            background-color: var(--bg-tarjeta);
-            border: 1px solid var(--borde);
-            border-radius: 12px;
-            padding: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .tarjeta-formulario:hover {
-            border-color: var(--azul-acento);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.3);
-        }
-
-        .contenido-tarjeta {
-            flex: 1;
-            padding-right: 20px;
-        }
-
-        .meta-codigo {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--azul-acento);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
-
-        .titulo-formulario {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin: 0 0 10px 0;
-            color: var(--texto-claro);
-        }
-
-        .descripcion-formulario {
-            color: var(--texto-mutado);
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin: 0;
-        }
-
-        .contenedor-boton { flex-shrink: 0; }
-
-        .btn-enlace {
-            display: inline-block;
-            background-color: var(--azul-acento);
-            color: var(--texto-claro);
-            text-decoration: none;
-            padding: 14px 28px;
-            font-weight: 700;
-            font-size: 0.95rem;
-            border-radius: 6px;
-            transition: background-color 0.2s ease;
-            text-align: center;
-            white-space: nowrap;
-        }
-
-        .btn-enlace:hover { background-color: var(--azul-hover); }
-
-        footer {
-            text-align: center;
-            margin-top: 80px;
-            font-size: 0.85rem;
-            color: var(--texto-mutado);
-            border-top: 1px solid var(--borde);
-            padding-top: 25px;
-        }
-
-        @media (max-width: 640px) {
-            .tarjeta-formulario {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 20px;
-            }
-            .contenido-tarjeta { padding-right: 0; }
-            .btn-enlace { width: 100%; box-sizing: border-box; }
-        }
-    </style>
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      header h1 { font-size: 2rem; }
+    }
+  </style>
 </head>
 <body>
-    <div class="wrapper">
-        <header>
-            <h1>SEKaform</h1>
-            <p>Digitalización inteligente de documentos · inspección · auditoría · control de campo</p>
-        </header>
+  <div class="wrapper">
+    <header>
+      <h1>SEKaform</h1>
+      <p>Convierte documentos físicos en formularios digitales inteligentes.<br>
+      Firmas, fechas automáticas, GPS, desplegables y más — sin código.</p>
+    </header>
 
-        <main class="grid-formularios">
+    <div class="grid">
 
-            <div class="tarjeta-formulario" style="border-color:#1abc9c">
-                <div class="contenido-tarjeta">
-                    <div class="meta-codigo" style="color:#1abc9c">NUEVO — DIGITALIZACIÓN</div>
-                    <h2 class="titulo-formulario">Digitalizador de Documentos</h2>
-                    <p class="descripcion-formulario">
-                        Sube un documento escaneado y conviértelo en un formulario digital inteligente: fechas automáticas, desplegables, firmas, GPS y más. Sin código.
-                    </p>
-                </div>
-                <div class="contenedor-boton">
-                    <a href="digitalizador.html" class="btn-enlace" style="background:#1abc9c">Crear formulario</a>
-                </div>
-            </div>
+      <a href="digitalizador.html" class="card accent">
+        <span class="card-ico">🔍</span>
+        <div>
+          <div class="card-tag">Digitalizar</div>
+          <h2>Crear formulario</h2>
+        </div>
+        <p>Sube el documento escaneado. El sistema detecta automáticamente qué campos usar: fechas, firmas, desplegables, GPS, Sí/No, fotografías y más.</p>
+        <span class="card-cta">Crear formulario →</span>
+      </a>
 
-            <div class="tarjeta-formulario" style="border-color:#2563eb">
-                <div class="contenido-tarjeta">
-                    <div class="meta-codigo">FORMULARIOS DIGITALES</div>
-                    <h2 class="titulo-formulario">Llenar formularios</h2>
-                    <p class="descripcion-formulario">
-                        Accede a tus plantillas guardadas y llénalas desde cualquier dispositivo: móvil, tablet o escritorio. Guarda borradores y envía cuando estés listo.
-                    </p>
-                </div>
-                <div class="contenedor-boton">
-                    <a href="llenar.html" class="btn-enlace">Mis formularios</a>
-                </div>
-            </div>
+      <a href="llenar.html" class="card">
+        <span class="card-ico">✏️</span>
+        <div>
+          <div class="card-tag">Captura en campo</div>
+          <h2>Llenar formulario</h2>
+        </div>
+        <p>Abre cualquier plantilla guardada y llénala desde tu celular o tablet. Auto-fecha, firma táctil, borrador offline y envío al toque.</p>
+        <span class="card-cta">Mis formularios →</span>
+      </a>
 
-            <div class="tarjeta-formulario">
-                <div class="contenido-tarjeta">
-                    <div class="meta-codigo">CÓDIGO: BCC-SG-SST-FT-02</div>
-                    <h2 class="titulo-formulario">Control de Asistencia</h2>
-                    <p class="descripcion-formulario">
-                        Módulo de validación de horas, ingreso de personal técnico de campo, bitácora de temas expuestos y captura de firmas de asistencia.
-                    </p>
-                </div>
-                <div class="contenedor-boton">
-                    <a href="control_asistencia.html" class="btn-enlace">Abrir Formulario</a>
-                </div>
-            </div>
-
-            <div class="tarjeta-formulario">
-                <div class="contenido-tarjeta">
-                    <div class="meta-codigo">CÓDIGO: COLMULTI-SG-SGA-FT 15</div>
-                    <h2 class="titulo-formulario">Locales Peluquerías, Barberías y Salones de Belleza</h2>
-                    <p class="descripcion-formulario">
-                        Inspección operativa y comercial. Evaluación de infraestructura locativa, control biológico básico, gestión de tanques e higiene general.
-                    </p>
-                </div>
-                <div class="contenedor-boton">
-                    <a href="locales_peluquerias.html" class="btn-enlace">Abrir Formulario</a>
-                </div>
-            </div>
-
-            <div class="tarjeta-formulario">
-                <div class="contenido-tarjeta">
-                    <div class="meta-codigo">CÓDIGO: COLMULTI-SG-SGA-FT 15</div>
-                    <h2 class="titulo-formulario">Centros de Estética y Similares</h2>
-                    <p class="descripcion-formulario">
-                        Auditoría ambiental avanzada. Verificación técnica de vertimientos, almacenamiento RESPEL, control normativo de lodos y sustancias complejas.
-                    </p>
-                </div>
-                <div class="contenedor-boton">
-                    <a href="formulario_centros_estetica_unificado_final.html" class="btn-enlace">Abrir Formulario</a>
-                </div>
-            </div>
-
-        </main>
-
-        <footer>
-            &copy; 2026 SEKapp Platform. Todos los derechos reservados.
-        </footer>
     </div>
+
+    <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
+  </div>
 </body>
 </html>

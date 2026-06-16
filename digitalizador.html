@@ -6,17 +6,12 @@
   <title>Digitalizador — SEKaform</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --inp: #0f172a;
-      --pri: #2563eb;
-      --pri-h: #3b82f6;
-      --ok: #1abc9c;
-      --err: #ef4444;
-      --warn: #f59e0b;
-      --txt: #f8fafc;
-      --mut: #94a3b8;
-      --bor: #334155;
+      --bg: #0f172a; --card: #1e293b; --inp: #0f172a;
+      --pri: #2563eb; --pri-h: #3b82f6; --pri-dim: rgba(37,99,235,.12);
+      --ok: #1abc9c; --ok-dim: rgba(26,188,156,.12);
+      --err: #ef4444; --warn: #f59e0b;
+      --txt: #f8fafc; --mut: #94a3b8; --bor: #334155;
+      --purple: #8b5cf6; --orange: #f97316;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
@@ -25,54 +20,38 @@
     .topbar {
       background: var(--card); border-bottom: 1px solid var(--bor);
       padding: 0 20px; height: 52px;
-      display: flex; align-items: center; gap: 14px;
-      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 200;
     }
-    .topbar a { color: var(--mut); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; }
+    .topbar a { color: var(--mut); text-decoration: none; font-size: 0.85rem; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; }
     .topbar a:hover { background: var(--bor); color: var(--txt); }
-    .topbar-title { font-size: 0.95rem; font-weight: 700; color: var(--txt); }
+    .topbar-title { font-size: 0.95rem; font-weight: 700; flex: 1; }
 
     /* ── wizard tabs ── */
-    .wizard {
-      background: var(--card); border-bottom: 1px solid var(--bor);
-      padding: 0 20px; display: flex; gap: 0; overflow-x: auto;
+    .wizard { background: var(--card); border-bottom: 1px solid var(--bor); padding: 0 20px; display: flex; overflow-x: auto; }
+    .wz {
+      padding: 12px 16px; font-size: 0.8rem; font-weight: 600; color: var(--mut);
+      border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 7px;
+      white-space: nowrap; transition: color .2s, border-color .2s; cursor: default;
     }
-    .wz-step {
-      padding: 12px 18px; font-size: 0.82rem; font-weight: 600; color: var(--mut);
-      border-bottom: 3px solid transparent; cursor: default;
-      display: flex; align-items: center; gap: 8px; white-space: nowrap;
-      transition: color .2s, border-color .2s;
-    }
-    .wz-step.active { color: var(--pri); border-bottom-color: var(--pri); }
-    .wz-step.done { color: var(--ok); }
-    .wz-num {
+    .wz.active { color: var(--pri); border-bottom-color: var(--pri); }
+    .wz.done { color: var(--ok); }
+    .wz-n {
       width: 20px; height: 20px; border-radius: 50%; background: var(--bor);
-      color: var(--mut); font-size: 0.7rem; display: flex; align-items: center;
+      color: var(--mut); font-size: 0.68rem; display: flex; align-items: center;
       justify-content: center; font-weight: 800; flex-shrink: 0;
     }
-    .wz-step.active .wz-num { background: var(--pri); color: #fff; }
-    .wz-step.done .wz-num { background: var(--ok); color: #fff; }
+    .wz.active .wz-n { background: var(--pri); color: #fff; }
+    .wz.done .wz-n { background: var(--ok); color: #fff; }
 
     /* ── pages ── */
     .page { display: none; }
-    .page.active { display: block; }
+    .page.on { display: block; }
 
-    /* ── shared form controls ── */
-    .wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
-    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
-    .pg-sub { color: var(--mut); font-size: 0.9rem; line-height: 1.5; margin-bottom: 28px; }
-
-    .fg { margin-bottom: 18px; }
-    .fg label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
-    .fg input, .fg textarea, .fg select {
-      width: 100%; background: var(--card); border: 1px solid var(--bor);
-      border-radius: 8px; color: var(--txt); font-size: 0.95rem;
-      font-family: inherit; padding: 11px 14px; outline: none; transition: border-color .2s;
-    }
-    .fg input:focus, .fg textarea:focus, .fg select:focus { border-color: var(--pri); }
-    .fg textarea { resize: vertical; min-height: 74px; }
-
-    .row-act { display: flex; justify-content: flex-end; gap: 10px; margin-top: 28px; }
+    /* ── shared ── */
+    .wrap { max-width: 680px; margin: 0 auto; padding: 28px 16px 80px; }
+    .pg-h { font-size: 1.45rem; font-weight: 800; margin-bottom: 5px; }
+    .pg-sub { color: var(--mut); font-size: 0.88rem; line-height: 1.55; margin-bottom: 26px; }
+    .row-act { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
 
     .btn {
       padding: 11px 22px; border-radius: 8px; font-size: 0.88rem; font-weight: 700;
@@ -88,166 +67,185 @@
     .btn-ok:hover:not(:disabled) { background: #17a589; }
     .btn-ghost { background: transparent; color: var(--mut); }
     .btn-ghost:hover:not(:disabled) { background: var(--bor); color: var(--txt); }
-    .btn-sm { padding: 7px 14px; font-size: 0.78rem; }
+    .btn-sm { padding: 6px 13px; font-size: 0.78rem; }
     .btn-full { width: 100%; justify-content: center; }
 
-    /* ── dropzone ── */
+    .fg { margin-bottom: 18px; }
+    .fg label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+    .fg input, .fg textarea {
+      width: 100%; background: var(--card); border: 1px solid var(--bor); border-radius: 8px;
+      color: var(--txt); font-size: 0.95rem; font-family: inherit; padding: 11px 14px;
+      outline: none; transition: border-color .2s;
+    }
+    .fg input:focus, .fg textarea:focus { border-color: var(--pri); }
+    .fg textarea { resize: vertical; min-height: 74px; }
+
+    /* ── PAGE 1: upload ── */
     .dropzone {
       border: 2px dashed var(--bor); border-radius: 12px; padding: 44px 24px;
       text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
       margin-bottom: 20px; background: var(--card);
     }
-    .dropzone:hover, .dropzone.over { border-color: var(--pri); background: rgba(37,99,235,.06); }
+    .dropzone:hover, .dropzone.over { border-color: var(--pri); background: var(--pri-dim); }
     .dz-ico { font-size: 2.8rem; display: block; margin-bottom: 10px; }
     .dropzone h3 { font-size: 0.95rem; margin-bottom: 6px; }
     .dropzone p { color: var(--mut); font-size: 0.82rem; }
     .link-like { color: var(--pri); text-decoration: underline; cursor: pointer; }
 
-    .doc-prev-box {
+    .doc-prev {
       background: var(--card); border: 1px solid var(--bor); border-radius: 10px;
-      padding: 16px; margin-bottom: 20px;
-      display: flex; align-items: flex-start; gap: 14px;
+      padding: 14px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px;
     }
-    .doc-prev-thumb {
-      width: 88px; height: 108px; object-fit: contain;
-      border-radius: 6px; background: var(--bg); border: 1px solid var(--bor); flex-shrink: 0;
-    }
-    .doc-prev-info { flex: 1; min-width: 0; }
-    .doc-prev-name { font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .doc-prev-meta { color: var(--mut); font-size: 0.78rem; }
-    .doc-remove { color: var(--err); cursor: pointer; font-size: 0.78rem; margin-top: 6px; display: inline-block; }
+    .doc-thumb { width: 80px; height: 100px; object-fit: contain; border-radius: 6px; background: var(--bg); border: 1px solid var(--bor); flex-shrink: 0; }
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-name { font-weight: 600; font-size: 0.88rem; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-meta { color: var(--mut); font-size: 0.78rem; }
+    .doc-rm { color: var(--err); cursor: pointer; font-size: 0.75rem; margin-top: 6px; display: inline-block; }
 
-    /* ── builder (page 2) ── */
-    .builder {
-      display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 105px); overflow: hidden;
-    }
-    .ref-panel { border-right: 1px solid var(--bor); overflow-y: auto; padding: 20px; background: var(--bg); }
-    .panel-lbl { font-size: 0.72rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
-    .ref-img { width: 100%; border-radius: 8px; border: 1px solid var(--bor); }
-    .ref-empty { background: var(--card); border: 1px dashed var(--bor); border-radius: 8px; padding: 36px; text-align: center; color: var(--mut); font-size: 0.82rem; line-height: 1.6; }
+    /* ── PAGE 2: smart fields ── */
+    .smart-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .doc-panel { position: sticky; top: 80px; }
+    .panel-hd { font-size: 0.72rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+    .doc-ref-img { width: 100%; border-radius: 8px; border: 1px solid var(--bor); max-height: 70vh; object-fit: contain; }
+    .doc-ref-empty { background: var(--card); border: 1px dashed var(--bor); border-radius: 8px; padding: 32px; text-align: center; color: var(--mut); font-size: 0.82rem; line-height: 1.5; }
 
-    .fields-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
-    .fp-header {
-      padding: 14px 18px; background: var(--card); border-bottom: 1px solid var(--bor);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .fp-cnt { font-size: 0.72rem; color: var(--mut); margin-top: 2px; }
-    .fields-list { flex: 1; overflow-y: auto; padding: 12px; }
+    .fields-col {}
 
-    .field-item {
-      background: var(--card); border: 1px solid var(--bor); border-radius: 8px;
-      padding: 10px 12px; margin-bottom: 7px;
-      display: flex; align-items: center; gap: 9px;
-      transition: border-color .15s;
+    /* bulk input */
+    .bulk-input-wrap { background: var(--card); border: 1px solid var(--bor); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .bulk-input-wrap p { font-size: 0.82rem; color: var(--mut); margin-bottom: 10px; line-height: 1.5; }
+    .bulk-input-wrap textarea {
+      width: 100%; background: var(--inp); border: 1px solid var(--bor); border-radius: 7px;
+      color: var(--txt); font-family: inherit; font-size: 0.88rem; padding: 10px 12px;
+      outline: none; resize: vertical; min-height: 120px; transition: border-color .2s;
     }
-    .field-item:hover { border-color: var(--pri); }
-    .fi-icon {
-      width: 30px; height: 30px; border-radius: 6px;
-      background: rgba(37,99,235,.15); color: var(--pri);
-      font-size: 0.85rem; font-weight: 700;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    .bulk-input-wrap textarea:focus { border-color: var(--pri); }
+    .bulk-hint { font-size: 0.72rem; color: var(--mut); margin-top: 7px; }
+
+    /* field suggestions list */
+    .sugg-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .sugg-card {
+      background: var(--card); border: 1px solid var(--bor); border-radius: 9px;
+      padding: 12px 14px; animation: fadeIn .18s ease;
     }
-    .fi-sep .fi-icon { background: rgba(26,188,156,.15); color: var(--ok); }
-    .fi-info { flex: 1; min-width: 0; }
-    .fi-label { font-size: 0.88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .fi-type { font-size: 0.72rem; color: var(--mut); margin-top: 1px; }
-    .fi-req { font-size: 0.68rem; color: var(--err); font-weight: 800; flex-shrink: 0; }
-    .fi-acts { display: flex; gap: 2px; flex-shrink: 0; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+    .sugg-card:hover { border-color: var(--pri); }
+
+    .sugg-top { display: flex; align-items: center; gap: 10px; }
+    .sugg-drag { color: var(--mut); cursor: grab; font-size: 1rem; flex-shrink: 0; }
+    .sugg-ico { width: 32px; height: 32px; border-radius: 7px; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sugg-info { flex: 1; min-width: 0; }
+    .sugg-lbl { font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sugg-lbl input {
+      background: transparent; border: none; outline: none; color: var(--txt);
+      font-size: 0.9rem; font-weight: 600; font-family: inherit; width: 100%;
+      padding: 0; border-bottom: 1px solid transparent; transition: border-color .15s;
+    }
+    .sugg-lbl input:focus { border-bottom-color: var(--pri); }
+    .sugg-acts { display: flex; gap: 4px; flex-shrink: 0; }
+
+    /* smart badge (clickable type chip) */
+    .type-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; border: 1.5px solid; transition: all .15s; margin-top: 5px;
+      font-family: inherit; background: transparent;
+    }
+    .chip-auto  { color: var(--pri);    border-color: var(--pri);    background: var(--pri-dim); }
+    .chip-smart { color: var(--ok);     border-color: var(--ok);     background: var(--ok-dim); }
+    .chip-man   { color: var(--mut);    border-color: var(--bor);    background: transparent; }
+    .chip-sig   { color: var(--purple); border-color: var(--purple); background: rgba(139,92,246,.12); }
+    .chip-photo { color: var(--orange); border-color: var(--orange); background: rgba(249,115,22,.12); }
+    .chip-ico   { font-size: 0.9rem; }
+
+    .sugg-req { font-size: 0.68rem; color: var(--err); font-weight: 800; }
+
     .fi-btn {
-      width: 26px; height: 26px; border-radius: 4px; border: none; background: transparent;
-      color: var(--mut); cursor: pointer; font-size: 0.85rem;
-      display: flex; align-items: center; justify-content: center; transition: background .12s, color .12s;
+      width: 26px; height: 26px; border-radius: 5px; border: none; background: transparent;
+      color: var(--mut); cursor: pointer; font-size: 0.85rem; display: flex; align-items: center;
+      justify-content: center; transition: background .12s, color .12s;
     }
     .fi-btn:hover { background: var(--bor); color: var(--txt); }
     .fi-btn.del:hover { background: rgba(239,68,68,.15); color: var(--err); }
 
-    .empty-fields { text-align: center; padding: 44px 20px; color: var(--mut); }
-    .ef-ico { font-size: 2.5rem; display: block; margin-bottom: 10px; }
-    .empty-fields h3 { font-size: 0.95rem; margin-bottom: 7px; }
-    .empty-fields p { font-size: 0.82rem; line-height: 1.5; }
-
-    .fp-add-bar { padding: 12px; background: var(--card); border-top: 1px solid var(--bor); }
-    .builder-foot {
-      padding: 12px 20px; background: var(--card); border-top: 1px solid var(--bor);
-      display: flex; justify-content: space-between; align-items: center;
+    /* Options for select/radio/checkbox */
+    .sugg-opts { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bor); }
+    .opts-lbl { font-size: 0.72rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
+    .opts-row { display: flex; gap: 7px; align-items: center; margin-bottom: 6px; }
+    .opts-row input {
+      flex: 1; background: var(--inp); border: 1px solid var(--bor); border-radius: 6px;
+      color: var(--txt); padding: 6px 10px; font-family: inherit; font-size: 0.85rem; outline: none;
     }
+    .opts-row input:focus { border-color: var(--pri); }
+    .opt-rm { color: var(--err); background: none; border: none; cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.9rem; flex-shrink: 0; }
+    .opt-rm:hover { background: rgba(239,68,68,.12); }
 
-    /* ── preview (page 3) ── */
+    .chk-row { display: flex; align-items: center; gap: 9px; margin-top: 8px; }
+    .chk-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--pri); cursor: pointer; flex-shrink: 0; }
+    .chk-row label { font-size: 0.85rem; cursor: pointer; color: var(--mut); }
+
+    /* add field row */
+    .add-row { display: flex; gap: 8px; margin-top: 12px; }
+    .add-row input {
+      flex: 1; background: var(--card); border: 1px solid var(--bor); border-radius: 8px;
+      color: var(--txt); padding: 10px 13px; font-family: inherit; font-size: 0.88rem; outline: none;
+    }
+    .add-row input:focus { border-color: var(--pri); }
+
+    /* empty state */
+    .sugg-empty { text-align: center; padding: 36px 16px; color: var(--mut); background: var(--card); border: 1px dashed var(--bor); border-radius: 10px; }
+    .sugg-empty-ico { font-size: 2.2rem; display: block; margin-bottom: 8px; }
+    .sugg-empty p { font-size: 0.85rem; line-height: 1.5; }
+
+    /* ── PAGE 3: preview ── */
     .prev-card { background: var(--card); border: 1px solid var(--bor); border-radius: 12px; padding: 26px; margin-bottom: 20px; }
-    .pf-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 5px; }
-    .pf-desc { color: var(--mut); font-size: 0.88rem; margin-bottom: 20px; }
-    .pf-field { margin-bottom: 18px; }
-    .pf-field label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
-    .pf-field label .req { color: var(--err); margin-left: 3px; }
-    .pf-field input, .pf-field textarea, .pf-field select {
+    .prev-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 5px; }
+    .prev-desc { color: var(--mut); font-size: 0.88rem; margin-bottom: 20px; }
+    .pf { margin-bottom: 18px; }
+    .pf label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+    .pf label .req { color: var(--err); margin-left: 3px; }
+    .pf input, .pf textarea, .pf select {
       width: 100%; background: var(--inp); border: 1px solid var(--bor); border-radius: 8px;
       color: var(--txt); font-family: inherit; font-size: 0.9rem; padding: 10px 13px; pointer-events: none;
     }
     .pf-sep { font-size: 0.9rem; font-weight: 700; color: var(--pri); padding: 10px 0; border-bottom: 1px solid var(--bor); margin-bottom: 18px; }
 
-    /* ── modal ── */
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 500; display: flex; align-items: flex-end; justify-content: center; }
-    .overlay.hidden { display: none; }
-    .sheet {
-      background: var(--card); border-radius: 20px 20px 0 0;
-      padding: 20px 20px 32px; width: 100%; max-width: 560px; max-height: 92vh;
-      overflow-y: auto; animation: slideUp .22s ease;
+    /* ── type picker dropdown ── */
+    .type-picker-wrap { position: relative; display: inline-block; }
+    .type-picker-menu {
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 300;
+      background: var(--card); border: 1px solid var(--bor); border-radius: 10px;
+      padding: 6px; min-width: 200px; display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5); animation: menuIn .15s ease;
     }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .handle { width: 38px; height: 4px; background: var(--bor); border-radius: 2px; margin: 0 auto 18px; }
-    .sheet-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; }
-
-    /* type picker */
-    .type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 18px; }
-    .ty-btn {
-      background: var(--inp); border: 2px solid var(--bor); border-radius: 8px;
-      padding: 10px 6px; cursor: pointer; text-align: center; transition: all .14s; color: var(--txt); font-family: inherit;
+    @keyframes menuIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    .type-picker-menu.open { display: block; }
+    .tpm-item {
+      display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px;
+      cursor: pointer; transition: background .12s; font-size: 0.85rem;
     }
-    .ty-btn:hover { border-color: var(--pri); }
-    .ty-btn.sel { border-color: var(--pri); background: rgba(37,99,235,.1); }
-    .ty-ico { font-size: 1.3rem; display: block; margin-bottom: 3px; }
-    .ty-lbl { font-size: 0.65rem; font-weight: 700; color: var(--mut); line-height: 1.2; }
-    .ty-btn.sel .ty-lbl { color: var(--pri); }
-
-    /* options list */
-    .opts-list { display: flex; flex-direction: column; gap: 7px; }
-    .opt-row { display: flex; gap: 7px; align-items: center; }
-    .opt-row input {
-      flex: 1; background: var(--inp); border: 1px solid var(--bor); border-radius: 6px;
-      color: var(--txt); padding: 8px 10px; font-family: inherit; font-size: 0.88rem; outline: none;
-    }
-    .opt-row input:focus { border-color: var(--pri); }
-    .opt-rm {
-      color: var(--err); background: none; border: none; cursor: pointer; width: 26px; height: 26px;
-      display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 1rem; flex-shrink: 0;
-    }
-    .opt-rm:hover { background: rgba(239,68,68,.12); }
-    .chk-row { display: flex; align-items: center; gap: 9px; margin: 7px 0; }
-    .chk-row input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--pri); cursor: pointer; flex-shrink: 0; }
-    .chk-row label { font-size: 0.9rem; cursor: pointer; }
+    .tpm-item:hover { background: var(--pri-dim); }
+    .tpm-item .tpm-ico { font-size: 1.05rem; width: 22px; text-align: center; }
+    .tpm-item .tpm-lbl { font-weight: 600; }
+    .tpm-item .tpm-desc { color: var(--mut); font-size: 0.72rem; }
+    .tpm-sep { height: 1px; background: var(--bor); margin: 4px 2px; }
 
     /* ── toast ── */
     .toast {
-      position: fixed; bottom: 20px; right: 20px; background: var(--card);
-      border: 1px solid var(--bor); border-radius: 10px; padding: 12px 18px;
-      display: flex; align-items: center; gap: 9px; font-size: 0.88rem; font-weight: 600;
-      z-index: 2000; animation: toastIn .22s ease;
-      box-shadow: 0 8px 28px rgba(0,0,0,.45); max-width: 300px;
+      position: fixed; bottom: 20px; right: 16px; background: var(--card);
+      border: 1px solid var(--bor); border-radius: 10px; padding: 11px 16px;
+      display: flex; align-items: center; gap: 9px; font-size: 0.85rem; font-weight: 600;
+      z-index: 2000; animation: tIn .2s ease; box-shadow: 0 8px 28px rgba(0,0,0,.5); max-width: 280px;
     }
     .toast.ok { border-color: var(--ok); }
     .toast.er { border-color: var(--err); }
-    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes tIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-    @media (max-width: 700px) {
-      .builder { grid-template-columns: 1fr; height: auto; }
-      .ref-panel { display: none; }
-      .fields-panel { height: auto; min-height: 0; }
-      .fields-list { max-height: 55vh; }
-      .type-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (max-width: 400px) {
-      .type-grid { grid-template-columns: repeat(3, 1fr); }
-      .wz-step .wz-lbl { display: none; }
+    @media (max-width: 680px) {
+      .smart-layout { grid-template-columns: 1fr; }
+      .doc-panel { position: static; }
+      .doc-ref-img { max-height: 40vh; }
     }
   </style>
 </head>
@@ -259,22 +257,16 @@
 </nav>
 
 <div class="wizard">
-  <div class="wz-step active" id="ws1">
-    <span class="wz-num">1</span><span class="wz-lbl">Documento</span>
-  </div>
-  <div class="wz-step" id="ws2">
-    <span class="wz-num">2</span><span class="wz-lbl">Campos</span>
-  </div>
-  <div class="wz-step" id="ws3">
-    <span class="wz-num">3</span><span class="wz-lbl">Vista previa</span>
-  </div>
+  <div class="wz active" id="ws1"><span class="wz-n">1</span><span>Documento</span></div>
+  <div class="wz" id="ws2"><span class="wz-n">2</span><span>Campos</span></div>
+  <div class="wz" id="ws3"><span class="wz-n">3</span><span>Vista previa</span></div>
 </div>
 
-<!-- PAGE 1: Document upload -->
-<div class="page active" id="p1">
+<!-- PAGE 1: Upload -->
+<div class="page on" id="p1">
   <div class="wrap">
-    <h1 class="pg-h">Documento base</h1>
-    <p class="pg-sub">Sube el documento escaneado como referencia visual. Luego defines los campos digitales que lo reemplazarán.</p>
+    <h1 class="pg-h">Sube el documento</h1>
+    <p class="pg-sub">Carga la imagen del formulario físico o escaneado. Úsalo como guía visual mientras defines los campos digitales.</p>
 
     <div class="dropzone" id="dz" onclick="document.getElementById('fi').click()">
       <input type="file" id="fi" accept="image/*" style="display:none">
@@ -285,27 +277,27 @@
     </div>
 
     <div id="docPrev" style="display:none">
-      <div class="doc-prev-box">
-        <img id="docThumb" class="doc-prev-thumb" alt="">
-        <div class="doc-prev-info">
-          <div class="doc-prev-name" id="docName"></div>
-          <div class="doc-prev-meta" id="docMeta"></div>
-          <span class="doc-remove" onclick="removeDoc()">✕ Quitar documento</span>
+      <div class="doc-prev">
+        <img id="docThumb" class="doc-thumb" alt="">
+        <div class="doc-info">
+          <div class="doc-name" id="docName"></div>
+          <div class="doc-meta" id="docMeta"></div>
+          <span class="doc-rm" onclick="removeDoc()">✕ Quitar</span>
         </div>
       </div>
     </div>
 
     <div class="fg">
       <label>Nombre del formulario *</label>
-      <input type="text" id="fNom" placeholder="Ej: Inspección Sanitaria de Locales" maxlength="100">
+      <input type="text" id="fNom" placeholder="Ej: Acta de Inspección Sanitaria" maxlength="100">
     </div>
     <div class="fg">
       <label>Descripción</label>
-      <textarea id="fDesc" placeholder="Propósito del formulario (opcional)" rows="3"></textarea>
+      <textarea id="fDesc" placeholder="Para qué se usa este formulario" rows="2"></textarea>
     </div>
     <div class="fg">
-      <label>Código / versión</label>
-      <input type="text" id="fCod" placeholder="Ej: FORM-001-v1" maxlength="50">
+      <label>Código</label>
+      <input type="text" id="fCod" placeholder="Ej: FORM-2026-v1" maxlength="50">
     </div>
 
     <div class="row-act">
@@ -314,124 +306,168 @@
   </div>
 </div>
 
-<!-- PAGE 2: Field builder -->
+<!-- PAGE 2: Smart field builder -->
 <div class="page" id="p2">
-  <div class="builder">
-    <div class="ref-panel">
-      <div class="panel-lbl">Referencia del documento</div>
-      <img id="refImg" class="ref-img" alt="" style="display:none">
-      <div class="ref-empty" id="refEmpty">Sin imagen de referencia.<br>Puedes guiarte por el documento físico.</div>
-    </div>
-    <div class="fields-panel">
-      <div class="fp-header">
-        <div>
-          <div class="panel-lbl" style="margin:0">Campos del formulario</div>
-          <div class="fp-cnt" id="fpCnt">0 campos</div>
+  <div class="wrap">
+    <h1 class="pg-h">Campos del formulario</h1>
+    <p class="pg-sub">Escribe los nombres de los campos que ves en el documento — uno por línea. El sistema sugiere automáticamente el tipo de campo más adecuado para cada uno.</p>
+
+    <div class="smart-layout">
+      <!-- Left: doc reference -->
+      <div class="doc-panel">
+        <div class="panel-hd">Documento de referencia</div>
+        <img id="refImg" class="doc-ref-img" alt="" style="display:none">
+        <div class="doc-ref-empty" id="refEmpty">Sin imagen. Usa el documento físico como referencia.</div>
+      </div>
+
+      <!-- Right: fields -->
+      <div class="fields-col">
+        <!-- Bulk entry -->
+        <div class="bulk-input-wrap">
+          <p>📋 <strong>Copia los nombres de los campos</strong> que aparecen en el formulario:</p>
+          <textarea id="bulkInput" placeholder="Ejemplo:&#10;Nombre del establecimiento&#10;Fecha de inspección&#10;Ciudad&#10;Tipo de establecimiento&#10;¿Cumple normativa de higiene?&#10;Observaciones&#10;Firma del inspector&#10;Fotografía del local" rows="8"></textarea>
+          <div class="bulk-hint">Una etiqueta por línea. El sistema detecta fechas, firmas, GPS, desplegables, sí/no y más.</div>
+          <div style="margin-top:12px">
+            <button class="btn btn-pri btn-full" onclick="processaBulk()">⚡ Analizar y sugerir tipos</button>
+          </div>
         </div>
-        <button class="btn btn-pri btn-sm" onclick="openModal()">+ Campo</button>
-      </div>
-      <div class="fields-list" id="fieldsList">
-        <div class="empty-fields" id="emptyF">
-          <span class="ef-ico">📋</span>
-          <h3>Sin campos todavía</h3>
-          <p>Agrega textos, desplegables, fechas automáticas, firmas y más.</p>
+
+        <!-- Suggestions list -->
+        <div id="suggList" class="sugg-list"></div>
+
+        <!-- Add single field -->
+        <div class="add-row" style="margin-top:14px">
+          <input type="text" id="addInput" placeholder="+ Agregar campo manualmente..." onkeydown="if(event.key==='Enter'){addSingle();}">
+          <button class="btn btn-sec btn-sm" onclick="addSingle()">Agregar</button>
         </div>
       </div>
-      <div class="fp-add-bar">
-        <button class="btn btn-pri btn-full" onclick="openModal()">+ Agregar campo</button>
-      </div>
     </div>
-  </div>
-  <div class="builder-foot">
-    <button class="btn btn-sec" onclick="goPg(1)">← Atrás</button>
-    <button class="btn btn-pri" onclick="goPg(3)">Vista previa →</button>
+
+    <div style="display:flex;justify-content:space-between;margin-top:8px">
+      <button class="btn btn-sec" onclick="goPg(1)">← Atrás</button>
+      <button class="btn btn-pri" onclick="goPg(3)">Vista previa →</button>
+    </div>
   </div>
 </div>
 
 <!-- PAGE 3: Preview & save -->
 <div class="page" id="p3">
   <div class="wrap">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div>
         <h1 class="pg-h" id="prevH">Vista previa</h1>
         <p style="color:var(--mut);font-size:0.82rem">Así se verá el formulario al llenarlo</p>
       </div>
-      <button class="btn btn-ok" onclick="saveTemplate()">💾 Guardar plantilla</button>
+      <button class="btn btn-ok" onclick="save()">💾 Guardar plantilla</button>
     </div>
 
     <div id="prevForm" class="prev-card"></div>
 
-    <div class="row-act" style="justify-content:space-between">
+    <div style="display:flex;justify-content:space-between;margin-top:16px">
       <button class="btn btn-sec" onclick="goPg(2)">← Editar campos</button>
       <button class="btn btn-pri" onclick="goFill()">Ir a llenar →</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Add/Edit field -->
-<div class="overlay hidden" id="overlay" onclick="overlayClick(event)">
-  <div class="sheet" id="sheet">
-    <div class="handle"></div>
-    <div class="sheet-title" id="sheetTitle">Agregar campo</div>
-    <div class="type-grid" id="typeGrid"></div>
-    <div id="fieldProps"></div>
-    <div class="row-act">
-      <button class="btn btn-sec" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-pri" onclick="saveField()">Guardar campo</button>
-    </div>
-  </div>
-</div>
+<!-- Type picker menu (shared, moved into DOM) -->
+<div id="typeMenu" class="type-picker-menu"></div>
 
 <script>
 // ── State ─────────────────────────────────────────────────────────
 let tmpl = { id:null, nombre:'', descripcion:'', codigo:'', imagen:null, campos:[], version:'1.0', creadoEn:null, actualizadoEn:null };
-let editId = null;
-let selType = 'texto';
-let curOpts = [];
+let activeMenuId = null;
 
-const TIPOS = {
-  texto:         { ico:'T',   lbl:'Texto corto'  },
-  textarea:      { ico:'¶',   lbl:'Texto largo'   },
-  numero:        { ico:'#',   lbl:'Número'        },
-  email:         { ico:'@',   lbl:'Correo'        },
-  telefono:      { ico:'☏',   lbl:'Teléfono'      },
-  fecha_auto:    { ico:'📅',  lbl:'Fecha auto'    },
-  hora_auto:     { ico:'⏰',  lbl:'Hora auto'     },
-  fecha:         { ico:'🗓',  lbl:'Fecha manual'  },
-  select:        { ico:'▼',   lbl:'Desplegable'   },
-  radio:         { ico:'◉',   lbl:'Opción única'  },
-  si_no:         { ico:'✓✗',  lbl:'Sí/No/N/A'    },
-  checkbox_multi:{ ico:'☑',   lbl:'Multi-opción'  },
-  firma:         { ico:'✍',   lbl:'Firma digital' },
-  foto:          { ico:'📷',  lbl:'Fotografía'    },
-  separador:     { ico:'—',   lbl:'Separador'     },
-  ubicacion:     { ico:'📍',  lbl:'Ubicación GPS' },
-};
+// ── Field type catalog ────────────────────────────────────────────
+const TIPOS = [
+  { k:'fecha_auto',     ico:'📅', lbl:'Fecha automática',   desc:'Hoy (auto)',    chip:'chip-auto'  },
+  { k:'hora_auto',      ico:'⏰', lbl:'Hora automática',    desc:'Ahora (auto)',  chip:'chip-auto'  },
+  { k:'firma',          ico:'✍',  lbl:'Firma digital',      desc:'Dibujo táctil', chip:'chip-sig'   },
+  { k:'si_no',          ico:'✓✗', lbl:'Sí / No / N/A',      desc:'Cumplimiento',  chip:'chip-smart' },
+  { k:'select',         ico:'▼',  lbl:'Desplegable',        desc:'Lista opciones',chip:'chip-smart' },
+  { k:'radio',          ico:'◉',  lbl:'Opción única',       desc:'Radio buttons', chip:'chip-smart' },
+  { k:'checkbox_multi', ico:'☑',  lbl:'Múltiple opción',    desc:'Casillas',      chip:'chip-smart' },
+  { k:'ubicacion',      ico:'📍', lbl:'Ubicación GPS',      desc:'Coords. auto',  chip:'chip-auto'  },
+  { k:'foto',           ico:'📷', lbl:'Fotografía',         desc:'Cámara / galería',chip:'chip-photo'},
+  { k:'texto',          ico:'T',  lbl:'Texto corto',        desc:'Una línea',     chip:'chip-man'   },
+  { k:'textarea',       ico:'¶',  lbl:'Texto largo',        desc:'Párrafo',       chip:'chip-man'   },
+  { k:'numero',         ico:'#',  lbl:'Número',             desc:'Cifra',         chip:'chip-man'   },
+  { k:'email',          ico:'@',  lbl:'Correo electrónico', desc:'E-mail',        chip:'chip-man'   },
+  { k:'telefono',       ico:'☏',  lbl:'Teléfono',           desc:'Tel/cel',       chip:'chip-man'   },
+  { k:'fecha',          ico:'🗓', lbl:'Fecha manual',       desc:'El usuario elige',chip:'chip-man' },
+  { k:'separador',      ico:'—',  lbl:'Separador / Título', desc:'Encabezado de sección',chip:'chip-man'},
+];
+const TIPO_MAP = Object.fromEntries(TIPOS.map(t=>[t.k,t]));
 
-// ── Drag & Drop ────────────────────────────────────────────────────
+// ── Smart type detection ───────────────────────────────────────────
+function sugerirTipo(label) {
+  const l = label.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[¿?¡!]/g,'');
+
+  // Firma
+  if (/firma|rubrica|rúbrica|huella|sello|autorizacion|autoriza/.test(l)) return 'firma';
+
+  // Fecha
+  if (/^fecha|fecha de|^dia$|^date|periodo|vigencia|vencimiento/.test(l)) return 'fecha_auto';
+
+  // Hora
+  if (/^hora|hora de|^time|horario/.test(l)) return 'hora_auto';
+
+  // Foto
+  if (/foto|fotografia|imagen|evidencia|registro fotografico|captura/.test(l)) return 'foto';
+
+  // GPS / ubicación
+  if (/ubicacion|localizacion|gps|coordenadas|direccion|domicilio|localidad/.test(l)) return 'ubicacion';
+
+  // Sí / No
+  if (/cumple|aplica|tiene |cuenta con|existe|si.*no|cumplimiento|verifica|realiza|posee|cuenta/.test(l)) return 'si_no';
+
+  // Teléfono
+  if (/telefono|celular|movil|fono|phone|cel\./.test(l)) return 'telefono';
+
+  // Email
+  if (/correo|email|e-mail/.test(l)) return 'email';
+
+  // Número
+  if (/numero|nit|cedula|rut|codigo|cantidad|total|valor|nro\.|tarifa|capacidad|empleados|trabajadores/.test(l)) return 'numero';
+
+  // Desplegable (campos con valores conocidos y acotados)
+  if (/ciudad|municipio|departamento|pais|tipo de|categoria|area|cargo|genero|estado|sexo|estrato|zona|modalidad|regimen|actividad/.test(l)) return 'select';
+
+  // Textarea
+  if (/observacion|descripcion|comentario|nota|detalle|justificacion|especificacion|aclaracion|conclusion|resultado/.test(l)) return 'textarea';
+
+  // Separador (parece encabezado de sección)
+  if (/^datos (de|del)|^informacion|^seccion|^modulo|^bloque|^parte /.test(l)) return 'separador';
+
+  return 'texto';
+}
+
+// ── Drag/drop upload ──────────────────────────────────────────────
 const dz = document.getElementById('dz');
 const fi = document.getElementById('fi');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
-fi.addEventListener('change', () => { if (fi.files[0]) handleFile(fi.files[0]); });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fi.addEventListener('change', () => { if(fi.files[0]) handleFile(fi.files[0]); });
 
-function handleFile(file) {
-  if (!file.type.startsWith('image/')) { toast('Solo imágenes: JPG, PNG, GIF','er'); return; }
-  if (file.size > 10*1024*1024) { toast('Archivo muy grande (máx 10 MB)','er'); return; }
+function handleFile(f) {
+  if (!f.type.startsWith('image/')) { toast('Solo imágenes (JPG, PNG, GIF)','er'); return; }
+  if (f.size > 10*1024*1024) { toast('Máximo 10 MB','er'); return; }
   const r = new FileReader();
   r.onload = e => {
     tmpl.imagen = e.target.result;
     document.getElementById('docThumb').src = e.target.result;
-    document.getElementById('docName').textContent = file.name;
-    document.getElementById('docMeta').textContent = `${(file.size/1024).toFixed(0)} KB`;
+    document.getElementById('docName').textContent = f.name;
+    document.getElementById('docMeta').textContent = `${(f.size/1024).toFixed(0)} KB`;
     dz.style.display = 'none';
     document.getElementById('docPrev').style.display = 'block';
     const ri = document.getElementById('refImg');
     ri.src = e.target.result; ri.style.display = 'block';
     document.getElementById('refEmpty').style.display = 'none';
   };
-  r.readAsDataURL(file);
+  r.readAsDataURL(f);
 }
 
 function removeDoc() {
@@ -442,268 +478,313 @@ function removeDoc() {
   document.getElementById('refEmpty').style.display = 'block';
 }
 
-// ── Page navigation ────────────────────────────────────────────────
+// ── Page nav ──────────────────────────────────────────────────────
 function goPg(n) {
-  if (n === 2) {
+  if (n >= 2) {
     const nom = document.getElementById('fNom').value.trim();
-    if (!nom) { toast('Ingresa el nombre del formulario','er'); document.getElementById('fNom').focus(); return; }
+    if (!nom) { toast('Escribe el nombre del formulario','er'); document.getElementById('fNom').focus(); return; }
     tmpl.nombre = nom;
     tmpl.descripcion = document.getElementById('fDesc').value.trim();
     tmpl.codigo = document.getElementById('fCod').value.trim();
   }
   if (n === 3) {
-    if (tmpl.campos.length === 0) { toast('Agrega al menos un campo','er'); return; }
+    if (!tmpl.campos.length) { toast('Agrega al menos un campo','er'); return; }
     renderPreview();
   }
-  document.querySelectorAll('.wz-step').forEach((el,i) => {
+  document.querySelectorAll('.wz').forEach((el,i) => {
     el.classList.toggle('active', i+1===n);
     el.classList.toggle('done', i+1<n);
   });
-  document.querySelectorAll('.page').forEach((el,i) => el.classList.toggle('active', i+1===n));
+  document.querySelectorAll('.page').forEach((el,i) => el.classList.toggle('on', i+1===n));
   window.scrollTo(0,0);
 }
 
-// ── Modal ──────────────────────────────────────────────────────────
-function openModal(fieldId=null) {
-  editId = fieldId;
-  selType = 'texto';
-  document.getElementById('sheetTitle').textContent = fieldId ? 'Editar campo' : 'Agregar campo';
-  if (fieldId) {
-    const c = tmpl.campos.find(x => x.id===fieldId);
-    if (c) { selType = c.tipo; renderTypeGrid(); renderProps(c); }
-    else { renderTypeGrid(); renderProps(null); }
-  } else {
-    renderTypeGrid(); renderProps(null);
+// ── Bulk field analysis ───────────────────────────────────────────
+function processaBulk() {
+  const raw = document.getElementById('bulkInput').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  if (!lines.length) { toast('Escribe al menos un campo','er'); return; }
+
+  lines.forEach(label => {
+    if (tmpl.campos.find(c=>c.etiqueta.toLowerCase()===label.toLowerCase())) return; // skip dups
+    const tipo = sugerirTipo(label);
+    tmpl.campos.push({
+      id: `c${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      tipo, etiqueta: label,
+      placeholder: '', requerido: tipo!=='separador',
+      opciones: needsOptions(tipo) ? [] : undefined,
+      _sugerido: true
+    });
+  });
+  document.getElementById('bulkInput').value = '';
+  renderSuggList();
+  toast(`${lines.length} campo${lines.length!==1?'s':''} analizados ✓`,'ok');
+}
+
+function addSingle() {
+  const inp = document.getElementById('addInput');
+  const label = inp.value.trim();
+  if (!label) return;
+  const tipo = sugerirTipo(label);
+  tmpl.campos.push({
+    id: `c${Date.now()}`,
+    tipo, etiqueta: label,
+    placeholder:'', requerido: tipo!=='separador',
+    opciones: needsOptions(tipo) ? [] : undefined,
+    _sugerido: true
+  });
+  inp.value = '';
+  renderSuggList();
+}
+
+function needsOptions(tipo) { return ['select','radio','checkbox_multi'].includes(tipo); }
+
+// ── Render suggestion list ────────────────────────────────────────
+function renderSuggList() {
+  const el = document.getElementById('suggList');
+  if (!tmpl.campos.length) {
+    el.innerHTML = `<div class="sugg-empty"><span class="sugg-empty-ico">✨</span>
+      <p>Escribe los nombres de los campos arriba y presiona <strong>"Analizar"</strong>.<br>
+      El sistema detectará automáticamente fechas, firmas, desplegables, GPS, sí/no y más.</p></div>`;
+    return;
   }
-  document.getElementById('overlay').classList.remove('hidden');
+  el.innerHTML = tmpl.campos.map((c,i) => buildSuggCard(c,i)).join('');
 }
 
-function closeModal() { document.getElementById('overlay').classList.add('hidden'); editId=null; }
-function overlayClick(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
+function buildSuggCard(c, i) {
+  const T = TIPO_MAP[c.tipo] || TIPO_MAP.texto;
+  const isSep = c.tipo==='separador';
+  const hasOpts = needsOptions(c.tipo);
 
-function renderTypeGrid() {
-  document.getElementById('typeGrid').innerHTML = Object.entries(TIPOS).map(([k,v]) =>
-    `<button class="ty-btn${selType===k?' sel':''}" onclick="pickType('${k}')">
-      <span class="ty-ico">${v.ico}</span>
-      <span class="ty-lbl">${v.lbl}</span>
-    </button>`
-  ).join('');
-}
+  let optHtml = '';
+  if (hasOpts) {
+    const opts = c.opciones||[];
+    optHtml = `<div class="sugg-opts">
+      <div class="opts-lbl">Opciones del desplegable</div>
+      <div id="optRows_${c.id}">
+        ${opts.map((o,j)=>`<div class="opts-row" id="or_${c.id}_${j}">
+          <input type="text" value="${escHtml(o)}" placeholder="Opción ${j+1}" oninput="setOpt('${c.id}',${j},this.value)">
+          <button class="opt-rm" onclick="rmOpt('${c.id}',${j})">✕</button>
+        </div>`).join('')}
+        ${opts.length===0?`<div class="opts-row" id="or_${c.id}_0">
+          <input type="text" placeholder="Opción 1" oninput="setOpt('${c.id}',0,this.value)">
+          <button class="opt-rm" onclick="rmOpt('${c.id}',0)">✕</button>
+        </div>`:''}
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addOpt('${c.id}')">+ Opción</button>
+    </div>`;
+    // init opciones array if empty
+    if (!c.opciones?.length) c.opciones = [''];
+  }
 
-function pickType(t) { selType=t; renderTypeGrid(); renderProps(null); }
+  const reqCheck = !isSep ? `<div class="chk-row" style="margin-top:10px">
+    <input type="checkbox" id="req_${c.id}" ${c.requerido?'checked':''} onchange="setReq('${c.id}',this.checked)">
+    <label for="req_${c.id}">Campo requerido</label>
+  </div>` : '';
 
-function renderProps(campo) {
-  const isSep = selType==='separador';
-  const isAuto = ['fecha_auto','hora_auto','ubicacion'].includes(selType);
-  const hasOpts = ['select','radio','checkbox_multi'].includes(selType);
-  const isSiNo = selType==='si_no';
-  const isFirma = selType==='firma';
-
-  const et = campo?.etiqueta||'', ph=campo?.placeholder||'', req=campo?.requerido??true;
-  curOpts = campo?.opciones ? [...campo.opciones] : [''];
-
-  let h = '';
-  if (isSep) {
-    h = `<div class="fg"><label>Texto del separador *</label><input type="text" id="pEt" placeholder="Ej: Datos del Establecimiento" value="${et}"></div>`;
-  } else {
-    h = `<div class="fg"><label>Etiqueta *</label><input type="text" id="pEt" placeholder="Ej: Nombre del responsable" value="${et}"></div>`;
-    if (!isFirma && !isAuto && !isSiNo) {
-      h += `<div class="fg"><label>Texto de ayuda</label><input type="text" id="pPh" placeholder="Ej: Ingresa el nombre completo..." value="${ph}"></div>`;
-    }
-    if (hasOpts) {
-      h += `<div class="fg"><label>Opciones *</label>
-        <div class="opts-list" id="optList">
-          ${curOpts.map((o,i)=>`<div class="opt-row" id="or${i}">
-            <input type="text" placeholder="Opción ${i+1}" value="${o}" oninput="setOpt(${i},this.value)">
-            <button class="opt-rm" onclick="rmOpt(${i})">✕</button>
-          </div>`).join('')}
+  return `<div class="sugg-card" id="sc_${c.id}">
+    <div class="sugg-top">
+      <span class="sugg-drag">⠿</span>
+      <div class="sugg-ico ${T.chip}" style="font-size:1.1rem">${T.ico}</div>
+      <div class="sugg-info">
+        <div class="sugg-lbl">
+          <input type="text" value="${escHtml(c.etiqueta)}" placeholder="Nombre del campo" oninput="setLbl('${c.id}',this.value)">
         </div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addOpt()">+ Opción</button>
-      </div>`;
-    }
-    if (!isAuto) {
-      h += `<div class="chk-row"><input type="checkbox" id="pReq"${req?' checked':''}><label for="pReq">Campo requerido</label></div>`;
-    }
-  }
-  document.getElementById('fieldProps').innerHTML = h;
+        <button class="type-chip ${T.chip}" onclick="openMenu('${c.id}',this)" id="chip_${c.id}">
+          <span class="chip-ico">${T.ico}</span> ${T.lbl}
+          ${c._sugerido?'<span style="opacity:.6;font-size:.65rem">▾</span>':'<span style="opacity:.6;font-size:.65rem">▾</span>'}
+        </button>
+      </div>
+      ${c.requerido?'<span class="sugg-req">*</span>':''}
+      <div class="sugg-acts">
+        ${i>0?`<button class="fi-btn" onclick="mvC('${c.id}',-1)" title="Subir">↑</button>`:'<span style="width:26px"></span>'}
+        ${i<tmpl.campos.length-1?`<button class="fi-btn" onclick="mvC('${c.id}',1)" title="Bajar">↓</button>`:'<span style="width:26px"></span>'}
+        <button class="fi-btn del" onclick="delC('${c.id}')" title="Eliminar">✕</button>
+      </div>
+    </div>
+    ${optHtml}
+    ${reqCheck}
+  </div>`;
 }
 
-function setOpt(i,v) { curOpts[i]=v; }
-function addOpt() {
-  curOpts.push('');
-  const list = document.getElementById('optList');
-  const i = curOpts.length-1;
-  const d = document.createElement('div');
-  d.className='opt-row'; d.id=`or${i}`;
-  d.innerHTML=`<input type="text" placeholder="Opción ${i+1}" oninput="setOpt(${i},this.value)"><button class="opt-rm" onclick="rmOpt(${i})">✕</button>`;
-  list.appendChild(d);
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ── Field mutations ───────────────────────────────────────────────
+function setLbl(id,v) { const c=tmpl.campos.find(x=>x.id===id); if(c) c.etiqueta=v; }
+function setReq(id,v) { const c=tmpl.campos.find(x=>x.id===id); if(c) c.requerido=v; }
+function setOpt(id,j,v) { const c=tmpl.campos.find(x=>x.id===id); if(c&&c.opciones) c.opciones[j]=v; }
+function mvC(id,dir) {
+  const i=tmpl.campos.findIndex(c=>c.id===id), j=i+dir;
+  if(j<0||j>=tmpl.campos.length) return;
+  [tmpl.campos[i],tmpl.campos[j]]=[tmpl.campos[j],tmpl.campos[i]];
+  renderSuggList();
 }
-function rmOpt(i) {
-  const list = document.getElementById('optList');
-  if (list.children.length<=1) { toast('Mínimo una opción','er'); return; }
-  // Read current values from DOM before rebuilding
-  curOpts = Array.from(list.querySelectorAll('input')).map(inp=>inp.value);
-  curOpts.splice(i,1);
-  list.innerHTML = curOpts.map((o,j)=>`<div class="opt-row" id="or${j}">
-    <input type="text" placeholder="Opción ${j+1}" value="${o}" oninput="setOpt(${j},this.value)">
-    <button class="opt-rm" onclick="rmOpt(${j})">✕</button>
+function delC(id) {
+  tmpl.campos=tmpl.campos.filter(c=>c.id!==id);
+  renderSuggList();
+}
+function addOpt(id) {
+  const c=tmpl.campos.find(x=>x.id===id); if(!c) return;
+  if(!c.opciones) c.opciones=[];
+  c.opciones.push('');
+  const j=c.opciones.length-1;
+  const list=document.getElementById(`optRows_${id}`);
+  if(!list) return;
+  const row=document.createElement('div');
+  row.className='opts-row'; row.id=`or_${id}_${j}`;
+  row.innerHTML=`<input type="text" placeholder="Opción ${j+1}" oninput="setOpt('${id}',${j},this.value)"><button class="opt-rm" onclick="rmOpt('${id}',${j})">✕</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+function rmOpt(id,j) {
+  const c=tmpl.campos.find(x=>x.id===id); if(!c||!c.opciones) return;
+  if(c.opciones.length<=1) { toast('Mínimo una opción','er'); return; }
+  // Read current DOM values before splice
+  const list=document.getElementById(`optRows_${id}`);
+  if(list) c.opciones=Array.from(list.querySelectorAll('input')).map(i=>i.value);
+  c.opciones.splice(j,1);
+  // Re-render that card's options
+  const card=document.getElementById(`sc_${c.id}`);
+  if(!card) return;
+  const existing=card.querySelector(`#optRows_${id}`);
+  if(existing) existing.innerHTML=c.opciones.map((o,k)=>`<div class="opts-row" id="or_${id}_${k}">
+    <input type="text" value="${escHtml(o)}" placeholder="Opción ${k+1}" oninput="setOpt('${id}',${k},this.value)">
+    <button class="opt-rm" onclick="rmOpt('${id}',${k})">✕</button>
   </div>`).join('');
 }
 
-function saveField() {
-  const etEl = document.getElementById('pEt');
-  const et = etEl?.value?.trim()||'';
-  if (!et) { toast('La etiqueta es obligatoria','er'); etEl?.focus(); return; }
+// ── Type picker menu ──────────────────────────────────────────────
+function openMenu(cId, btn) {
+  const menu = document.getElementById('typeMenu');
+  if (activeMenuId===cId && menu.classList.contains('open')) { closeMenu(); return; }
+  activeMenuId = cId;
 
-  const hasOpts = ['select','radio','checkbox_multi'].includes(selType);
-  if (hasOpts) {
-    const inputs = document.getElementById('optList')?.querySelectorAll('input');
-    if (inputs) curOpts = Array.from(inputs).map(i=>i.value.trim()).filter(Boolean);
-    if (!curOpts.length) { toast('Agrega al menos una opción','er'); return; }
-  }
-
-  const campo = {
-    id: editId||`c${Date.now()}`,
-    tipo: selType,
-    etiqueta: et,
-    placeholder: document.getElementById('pPh')?.value?.trim()||'',
-    requerido: document.getElementById('pReq')?.checked??true,
-    opciones: hasOpts ? [...curOpts] : undefined
-  };
-  if (['fecha_auto','hora_auto','ubicacion'].includes(selType)) { campo.requerido=false; campo.autoLlenar=selType; }
-
-  if (editId) {
-    const idx=tmpl.campos.findIndex(c=>c.id===editId);
-    if (idx>=0) tmpl.campos[idx]=campo;
-  } else {
-    tmpl.campos.push(campo);
-  }
-  renderFieldList();
-  closeModal();
-  toast(editId?'Campo actualizado':'Campo agregado','ok');
-}
-
-// ── Field list ─────────────────────────────────────────────────────
-function renderFieldList() {
-  const list = document.getElementById('fieldsList');
-  const emp = document.getElementById('emptyF');
-  document.getElementById('fpCnt').textContent = `${tmpl.campos.length} campo${tmpl.campos.length!==1?'s':''}`;
-  if (!tmpl.campos.length) { emp.style.display='block'; list.querySelectorAll('.field-item').forEach(e=>e.remove()); return; }
-  emp.style.display='none';
-  list.querySelectorAll('.field-item').forEach(e=>e.remove());
-  list.insertAdjacentHTML('afterbegin', tmpl.campos.map((c,i) => {
-    const T=TIPOS[c.tipo]||{ico:'?',lbl:c.tipo};
-    const isSep=c.tipo==='separador';
-    return `<div class="field-item${isSep?' fi-sep':''}" id="fi_${c.id}">
-      <div class="fi-icon">${T.ico}</div>
-      <div class="fi-info">
-        <div class="fi-label">${c.etiqueta}</div>
-        <div class="fi-type">${T.lbl}</div>
-      </div>
-      ${c.requerido?'<span class="fi-req">*</span>':''}
-      <div class="fi-acts">
-        ${i>0?`<button class="fi-btn" onclick="mvF('${c.id}',-1)" title="Subir">↑</button>`:'<span style="width:26px"></span>'}
-        ${i<tmpl.campos.length-1?`<button class="fi-btn" onclick="mvF('${c.id}',1)" title="Bajar">↓</button>`:'<span style="width:26px"></span>'}
-        <button class="fi-btn" onclick="openModal('${c.id}')" title="Editar">✏️</button>
-        <button class="fi-btn del" onclick="delF('${c.id}')" title="Eliminar">🗑</button>
-      </div>
+  menu.innerHTML = TIPOS.map((t,i) => {
+    const sep = i===9 ? '<div class="tpm-sep"></div>' : '';
+    return `${sep}<div class="tpm-item" onclick="changeType('${cId}','${t.k}')">
+      <span class="tpm-ico">${t.ico}</span>
+      <div><div class="tpm-lbl">${t.lbl}</div><div class="tpm-desc">${t.desc}</div></div>
     </div>`;
-  }).join(''));
+  }).join('');
+
+  // Position near the chip button
+  const r = btn.getBoundingClientRect();
+  menu.style.position='fixed';
+  menu.style.top = (r.bottom+6)+'px';
+  menu.style.left = Math.min(r.left, window.innerWidth-210)+'px';
+  menu.classList.add('open');
 }
 
-function mvF(id,dir) {
-  const i=tmpl.campos.findIndex(c=>c.id===id), j=i+dir;
-  if (j<0||j>=tmpl.campos.length) return;
-  [tmpl.campos[i],tmpl.campos[j]]=[tmpl.campos[j],tmpl.campos[i]];
-  renderFieldList();
+function closeMenu() {
+  document.getElementById('typeMenu').classList.remove('open');
+  activeMenuId=null;
 }
-function delF(id) {
-  if (!confirm('¿Eliminar este campo?')) return;
-  tmpl.campos=tmpl.campos.filter(c=>c.id!==id);
-  renderFieldList();
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.type-chip') && !e.target.closest('#typeMenu')) closeMenu();
+});
+
+function changeType(cId, newTipo) {
+  const c=tmpl.campos.find(x=>x.id===cId); if(!c) return;
+  c.tipo=newTipo; c._sugerido=false;
+  // Handle opciones
+  if(needsOptions(newTipo) && !c.opciones) c.opciones=[''];
+  if(!needsOptions(newTipo)) delete c.opciones;
+  closeMenu();
+  renderSuggList();
 }
 
 // ── Preview ────────────────────────────────────────────────────────
 function renderPreview() {
   document.getElementById('prevH').textContent = tmpl.nombre||'Vista previa';
-  const now = new Date();
-  const ds = now.toLocaleDateString('es-CO');
-  const ts = now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-  let h = `<h2 class="pf-title">${tmpl.nombre}</h2>`;
-  if (tmpl.descripcion) h+=`<p class="pf-desc">${tmpl.descripcion}</p>`;
-  if (tmpl.codigo) h+=`<p style="color:var(--mut);font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px">${tmpl.codigo}</p>`;
-  tmpl.campos.forEach(c=>{h+=renderCampoPrev(c,ds,ts);});
+  const now=new Date();
+  const ds=now.toLocaleDateString('es-CO');
+  const ts=now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  let h=`<h2 class="prev-title">${escHtml(tmpl.nombre)}</h2>`;
+  if(tmpl.descripcion) h+=`<p class="prev-desc">${escHtml(tmpl.descripcion)}</p>`;
+  if(tmpl.codigo) h+=`<p style="color:var(--mut);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px">${escHtml(tmpl.codigo)}</p>`;
+  tmpl.campos.forEach(c=>{h+=prevField(c,ds,ts);});
   document.getElementById('prevForm').innerHTML=h;
 }
 
-function renderCampoPrev(c,ds,ts) {
-  if (c.tipo==='separador') return `<div class="pf-sep">— ${c.etiqueta}</div>`;
+function prevField(c,ds,ts) {
+  if(c.tipo==='separador') return `<div class="pf-sep">— ${escHtml(c.etiqueta)}</div>`;
+  const T=TIPO_MAP[c.tipo]||TIPO_MAP.texto;
   const req=c.requerido?'<span class="req">*</span>':'';
-  const W=`<div class="pf-field"><label>${c.etiqueta}${req}</label>`;
+  const W=`<div class="pf"><label>${escHtml(c.etiqueta)}${req}</label>`;
   const E=`</div>`;
-  switch (c.tipo) {
-    case 'texto': case 'email': case 'telefono': case 'numero':
-      return `${W}<input type="text" placeholder="${c.placeholder||'Ingresa aquí...'}" disabled>${E}`;
+  switch(c.tipo){
+    case 'texto': case 'email': case 'telefono':
+      return `${W}<input type="text" placeholder="${escHtml(c.placeholder||'Ingresa aquí...')}" disabled>${E}`;
+    case 'numero':
+      return `${W}<input type="number" placeholder="0" disabled>${E}`;
     case 'textarea':
-      return `${W}<textarea placeholder="${c.placeholder||'Escribe aquí...'}" disabled style="min-height:72px"></textarea>${E}`;
+      return `${W}<textarea placeholder="${escHtml(c.placeholder||'Escribe aquí...')}" disabled style="min-height:72px"></textarea>${E}`;
     case 'fecha_auto':
-      return `${W}<input type="text" value="${ds}" disabled style="background:rgba(37,99,235,.09);border-color:var(--pri);color:var(--pri)">${E}`;
+      return `${W}<input type="text" value="${ds}" disabled style="background:var(--pri-dim);border-color:var(--pri);color:var(--pri)">${E}`;
     case 'hora_auto':
-      return `${W}<input type="text" value="${ts}" disabled style="background:rgba(37,99,235,.09);border-color:var(--pri);color:var(--pri)">${E}`;
+      return `${W}<input type="text" value="${ts}" disabled style="background:var(--pri-dim);border-color:var(--pri);color:var(--pri)">${E}`;
     case 'fecha':
       return `${W}<input type="date" disabled>${E}`;
     case 'select':
-      return `${W}<select disabled><option>Seleccionar...</option>${(c.opciones||[]).map(o=>`<option>${o}</option>`).join('')}</select>${E}`;
-    case 'radio': case 'si_no': {
+      return `${W}<select disabled><option>Seleccionar...</option>${(c.opciones||[]).map(o=>`<option>${escHtml(o)}</option>`).join('')}</select>${E}`;
+    case 'radio': case 'si_no':{
       const opts=c.tipo==='si_no'?['Sí','No','N/A']:(c.opciones||[]);
       return `${W}<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:4px">
-        ${opts.map(o=>`<label style="display:flex;align-items:center;gap:6px;padding:7px 13px;background:var(--inp);border:1px solid var(--bor);border-radius:6px;font-size:0.88rem">
-          <input type="radio" disabled> ${o}</label>`).join('')}</div>${E}`;
+        ${opts.map(o=>`<label style="display:flex;align-items:center;gap:6px;padding:8px 13px;background:var(--inp);border:1.5px solid var(--bor);border-radius:7px;font-size:.88rem">
+          <input type="radio" disabled> ${escHtml(o)}</label>`).join('')}</div>${E}`;
     }
     case 'checkbox_multi':
       return `${W}<div style="display:flex;flex-direction:column;gap:7px;margin-top:4px">
-        ${(c.opciones||[]).map(o=>`<label style="display:flex;align-items:center;gap:8px;font-size:0.88rem">
-          <input type="checkbox" disabled> ${o}</label>`).join('')}</div>${E}`;
+        ${(c.opciones||[]).map(o=>`<label style="display:flex;align-items:center;gap:8px;font-size:.88rem">
+          <input type="checkbox" disabled> ${escHtml(o)}</label>`).join('')}</div>${E}`;
     case 'firma':
-      return `${W}<div style="background:var(--inp);border:1px solid var(--bor);border-radius:8px;height:110px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:0.82rem">✍ Área de firma</div>${E}`;
+      return `${W}<div style="background:var(--inp);border:1.5px solid var(--bor);border-radius:8px;height:110px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:.82rem;flex-direction:column;gap:6px"><span style="font-size:2rem">✍</span>Área de firma digital</div>${E}`;
     case 'foto':
-      return `${W}<div style="background:var(--inp);border:1px dashed var(--bor);border-radius:8px;padding:22px;text-align:center;color:var(--mut);font-size:0.82rem">📷 Capturar o subir foto</div>${E}`;
+      return `${W}<div style="background:var(--inp);border:1.5px dashed var(--bor);border-radius:8px;padding:22px;text-align:center;color:var(--mut);font-size:.82rem"><span style="font-size:2rem;display:block;margin-bottom:6px">📷</span>Capturar o subir foto</div>${E}`;
     case 'ubicacion':
-      return `${W}<div style="background:rgba(37,99,235,.09);border:1px solid var(--pri);border-radius:8px;padding:11px 15px;display:flex;align-items:center;gap:9px;font-size:0.82rem;color:var(--pri)">📍 Ubicación GPS (automática)</div>${E}`;
+      return `${W}<div style="background:var(--pri-dim);border:1.5px solid var(--pri);border-radius:8px;padding:12px 15px;display:flex;align-items:center;gap:9px;font-size:.82rem;color:var(--pri)"><span style="font-size:1.2rem">📍</span>Ubicación GPS automática</div>${E}`;
     default:
       return `${W}<input type="text" placeholder="..." disabled>${E}`;
   }
 }
 
-// ── Save ───────────────────────────────────────────────────────────
-function saveTemplate() {
-  if (!tmpl.nombre) { toast('El formulario no tiene nombre','er'); return; }
-  if (!tmpl.campos.length) { toast('Agrega al menos un campo','er'); return; }
-  if (!tmpl.id) { tmpl.id=`tmpl_${Date.now()}`; tmpl.creadoEn=new Date().toISOString(); }
+// ── Save ──────────────────────────────────────────────────────────
+function save() {
+  // Collect latest option values from DOM before saving
+  tmpl.campos.forEach(c=>{
+    if(needsOptions(c.tipo)){
+      const list=document.getElementById(`optRows_${c.id}`);
+      if(list) c.opciones=Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean);
+    }
+  });
+  if(!tmpl.nombre){ toast('Sin nombre de formulario','er'); return; }
+  if(!tmpl.campos.length){ toast('Agrega campos primero','er'); return; }
+  if(!tmpl.id){ tmpl.id=`tmpl_${Date.now()}`; tmpl.creadoEn=new Date().toISOString(); }
   tmpl.actualizadoEn=new Date().toISOString();
-  let list=JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const list=JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
   const i=list.findIndex(p=>p.id===tmpl.id);
-  if (i>=0) list[i]=tmpl; else list.push(tmpl);
+  if(i>=0) list[i]=tmpl; else list.push(tmpl);
   localStorage.setItem('skf_plantillas',JSON.stringify(list));
   toast('Plantilla guardada ✓','ok');
 }
 
 function goFill() {
-  saveTemplate();
-  if (tmpl.id) window.location.href=`llenar.html?tmpl=${tmpl.id}`;
+  save();
+  if(tmpl.id) window.location.href=`llenar.html?tmpl=${tmpl.id}`;
 }
 
-// ── Toast ──────────────────────────────────────────────────────────
+// ── Toast ─────────────────────────────────────────────────────────
 let _tt;
-function toast(msg,type='ok') {
-  document.querySelectorAll('.toast').forEach(e=>e.remove());
-  clearTimeout(_tt);
-  const d=document.createElement('div');
-  d.className=`toast ${type}`;
+function toast(msg,type='ok'){
+  document.querySelectorAll('.toast').forEach(e=>e.remove()); clearTimeout(_tt);
+  const d=document.createElement('div'); d.className=`toast ${type}`;
   d.innerHTML=`<span>${type==='ok'?'✓':'✕'}</span> ${msg}`;
-  document.body.appendChild(d);
-  _tt=setTimeout(()=>d.remove(),3200);
+  document.body.appendChild(d); _tt=setTimeout(()=>d.remove(),3200);
 }
+
+// Init empty state
+renderSuggList();
 </script>
 </body>
 </html>
