@@ -203,6 +203,17 @@
     @media(max-width:400px){
       .src-tab-lbl{display:none;}
     }
+    .qual-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--warn);margin-top:9px;line-height:1.4;}
+    .qual-btns{display:flex;gap:7px;margin-top:7px;}
+    .card-warn .sugg-top{border-left:3px solid var(--warn);padding-left:8px;margin-left:-8px;}
+    .template-suggest{background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.22);border-radius:12px;padding:13px 16px;margin-bottom:14px;font-size:.85rem;}
+    .tmpl-match-title{font-weight:700;margin-bottom:6px;line-height:1.4;}
+    .tmpl-match-sub{color:var(--mut);font-size:.76rem;margin-bottom:9px;}
+    .conf-badge{background:rgba(26,188,156,.15);color:var(--ok);font-size:.67rem;font-weight:700;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;}
+    .tmpl-missing-list{display:flex;flex-wrap:wrap;gap:7px;}
+    .missing-chip{background:var(--card);border:1px solid var(--bor);border-radius:20px;padding:5px 6px 5px 11px;font-size:.78rem;display:inline-flex;align-items:center;gap:6px;}
+    .missing-chip button{background:var(--pri);color:#fff;border:none;border-radius:50%;width:19px;height:19px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;padding:0;font-weight:700;transition:background .15s;flex-shrink:0;}
+    .missing-chip button:hover{background:var(--pri-h);}
   </style>
   <script src="supabase-config.js"></script>
 </head>
@@ -385,6 +396,7 @@
         <div id="detectSummary" style="display:none" class="detect-summary">
           <span id="detectMsg"></span>
         </div>
+        <div id="templateSuggest" style="display:none" class="template-suggest"></div>
 
         <div id="suggList" class="sugg-list"></div>
 
@@ -646,6 +658,178 @@ function clearSrc(src) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// FORM TEMPLATE LIBRARY (14 common Latin American B2B form types)
+// ══════════════════════════════════════════════════════════════════
+const FORM_LIBRARY = [
+  {id:'asistencia',nombre:'Registro de Asistencia a Capacitación',
+   keywords:['asistencia','capacitacion','participante','instructor','facilitador','tema','objetivo'],
+   campos_clave:[
+    {etiqueta:'Nombre completo del participante',tipo:'texto'},
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de inicio',tipo:'hora_auto'},
+    {etiqueta:'Hora de finalización',tipo:'hora_auto'},
+    {etiqueta:'Facilitador / Instructor',tipo:'texto'},
+    {etiqueta:'Cargo',tipo:'select',opciones:['Operario','Técnico','Profesional','Supervisor','Coordinador','Otro']},
+    {etiqueta:'Firma del participante',tipo:'firma'},
+    {etiqueta:'¿Completó la capacitación?',tipo:'si_no'},
+  ]},
+  {id:'inspeccion_sst',nombre:'Lista de Verificación SST',
+   keywords:['inspeccion','verificacion','sst','seguridad','salud','trabajo','cumple','riesgo','epp','hallazgo'],
+   campos_clave:[
+    {etiqueta:'Empresa / Establecimiento',tipo:'texto'},{etiqueta:'Fecha de inspección',tipo:'fecha_auto'},
+    {etiqueta:'Área inspeccionada',tipo:'select',opciones:['Producción','Almacén','Oficinas','Mantenimiento','Otro']},
+    {etiqueta:'Inspector responsable',tipo:'texto'},
+    {etiqueta:'Calificación',tipo:'radio',opciones:['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente']},
+    {etiqueta:'Observaciones / Hallazgos',tipo:'textarea'},{etiqueta:'Acción correctiva',tipo:'textarea'},
+    {etiqueta:'Fotografía de evidencia',tipo:'foto'},{etiqueta:'Firma del inspector',tipo:'firma'},
+    {etiqueta:'Ubicación GPS',tipo:'ubicacion'},
+  ]},
+  {id:'acta_reunion',nombre:'Acta de Reunión',
+   keywords:['reunion','acta','acuerdo','compromiso','asistente','orden del dia','seguimiento','responsable'],
+   campos_clave:[
+    {etiqueta:'Objeto / Asunto de la reunión',tipo:'texto'},{etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Lugar / Modalidad',tipo:'select',opciones:['Presencial','Virtual','Híbrida']},
+    {etiqueta:'Nombre del asistente',tipo:'texto'},
+    {etiqueta:'Compromisos / Acuerdos',tipo:'textarea'},{etiqueta:'Responsable del compromiso',tipo:'texto'},
+    {etiqueta:'Fecha límite de cumplimiento',tipo:'fecha_auto'},{etiqueta:'Firma del secretario',tipo:'firma'},
+  ]},
+  {id:'orden_trabajo',nombre:'Orden de Trabajo / Servicio',
+   keywords:['orden','trabajo','servicio','mantenimiento','correctivo','preventivo','tecnico','falla','equipo'],
+   campos_clave:[
+    {etiqueta:'Número de orden',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'Cliente / Empresa',tipo:'texto'},
+    {etiqueta:'Tipo de mantenimiento',tipo:'select',opciones:['Correctivo','Preventivo','Predictivo','Instalación']},
+    {etiqueta:'Descripción del problema',tipo:'textarea'},{etiqueta:'Actividades realizadas',tipo:'textarea'},
+    {etiqueta:'Repuestos / Materiales',tipo:'textarea'},{etiqueta:'Técnico responsable',tipo:'texto'},
+    {etiqueta:'Fotografía antes',tipo:'foto'},{etiqueta:'Fotografía después',tipo:'foto'},
+    {etiqueta:'Firma del cliente',tipo:'firma'},
+  ]},
+  {id:'evaluacion_desempeno',nombre:'Evaluación de Desempeño',
+   keywords:['desempeno','evaluacion','competencia','indicador','meta','logro','colaborador','periodo','resultado'],
+   campos_clave:[
+    {etiqueta:'Nombre del colaborador',tipo:'texto'},{etiqueta:'Cargo',tipo:'select'},
+    {etiqueta:'Área / Departamento',tipo:'select'},{etiqueta:'Periodo evaluado',tipo:'texto'},
+    {etiqueta:'Calificación general',tipo:'radio',opciones:['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente']},
+    {etiqueta:'Logros del periodo',tipo:'textarea'},{etiqueta:'Oportunidades de mejora',tipo:'textarea'},
+    {etiqueta:'Plan de desarrollo',tipo:'textarea'},{etiqueta:'Firma del evaluado',tipo:'firma'},
+    {etiqueta:'Firma del evaluador',tipo:'firma'},
+  ]},
+  {id:'visita_comercial',nombre:'Reporte de Visita Comercial',
+   keywords:['visita','comercial','cliente','prospecto','cotizacion','oportunidad','venta','negocio','seguimiento'],
+   campos_clave:[
+    {etiqueta:'Fecha de visita',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
+    {etiqueta:'Nombre del cliente / empresa',tipo:'texto'},{etiqueta:'Contacto / Persona atendida',tipo:'texto'},
+    {etiqueta:'Teléfono',tipo:'telefono'},{etiqueta:'Correo electrónico',tipo:'email'},
+    {etiqueta:'Objetivo de la visita',tipo:'textarea'},
+    {etiqueta:'Resultado',tipo:'select',opciones:['Interesado','No interesado','Requiere seguimiento','Cotización enviada','Negocio cerrado']},
+    {etiqueta:'Próximos pasos',tipo:'textarea'},{etiqueta:'Ubicación GPS',tipo:'ubicacion'},
+    {etiqueta:'Firma del vendedor',tipo:'firma'},
+  ]},
+  {id:'solicitud_compra',nombre:'Solicitud de Compra / Pedido',
+   keywords:['solicitud','compra','pedido','requisicion','proveedor','cotizacion','articulo','cantidad','precio'],
+   campos_clave:[
+    {etiqueta:'Número de solicitud',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'Solicitante',tipo:'texto'},{etiqueta:'Área / Departamento',tipo:'select'},
+    {etiqueta:'Descripción del artículo',tipo:'texto'},{etiqueta:'Cantidad',tipo:'numero'},
+    {etiqueta:'Unidad de medida',tipo:'select',opciones:['Unidad','Caja','Kg','Litro','Metro','Paquete']},
+    {etiqueta:'Justificación / Uso',tipo:'textarea'},{etiqueta:'Firma del solicitante',tipo:'firma'},
+    {etiqueta:'Aprobado por',tipo:'firma'},
+  ]},
+  {id:'inspeccion_sanitaria',nombre:'Inspección Sanitaria / Higiene',
+   keywords:['sanitaria','higiene','alimento','limpieza','desinfeccion','plagas','temperatura','inocuidad','bpm'],
+   campos_clave:[
+    {etiqueta:'Nombre del establecimiento',tipo:'texto'},{etiqueta:'Fecha de inspección',tipo:'fecha_auto'},
+    {etiqueta:'Tipo de establecimiento',tipo:'select'},{etiqueta:'Temperatura de almacenamiento (°C)',tipo:'numero'},
+    {etiqueta:'Condición de limpieza',tipo:'radio',opciones:['Deficiente','Regular','Bueno','Muy Bueno','Excelente']},
+    {etiqueta:'¿Control de plagas vigente?',tipo:'si_no'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Fotografía de evidencia',tipo:'foto'},{etiqueta:'Firma del inspector',tipo:'firma'},
+    {etiqueta:'Ubicación GPS',tipo:'ubicacion'},
+  ]},
+  {id:'permiso_trabajo',nombre:'Permiso de Trabajo',
+   keywords:['permiso','altura','espacio confinado','electrico','caliente','riesgo','ats','atp','trabajador'],
+   campos_clave:[
+    {etiqueta:'Número de permiso',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora_auto'},
+    {etiqueta:'Tipo de trabajo',tipo:'select',opciones:['Trabajo en altura','Espacio confinado','Trabajo en caliente','Trabajo eléctrico','Otro']},
+    {etiqueta:'Descripción del trabajo',tipo:'textarea'},
+    {etiqueta:'¿Se realizó análisis de riesgos?',tipo:'si_no'},
+    {etiqueta:'EPP requerido',tipo:'checkbox_multi',opciones:['Casco','Guantes','Arnés','Gafas','Botas','Tapabocas']},
+    {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del supervisor',tipo:'firma'},
+  ]},
+  {id:'entrega_recibo',nombre:'Acta de Entrega / Recibo de Bienes',
+   keywords:['entrega','recibo','bien','activo','devolucion','recibido por','entregado por','estado del bien'],
+   campos_clave:[
+    {etiqueta:'Fecha de entrega',tipo:'fecha_auto'},{etiqueta:'Descripción del bien',tipo:'texto'},
+    {etiqueta:'Serial / Código',tipo:'texto'},{etiqueta:'Cantidad',tipo:'numero'},
+    {etiqueta:'Estado del bien',tipo:'select',opciones:['Nuevo','Bueno','Regular','Malo']},
+    {etiqueta:'Entregado por',tipo:'texto'},{etiqueta:'Recibido por',tipo:'texto'},
+    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Fotografía del bien',tipo:'foto'},
+    {etiqueta:'Firma de quien entrega',tipo:'firma'},{etiqueta:'Firma de quien recibe',tipo:'firma'},
+  ]},
+  {id:'incidente_accidente',nombre:'Reporte de Incidente / Accidente Laboral',
+   keywords:['incidente','accidente','lesion','trabajador','causa','testigo','investigacion','herido','medica'],
+   campos_clave:[
+    {etiqueta:'Fecha del incidente',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
+    {etiqueta:'Trabajador involucrado',tipo:'texto'},{etiqueta:'Cargo',tipo:'select'},
+    {etiqueta:'Tipo de evento',tipo:'select',opciones:['Incidente','Accidente de trabajo','Enfermedad laboral','Casi accidente']},
+    {etiqueta:'Descripción del evento',tipo:'textarea'},{etiqueta:'Causa raíz',tipo:'textarea'},
+    {etiqueta:'¿Hubo atención médica?',tipo:'si_no'},{etiqueta:'Días de incapacidad',tipo:'numero'},
+    {etiqueta:'Fotografía de la escena',tipo:'foto'},{etiqueta:'Ubicación GPS del incidente',tipo:'ubicacion'},
+    {etiqueta:'Firma del jefe inmediato',tipo:'firma'},
+  ]},
+  {id:'hoja_de_vida',nombre:'Hoja de Vida / Solicitud de Empleo',
+   keywords:['hoja de vida','curriculum','empleo','aspirante','candidato','experiencia','educacion','referencias','salario'],
+   campos_clave:[
+    {etiqueta:'Nombres y apellidos',tipo:'texto'},{etiqueta:'Número de cédula',tipo:'numero'},
+    {etiqueta:'Fecha de nacimiento',tipo:'fecha'},{etiqueta:'Teléfono celular',tipo:'telefono'},
+    {etiqueta:'Correo electrónico',tipo:'email'},
+    {etiqueta:'Nivel educativo',tipo:'select',opciones:['Bachillerato','Técnico','Tecnólogo','Universitario','Especialización','Maestría']},
+    {etiqueta:'Cargo aspirado',tipo:'texto'},{etiqueta:'Experiencia laboral previa',tipo:'textarea'},
+    {etiqueta:'Salario aspirado',tipo:'numero'},{etiqueta:'Fotografía',tipo:'foto'},
+    {etiqueta:'Firma del aspirante',tipo:'firma'},
+  ]},
+  {id:'encuesta_satisfaccion',nombre:'Encuesta de Satisfacción al Cliente',
+   keywords:['satisfaccion','encuesta','opinion','calidad del servicio','recomendaria','atencion','experiencia','califique'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Servicio / Producto evaluado',tipo:'texto'},
+    {etiqueta:'Calificación general',tipo:'radio',opciones:['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente']},
+    {etiqueta:'¿Recomendaría nuestro servicio?',tipo:'si_no'},
+    {etiqueta:'Aspectos positivos',tipo:'textarea'},{etiqueta:'Aspectos a mejorar',tipo:'textarea'},
+    {etiqueta:'Nombre del cliente (opcional)',tipo:'texto'},{etiqueta:'Correo (opcional)',tipo:'email'},
+  ]},
+  {id:'calibracion',nombre:'Registro de Calibración / Mantenimiento de Equipos',
+   keywords:['calibracion','instrumento','patron','verificacion','tolerancia','medicion','resultado de calibracion'],
+   campos_clave:[
+    {etiqueta:'Número de registro',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'Equipo / Instrumento',tipo:'texto'},{etiqueta:'Serial / Código',tipo:'texto'},
+    {etiqueta:'Tipo de mantenimiento',tipo:'select',opciones:['Preventivo','Correctivo','Calibración','Verificación']},
+    {etiqueta:'Resultado de la calibración',tipo:'select',opciones:['Conforme','No conforme','Fuera de tolerancia']},
+    {etiqueta:'Próxima calibración',tipo:'fecha'},{etiqueta:'Observaciones técnicas',tipo:'textarea'},
+    {etiqueta:'Técnico responsable',tipo:'texto'},{etiqueta:'Firma del técnico',tipo:'firma'},
+  ]},
+];
+
+function matchTemplate(fields) {
+  const fieldText = fields.map(f => _norm(f.etiqueta)).join(' ');
+  let bestScore = 0, bestTmpl = null;
+  for (const tmpl of FORM_LIBRARY) {
+    let score = 0;
+    for (const kw of tmpl.keywords) {
+      const n = _norm(kw);
+      if (fieldText.includes(n)) score += 2;
+      else if (n.length > 5 && fieldText.includes(n.slice(0, Math.floor(n.length * .65)))) score += 1;
+    }
+    if (score > bestScore) { bestScore = score; bestTmpl = tmpl; }
+  }
+  if (bestScore < 2 || !bestTmpl) return null;
+  const detNorm = fields.map(f => _norm(f.etiqueta));
+  const missing = bestTmpl.campos_clave.filter(ck => {
+    const words = _norm(ck.etiqueta).split(' ').filter(w => w.length > 3);
+    return !detNorm.some(dn => words.some(w => dn.includes(w)));
+  }).slice(0, 6);
+  return {template: bestTmpl, score: bestScore, missing};
+}
+
+// ══════════════════════════════════════════════════════════════════
 // ANALYZE (main entry point)
 // ══════════════════════════════════════════════════════════════════
 async function analyze() {
@@ -713,10 +897,26 @@ async function analyze() {
       const autoCount = tmpl.campos.filter(c=>['fecha_auto','hora_auto','ubicacion'].includes(c.tipo)).length;
       const sigCount = tmpl.campos.filter(c=>c.tipo==='firma').length;
       const selCount = tmpl.campos.filter(c=>['select','radio','si_no','checkbox_multi'].includes(c.tipo)).length;
-      msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} selección`;
+      const badCount = tmpl.campos.filter(c=>c._quality==='review').length;
+      msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} selección`
+        + (badCount ? ` · <span style="color:var(--warn)">⚠️ ${badCount} etiqueta${badCount!==1?'s':''} a revisar</span>` : '');
       sumEl.style.display='flex';
     } else {
       sumEl.style.display='none';
+    }
+
+    const suggestEl = document.getElementById('templateSuggest');
+    if (suggestEl) {
+      const match = matchTemplate(tmpl.campos);
+      if (match && match.missing.length > 0) {
+        const confLabel = match.score >= 6 ? 'Alta confianza' : match.score >= 3 ? 'Confianza media' : 'Posible coincidencia';
+        suggestEl.innerHTML = `<div class="tmpl-match-title">🎯 Tipo detectado: <strong>${match.template.nombre}</strong> <span class="conf-badge">${confLabel}</span></div>
+          <div class="tmpl-match-sub">Campos del estándar que podrían faltar — toca <strong>+</strong> para agregar:</div>
+          <div class="tmpl-missing-list">${match.missing.map(f=>`<span class="missing-chip">${TIPO_MAP[f.tipo]?.ico||'T'} ${esc(f.etiqueta)}<button onclick='addMissingField(${JSON.stringify(f).replace(/'/g,"\\'")})'  >+</button></span>`).join('')}</div>`;
+        suggestEl.style.display='block';
+      } else {
+        suggestEl.style.display='none';
+      }
     }
 
     renderSuggList();
@@ -1054,7 +1254,7 @@ function analyzeText(rawText) {
       seen.add(clean.toLowerCase());
       const _t = sugerirTipo(clean);
       const _o = sugerirOpciones(clean);
-      fields.push({etiqueta: clean, tipo: _t, opciones: _o.length ? _o : undefined});
+      fields.push({etiqueta: clean, tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(clean)});
     }
 
     i++;
@@ -1116,7 +1316,14 @@ function buildCard(c,i) {
     <input type="checkbox" id="req_${c.id}" ${c.requerido?'checked':''} onchange="setReq('${c.id}',this.checked)">
     <label for="req_${c.id}">Requerido</label></div>`:'';
 
-  return `<div class="sugg-card" id="sc_${c.id}">
+  const qualWarn = c._quality === 'review' ? `<div class="qual-warn">
+    ⚠️ Etiqueta posiblemente ilegible — revisa y confirma antes de guardar
+    <div class="qual-btns">
+      <button class="btn btn-sm btn-ok" onclick="approveLabel('${c.id}')">✓ Aprobar así</button>
+      <button class="btn btn-sm btn-sec" onclick="focusLabel('${c.id}')">✏️ Editar</button>
+    </div>
+  </div>` : '';
+  return `<div class="sugg-card${c._quality==='review'?' card-warn':''}" id="sc_${c.id}">
     <div class="sugg-top">
       <div class="sugg-ico ${T.chip}">${T.ico}</div>
       <div class="sugg-info">
@@ -1130,7 +1337,7 @@ function buildCard(c,i) {
         <button class="fi-btn del" onclick="delC('${c.id}')">✕</button>
       </div>
     </div>
-    ${optHtml}${reqChk}
+    ${qualWarn}${optHtml}${reqChk}
   </div>`;
 }
 
@@ -1148,7 +1355,16 @@ function addSingle() {
 }
 
 // Mutations
-function setLbl(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c)c.etiqueta=v;}
+function setLbl(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){c.etiqueta=v;c._quality='ok';}}
+function approveLabel(id){const c=tmpl.campos.find(x=>x.id===id);if(c){c._quality='ok';renderSuggList();}}
+function focusLabel(id){setTimeout(()=>{const inp=document.querySelector(`#sc_${id} .sugg-lbl input`);if(inp){inp.focus();inp.select();}},50);}
+function addMissingField(f){
+  const _ao=sugerirOpciones(f.etiqueta);
+  const opts=f.opciones&&f.opciones.length?f.opciones:(_ao.length?_ao:(needsOptions(f.tipo)?['']:undefined));
+  tmpl.campos.push({id:`c${Date.now()}_${Math.random().toString(36).slice(2,5)}`,tipo:f.tipo,etiqueta:f.etiqueta,placeholder:'',requerido:f.tipo!=='separador',opciones:needsOptions(f.tipo)?opts:undefined,_quality:'ok'});
+  renderSuggList();
+  setTimeout(()=>document.querySelector(`#sc_${tmpl.campos[tmpl.campos.length-1].id}`)?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
 function setReq(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c)c.requerido=v;}
 function setOpt(id,j,v){const c=tmpl.campos.find(x=>x.id===id);if(c&&c.opciones)c.opciones[j]=v;}
 function mvC(id,dir){const i=tmpl.campos.findIndex(c=>c.id===id),j=i+dir;if(j<0||j>=tmpl.campos.length)return;[tmpl.campos[i],tmpl.campos[j]]=[tmpl.campos[j],tmpl.campos[i]];renderSuggList();}
