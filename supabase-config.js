@@ -6,8 +6,8 @@
 //  3. Replace the values below
 //  4. Run supabase-schema.sql in the SQL editor
 // ─────────────────────────────────────────────────────────────
-const SKF_SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SKF_SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SKF_SUPABASE_URL = 'https://bdfppxvinyoszcfsvbcx.supabase.co';
+const SKF_SUPABASE_KEY = 'sb_publishable_fet4FKrvN60SoZtZa_2ylg_2PkhWIWU';
 const SKF_CONFIGURED   = !SKF_SUPABASE_URL.startsWith('YOUR_');
 
 let _sb = null;
