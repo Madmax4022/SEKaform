@@ -264,11 +264,13 @@
     <div class="src-panel on" id="pan-img">
       <div class="dropzone" id="dzImg" onclick="document.getElementById('fiImg').click()">
         <input type="file" id="fiImg" accept="image/*" style="display:none">
+        <input type="file" id="fiImgCam" accept="image/*" capture="environment" style="display:none">
         <span class="dz-ico">📸</span>
         <h3>Arrastra la imagen aquí</h3>
         <p>Captura de pantalla, foto del formulario, escáner</p>
         <p style="margin-top:6px">JPG · PNG · GIF · WEBP — máx. 10 MB</p>
         <p style="margin-top:8px;color:var(--pri)" class="link">Seleccionar archivo</p>
+        <button type="button" class="btn btn-sec btn-sm" style="margin-top:14px" onclick="event.stopPropagation();document.getElementById('fiImgCam').click()">📷 Tomar foto</button>
       </div>
       <div id="prevImg" style="display:none">
         <div class="doc-prev">
@@ -616,6 +618,8 @@ dzImg.addEventListener('dragover', e=>{e.preventDefault();dzImg.classList.add('o
 dzImg.addEventListener('dragleave',()=>dzImg.classList.remove('over'));
 dzImg.addEventListener('drop', e=>{e.preventDefault();dzImg.classList.remove('over');if(e.dataTransfer.files[0]) handleImg(e.dataTransfer.files[0]);});
 fiImg.addEventListener('change',()=>{if(fiImg.files[0]) handleImg(fiImg.files[0]);});
+const fiImgCam = document.getElementById('fiImgCam');
+fiImgCam.addEventListener('change',()=>{if(fiImgCam.files[0]) handleImg(fiImgCam.files[0]);});
 
 function handleImg(f) {
   if (!f.type.startsWith('image/')) { toast('Solo imágenes (JPG, PNG, GIF, WEBP)','er'); return; }
@@ -659,7 +663,7 @@ function handlePdf(f) {
 }
 
 function clearSrc(src) {
-  if (src==='img') { imgData=null; tmpl.imagen=null; fiImg.value=''; dzImg.style.display='block'; document.getElementById('prevImg').style.display='none'; }
+  if (src==='img') { imgData=null; tmpl.imagen=null; fiImg.value=''; fiImgCam.value=''; dzImg.style.display='block'; document.getElementById('prevImg').style.display='none'; }
   if (src==='pdf') { pdfFile=null; fiPdf.value=''; dzPdf.style.display='block'; document.getElementById('prevPdf').style.display='none'; }
 }
 
