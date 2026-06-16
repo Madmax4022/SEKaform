@@ -562,13 +562,13 @@ function renderFields(campos) {
 const _FICON = {
   texto:'T', email:'@', telefono:'☏', numero:'#', textarea:'¶', fecha:'🗓',
   fecha_auto:'📅', hora_auto:'⏰', ubicacion:'📍',
-  si_no:'✓✗', escala_1_5:'⭐', select:'▾', radio:'◉', checkbox_multi:'☑',
+  si_no:'✓✗', escala_1_5:'⭐', select:'▾', radio:'◉', checkbox:'☑', checkbox_multi:'☑',
   firma:'✍', foto:'📷', separador:'—'
 };
 const _FCLASS = {
   fecha_auto:'fc-auto', hora_auto:'fc-auto', ubicacion:'fc-auto',
   firma:'fc-sig', foto:'fc-media',
-  si_no:'fc-smart', escala_1_5:'fc-smart', radio:'fc-smart', select:'fc-smart', checkbox_multi:'fc-smart'
+  si_no:'fc-smart', escala_1_5:'fc-smart', radio:'fc-smart', select:'fc-smart', checkbox:'fc-smart', checkbox_multi:'fc-smart'
 };
 
 function buildFieldEl(c) {
@@ -671,6 +671,20 @@ function buildFieldEl(c) {
         lbl2.appendChild(document.createTextNode(o));
         inner.appendChild(lbl2);
       });
+      break;
+    }
+
+    case 'checkbox': {
+      inner = document.createElement('div');
+      const optLbl = document.createElement('label');
+      optLbl.className = 'opt-lbl';
+      const inp = document.createElement('input');
+      inp.type = 'checkbox';
+      if (submission[c.id] === true) inp.checked = true;
+      inp.addEventListener('change', () => { submission[c.id] = inp.checked; clearErr(c.id); updateProgress(); });
+      optLbl.appendChild(inp);
+      optLbl.appendChild(document.createTextNode('Marcar si aplica'));
+      inner.appendChild(optLbl);
       break;
     }
 

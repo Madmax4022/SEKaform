@@ -460,6 +460,7 @@ const TIPOS = [
   {k:'escala_1_5', ico:'⭐',  lbl:'Escala 1–5',          desc:'Calificación',  chip:'chip-smart'},
   {k:'select',     ico:'▼',  lbl:'Desplegable',         desc:'Lista opciones',chip:'chip-smart'},
   {k:'radio',      ico:'◉',  lbl:'Opción única',        desc:'Radio buttons', chip:'chip-smart'},
+  {k:'checkbox',   ico:'☑',  lbl:'Casilla de verificación',desc:'Marcar/Sin marcar',chip:'chip-smart'},
   {k:'checkbox_multi',ico:'☑',lbl:'Múltiple opción',   desc:'Casillas',      chip:'chip-smart'},
   {g:'Multimedia'},
   {k:'firma',      ico:'✍',  lbl:'Firma digital',       desc:'Canvas táctil', chip:'chip-sig'},
@@ -1573,6 +1574,8 @@ function prevField(c,ds,ts){
       return`${W}<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:4px">
         ${opts.map(o=>`<label style="display:flex;align-items:center;gap:6px;padding:8px 13px;background:var(--inp);border:1.5px solid var(--bor);border-radius:7px;font-size:.88rem"><input type="radio" disabled> ${esc(o)}</label>`).join('')}</div>${E}`;
     }
+    case 'checkbox':
+      return`${W}<div style="display:flex;align-items:center;gap:8px;font-size:.88rem;text-transform:none;font-weight:400;color:var(--txt);margin-top:4px"><input type="checkbox" disabled> Marcar si aplica</div>${E}`;
     case 'checkbox_multi':
       return`${W}<div style="display:flex;flex-direction:column;gap:7px;margin-top:4px">
         ${(c.opciones||[]).filter(Boolean).map(o=>`<label style="display:flex;align-items:center;gap:8px;font-size:.88rem"><input type="checkbox" disabled> ${esc(o)}</label>`).join('')}</div>${E}`;
