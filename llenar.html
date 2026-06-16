@@ -354,7 +354,7 @@ let draftId = null;
 
 // ── Shared template encoding ───────────────────────────────────────
 function encodeTemplateForShare(tmpl) {
-  const needsOpts = t => ['select','radio','checkbox_multi'].includes(t);
+  const needsOpts = t => ['select','radio','checkbox_multi','escala_1_5'].includes(t);
   const d = {
     v:1, n:tmpl.nombre, d:tmpl.descripcion||'', c:tmpl.codigo||'',
     f:tmpl.campos.map(c=>[c.id,c.tipo,c.etiqueta,c.requerido?1:0,
@@ -366,7 +366,7 @@ function encodeTemplateForShare(tmpl) {
 function decodeSharedTemplate(encoded) {
   const d = JSON.parse(decodeURIComponent(escape(atob(encoded))));
   if (!d||d.v!==1) throw new Error('invalid');
-  const needsOpts = t => ['select','radio','checkbox_multi'].includes(t);
+  const needsOpts = t => ['select','radio','checkbox_multi','escala_1_5'].includes(t);
   return {
     id: 'sh_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     nombre:d.n, descripcion:d.d, codigo:d.c,
@@ -562,13 +562,13 @@ function renderFields(campos) {
 const _FICON = {
   texto:'T', email:'@', telefono:'☏', numero:'#', textarea:'¶', fecha:'🗓',
   fecha_auto:'📅', hora_auto:'⏰', ubicacion:'📍',
-  si_no:'✓✗', select:'▾', radio:'◉', checkbox_multi:'☑',
+  si_no:'✓✗', escala_1_5:'⭐', select:'▾', radio:'◉', checkbox_multi:'☑',
   firma:'✍', foto:'📷', separador:'—'
 };
 const _FCLASS = {
   fecha_auto:'fc-auto', hora_auto:'fc-auto', ubicacion:'fc-auto',
   firma:'fc-sig', foto:'fc-media',
-  si_no:'fc-smart', radio:'fc-smart', select:'fc-smart', checkbox_multi:'fc-smart'
+  si_no:'fc-smart', escala_1_5:'fc-smart', radio:'fc-smart', select:'fc-smart', checkbox_multi:'fc-smart'
 };
 
 function buildFieldEl(c) {
@@ -656,7 +656,7 @@ function buildFieldEl(c) {
       break;
     }
 
-    case 'radio': case 'si_no': {
+    case 'radio': case 'si_no': case 'escala_1_5': {
       const opts = c.tipo==='si_no' ? ['Sí','No','N/A'] : (c.opciones||[]);
       inner = document.createElement('div');
       inner.className = 'opts-wrap' + (opts.length<=4?' inline':'');

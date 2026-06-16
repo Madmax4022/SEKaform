@@ -457,6 +457,7 @@ const TIPOS = [
   {k:'ubicacion',  ico:'📍', lbl:'Ubicación GPS',       desc:'Coords. auto',  chip:'chip-auto'},
   {g:'Selección'},
   {k:'si_no',      ico:'✓✗', lbl:'Sí / No / N/A',      desc:'Cumplimiento',  chip:'chip-smart'},
+  {k:'escala_1_5', ico:'⭐',  lbl:'Escala 1–5',          desc:'Calificación',  chip:'chip-smart'},
   {k:'select',     ico:'▼',  lbl:'Desplegable',         desc:'Lista opciones',chip:'chip-smart'},
   {k:'radio',      ico:'◉',  lbl:'Opción única',        desc:'Radio buttons', chip:'chip-smart'},
   {k:'checkbox_multi',ico:'☑',lbl:'Múltiple opción',   desc:'Casillas',      chip:'chip-smart'},
@@ -484,6 +485,12 @@ function _norm(s) {
     .replace(/[¿?¡!*:;]+/g,'').trim();
 }
 
+// Quita símbolos/iconos sobrantes al inicio de una etiqueta (bullets, bordes de
+// tabla mal leídos por OCR, glifos de fuentes de íconos) sin tocar ¿/¡.
+function stripLeadingNoise(s) {
+  return String(s||'').replace(/^(?!¿|¡)[^\p{L}\p{N}]+/u, '').trim();
+}
+
 function sugerirTipo(label) {
   const l = _norm(label);
 
@@ -502,9 +509,9 @@ function sugerirTipo(label) {
   // ── GPS ────────────────────────────────────────────────────────
   if (/\bubicacion\b|\blocalizacion\b|\bgps\b|coordenadas|geoloc/.test(l)) return 'ubicacion';
 
-  // ── Escala 1–5 (calificación numérica) → radio pre-poblado ────
-  if (/calificacion\b|puntaje\b|puntuacion\b|puntuaje\b|valoracion\b|rating\b|score\b/.test(l)) return 'radio';
-  if (/nivel de (calidad|servicio|satisfaccion|atencion)|grado de (cumplimiento|satisfaccion|calidad)/.test(l)) return 'radio';
+  // ── Escala 1–5 (calificación numérica) ────────────────────────
+  if (/calificacion\b|puntaje\b|puntuacion\b|puntuaje\b|valoracion\b|rating\b|score\b/.test(l)) return 'escala_1_5';
+  if (/nivel de (calidad|servicio|satisfaccion|atencion)|grado de (cumplimiento|satisfaccion|calidad)/.test(l)) return 'escala_1_5';
 
   // ── Escala cualitativa (evaluación) → radio pre-poblado ───────
   if (/\bevaluacion\b|concepto (de|del|tecnico)\b|apreciacion\b|percepcion\b|satisfaccion\b|calidad (del|de la|de los)/.test(l)) return 'radio';
@@ -598,7 +605,7 @@ function sugerirOpciones(label) {
   return [];
 }
 
-function needsOptions(tipo) { return ['select','radio','checkbox_multi'].includes(tipo); }
+function needsOptions(tipo) { return ['select','radio','checkbox_multi','escala_1_5'].includes(tipo); }
 
 // ══════════════════════════════════════════════════════════════════
 // SOURCE SELECTION
@@ -998,7 +1005,7 @@ async function analyze() {
     if (detectedCount > 0) {
       const autoCount = tmpl.campos.filter(c=>['fecha_auto','hora_auto','ubicacion'].includes(c.tipo)).length;
       const sigCount = tmpl.campos.filter(c=>c.tipo==='firma').length;
-      const selCount = tmpl.campos.filter(c=>['select','radio','si_no','checkbox_multi'].includes(c.tipo)).length;
+      const selCount = tmpl.campos.filter(c=>['select','radio','si_no','escala_1_5','checkbox_multi'].includes(c.tipo)).length;
       const badCount = tmpl.campos.filter(c=>c._quality==='review').length;
       msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} selección`
         + (badCount ? ` · <span style="color:var(--warn)">⚠️ ${badCount} etiqueta${badCount!==1?'s':''} a revisar</span>` : '');
@@ -1185,7 +1192,7 @@ function getHTMLLabel(doc, el) {
   if (el.id) {
     try {
       const lbl = doc.querySelector(`label[for="${CSS.escape(el.id)}"]`);
-      if (lbl) { const t=lbl.textContent.trim().replace(/[*:：]+$/,'').trim(); if(t.length>1) return t; }
+      if (lbl) { const t=stripLeadingNoise(lbl.textContent.trim().replace(/[*:：]+$/,'')); if(t.length>1) return t; }
     } catch(e) {}
   }
   // 2. Wrapping label
@@ -1193,22 +1200,22 @@ function getHTMLLabel(doc, el) {
   if (wrap) {
     const clone = wrap.cloneNode(true);
     clone.querySelectorAll('input,select,textarea').forEach(x=>x.remove());
-    const t=clone.textContent.trim().replace(/[*:：]+$/,'').trim();
+    const t=stripLeadingNoise(clone.textContent.trim().replace(/[*:：]+$/,''));
     if (t.length>1) return t;
   }
   // 3. aria-label / aria-labelledby
   const aLbl = el.getAttribute('aria-label');
-  if (aLbl && aLbl.length>1) return aLbl.trim();
+  if (aLbl && aLbl.length>1) return stripLeadingNoise(aLbl);
   const aLby = el.getAttribute('aria-labelledby');
-  if (aLby) { try { const e=doc.getElementById(aLby); if(e){const t=e.textContent.trim();if(t.length>1)return t;} }catch(e){} }
+  if (aLby) { try { const e=doc.getElementById(aLby); if(e){const t=stripLeadingNoise(e.textContent.trim());if(t.length>1)return t;} }catch(e){} }
   // 4. placeholder
   const ph = el.getAttribute('placeholder');
-  if (ph && ph.length>1 && ph.length<80) return ph;
+  if (ph && ph.length>1 && ph.length<80) return stripLeadingNoise(ph);
   // 5. Previous sibling
   let prev = el.previousSibling;
   while(prev) {
-    if (prev.nodeType===3) { const t=prev.textContent.trim().replace(/[*:]+$/,'').trim(); if(t.length>1&&t.length<80) return t; }
-    if (prev.nodeType===1) { const t=prev.textContent.trim().replace(/[*:]+$/,'').trim(); if(t.length>1&&t.length<80) return t; }
+    if (prev.nodeType===3) { const t=stripLeadingNoise(prev.textContent.trim().replace(/[*:]+$/,'')); if(t.length>1&&t.length<80) return t; }
+    if (prev.nodeType===1) { const t=stripLeadingNoise(prev.textContent.trim().replace(/[*:]+$/,'')); if(t.length>1&&t.length<80) return t; }
     prev=prev.previousSibling;
   }
   // 6. name → human readable
@@ -1311,11 +1318,11 @@ function analyzeText(rawText) {
       .replace(/\s*[_\.]{3,}.*$/, '')     // trailing fill line
       .replace(/\s*[:：]\s*$/, '')          // trailing colon
       .replace(/^\s*[\d]+[\.\)]\s+/, '')   // leading number
-      .replace(/^[•·▪▸►\-–]\s*/, '')       // leading bullet
       .replace(/\s*\*{1,2}\s*$/, '')       // trailing asterisk
       .replace(/\[\s*\]\s*$/, '')          // trailing checkbox
       .replace(/[☐□▢]\s*$/, '')           // trailing checkbox symbol
       .trim();
+    clean = stripLeadingNoise(clean);
 
     if (clean.length < 3 || clean.length > 100) { i++; continue; }
 
@@ -1335,7 +1342,7 @@ function analyzeText(rawText) {
     const multiMatches = [...line.matchAll(/([^:_\n]{3,40})\s*[:：]\s*[_\.]{3,}/g)];
     if (multiMatches.length >= 2) {
       for (const m of multiMatches) {
-        const lbl = m[1].replace(/^[•·▪▸►\-–\d\.\)]+\s*/,'').trim();
+        const lbl = stripLeadingNoise(m[1].trim().replace(/^\s*[\d]+[\.\)]\s+/,''));
         if (lbl.length > 2 && !seen.has(lbl.toLowerCase())) {
           seen.add(lbl.toLowerCase());
           const _t = sugerirTipo(lbl);
@@ -1519,7 +1526,8 @@ document.addEventListener('click',e=>{if(!e.target.closest('.type-chip')&&!e.tar
 function changeType(cId,k){
   const c=tmpl.campos.find(x=>x.id===cId);if(!c)return;
   c.tipo=k;c._auto=false;
-  if(needsOptions(k)&&!c.opciones){const _so=sugerirOpciones(c.etiqueta);c.opciones=_so.length?_so:[''];}
+  if(k==='escala_1_5'&&!c.opciones){c.opciones=['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente'];}
+  else if(needsOptions(k)&&!c.opciones){const _so=sugerirOpciones(c.etiqueta);c.opciones=_so.length?_so:[''];}
   if(!needsOptions(k))delete c.opciones;
   closeMenu();renderSuggList();
 }
@@ -1560,7 +1568,7 @@ function prevField(c,ds,ts){
       return`${W}<input type="date" disabled>${E}`;
     case 'select':
       return`${W}<select disabled><option>Seleccionar...</option>${(c.opciones||[]).filter(Boolean).map(o=>`<option>${esc(o)}</option>`).join('')}</select>${E}`;
-    case 'radio':case 'si_no':{
+    case 'radio':case 'si_no':case 'escala_1_5':{
       const opts=c.tipo==='si_no'?['Sí','No','N/A']:(c.opciones||[]).filter(Boolean);
       return`${W}<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:4px">
         ${opts.map(o=>`<label style="display:flex;align-items:center;gap:6px;padding:8px 13px;background:var(--inp);border:1.5px solid var(--bor);border-radius:7px;font-size:.88rem"><input type="radio" disabled> ${esc(o)}</label>`).join('')}</div>${E}`;
