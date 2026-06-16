@@ -511,6 +511,12 @@ function sugerirTipo(label) {
   if (/^(si\/no|yes\/no|conforme|cumple|aplica|existe|verifica)/.test(l)) return 'si_no';
   if (/\bcumple\b|\baplica\b|\bexiste\b|\bposee\b|\bcuenta con\b|\bverifica\b|\brealiza\b|\bejec(u|ú)ta\b|\bimplementa\b|\bdispone\b|\bregistra\b|\bevidencia\b/.test(l)) return 'si_no';
   if (/\bcumplimiento\b/.test(l) && !/nivel|porcentaje|indice/.test(l)) return 'si_no';
+  // Past-tense yes/no questions (verbs, not noun-adjective): ¿Completó? ¿Asistió? etc.
+  // Exclude "nombre completo", "formato completo", "registro completo" (adjective uses)
+  if (/\b(completo|asistio|participo|recibio|firmo|aprobo|autorizo|entrego|conocio|confirmo|acepto|reviso|valido|superviso)\b/.test(l)
+      && !/nombre|formato|registro|dato|archivo|expediente|documento|perfil|equipo/.test(l)) return 'si_no';
+  // Labels with explicit "sí/no" or "si/no" embedded
+  if (/\bsi\s*\/\s*no\b|\byes\s*\/\s*no\b/.test(l)) return 'si_no';
 
   // ── Teléfono ──────────────────────────────────────────────────
   if (/telefono|celular|movil\b|cel\b|fono|phone|whatsapp/.test(l)) return 'telefono';
