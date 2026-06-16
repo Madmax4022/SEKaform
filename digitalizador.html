@@ -925,24 +925,58 @@ async function analyzePDF(file) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 
-  setProc('Extrayendo texto del PDF...','Leyendo páginas...',30);
+  setProc('Extrayendo texto del PDF...','Leyendo páginas...',20);
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  const pageCount = Math.min(pdf.numPages, 10);
   let fullText = '';
 
-  for (let i=1; i<=Math.min(pdf.numPages, 10); i++) {
-    const pct = 30 + Math.round((i/Math.min(pdf.numPages,10))*45);
-    setProc('Extrayendo texto del PDF...',`Página ${i} de ${Math.min(pdf.numPages,10)}...`,pct);
+  for (let i=1; i<=pageCount; i++) {
+    const pct = 20 + Math.round((i/pageCount)*30);
+    setProc('Extrayendo texto del PDF...',`Página ${i} de ${pageCount}...`,pct);
     const page = await pdf.getPage(i);
     const tc = await page.getTextContent();
     fullText += tc.items.map(item=>item.str).join(' ') + '\n';
   }
 
-  setProc('Detectando campos...','Analizando estructura...',85);
+  const cleanText = fullText.replace(/\s+/g,' ').trim();
+  if (cleanText.length < 150) {
+    setProc('PDF escaneado detectado','Activando reconocimiento OCR...',52);
+    await loadScript('https://unpkg.com/tesseract.js@4/dist/tesseract.min.js');
+    const ocrPageCount = Math.min(pdf.numPages, 3);
+    const ocrParts = [];
+    for (let i=1; i<=ocrPageCount; i++) {
+      setProc('Reconociendo texto (OCR)...',`Procesando página ${i} de ${ocrPageCount}...`, 52 + Math.round((i/ocrPageCount)*30));
+      const page = await pdf.getPage(i);
+      const vp = page.getViewport({scale:2.0});
+      const canvas = document.createElement('canvas');
+      canvas.width = vp.width; canvas.height = vp.height;
+      await page.render({canvasContext:canvas.getContext('2d'), viewport:vp}).promise;
+      const {data:{text}} = await Tesseract.recognize(canvas.toDataURL('image/png'),'spa+eng');
+      ocrParts.push(text);
+    }
+    fullText = ocrParts.join('\n');
+  }
+
+  setProc('Detectando campos...','Analizando estructura...',87);
   const fields = analyzeText(fullText);
   setProc('¡Listo!',`${fields.length} campos detectados`,100);
   await sleep(500);
   return fields;
+}
+
+function labelQuality(label) {
+  const l = label.trim();
+  if (l.length < 3) return 'garbage';
+  if (/^\d[\d\s.,/-]*$/.test(l)) return 'garbage';
+  if (/^(pag|pagina|page|tabla|table|fig|figura)\s*\d/i.test(l)) return 'garbage';
+  if (/^[_.\s-]+$/.test(l)) return 'garbage';
+  const noSp = l.replace(/\s+/g,'');
+  const letters = (noSp.match(/[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]/g)||[]).length;
+  const ratio = letters / Math.max(noSp.length,1);
+  if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(noSp) && ratio < 0.7) return 'review';
+  if (ratio < 0.35 && noSp.length > 4) return 'review';
+  return 'ok';
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -988,7 +1022,7 @@ function analyzeText(rawText) {
       if (q.length > 2) clean = q.replace(/\s*[:：]\s*$/, '').trim();
       if (clean.length>2 && !seen.has(clean.toLowerCase())) {
         seen.add(clean.toLowerCase());
-        fields.push({etiqueta:clean, tipo:'si_no'});
+        fields.push({etiqueta:clean, tipo:'si_no', _quality:labelQuality(clean)});
       }
       i++; continue;
     }
@@ -1002,7 +1036,7 @@ function analyzeText(rawText) {
           seen.add(lbl.toLowerCase());
           const _t = sugerirTipo(lbl);
           const _o = sugerirOpciones(lbl);
-          fields.push({etiqueta: lbl, tipo: _t, opciones: _o.length ? _o : undefined});
+          fields.push({etiqueta: lbl, tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(lbl)});
         }
       }
       i++; continue;
