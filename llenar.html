@@ -51,7 +51,23 @@
     .tmpl-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tmpl-meta { color: var(--mut); font-size: 0.78rem; line-height: 1.5; }
     .tmpl-cod { color: var(--pri); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
-    .tmpl-acts { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+    .tmpl-acts { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; flex-shrink: 0; align-items: flex-start; justify-content: flex-end; }
+    .btn-danger { background: transparent; border: 1px solid rgba(239,68,68,.35); color: var(--err); border-radius: 7px; padding: 6px 10px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
+    .btn-danger:hover { background: rgba(239,68,68,.12); border-color: var(--err); }
+    /* QR modal */
+    .qr-over { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 600; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .qr-over.hidden { display: none; }
+    .qr-box { background: var(--card); border-radius: 20px; padding: 28px 24px 24px; max-width: 380px; width: 100%; text-align: center; animation: popIn .22s ease; }
+    .qr-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 4px; }
+    .qr-sub { color: var(--mut); font-size: .82rem; margin-bottom: 18px; line-height: 1.5; }
+    .qr-img-wrap { background: #1e293b; border-radius: 12px; padding: 14px; display: inline-block; margin-bottom: 16px; border: 1px solid var(--bor); }
+    .qr-img-wrap img { display: block; border-radius: 6px; }
+    .qr-url-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .qr-url-inp { flex: 1; background: rgba(0,0,0,.3); border: 1px solid var(--bor); border-radius: 8px; color: var(--mut); font-size: .72rem; padding: 8px 10px; outline: none; font-family: monospace; word-break: break-all; }
+    .qr-copy { background: var(--pri); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .15s; }
+    .qr-copy:hover { background: var(--pri-h); }
+    .qr-note { font-size: .73rem; color: var(--mut); line-height: 1.55; background: rgba(37,99,235,.08); border: 1px solid rgba(37,99,235,.2); border-radius: 8px; padding: 9px 12px; margin-bottom: 16px; text-align: left; }
+    .qr-note strong { color: var(--ok); }
 
     .empty-state { text-align: center; padding: 64px 20px; }
     .es-ico { font-size: 3.5rem; display: block; margin-bottom: 14px; }
@@ -296,6 +312,25 @@
   </div>
 </div>
 
+<!-- QR SHARE MODAL -->
+<div class="qr-over hidden" id="qrModal">
+  <div class="qr-box">
+    <div class="qr-title">📱 Compartir formulario</div>
+    <p class="qr-sub" id="qrFormName"></p>
+    <div class="qr-img-wrap">
+      <img id="qrImg" src="" alt="QR" width="200" height="200">
+    </div>
+    <div class="qr-url-row">
+      <input class="qr-url-inp" id="qrUrlInp" readonly>
+      <button class="qr-copy" onclick="copyShareUrl()">Copiar</button>
+    </div>
+    <div class="qr-note">
+      <strong>✓ Cómo funciona:</strong> quien escanee el QR verá el formulario completo y podrá llenarlo. Los envíos se guardan en su dispositivo. Para recibir los datos en tu base de datos, asegúrate de que todos los usuarios usen la misma cuenta de Supabase.
+    </div>
+    <button class="btn btn-sec" style="width:100%;justify-content:center" onclick="closeQRModal()">Cerrar</button>
+  </div>
+</div>
+
 <!-- SUCCESS MODAL -->
 <div class="modal-over hidden" id="successModal">
   <div class="modal-box">
@@ -317,11 +352,49 @@ let submission = {};  // campo.id → value
 let signatures = {};  // campo.id → { canvas, ctx }
 let draftId = null;
 
+// ── Shared template encoding ───────────────────────────────────────
+function encodeTemplateForShare(tmpl) {
+  const needsOpts = t => ['select','radio','checkbox_multi'].includes(t);
+  const d = {
+    v:1, n:tmpl.nombre, d:tmpl.descripcion||'', c:tmpl.codigo||'',
+    f:tmpl.campos.map(c=>[c.id,c.tipo,c.etiqueta,c.requerido?1:0,
+       needsOpts(c.tipo)&&c.opciones&&c.opciones[0]!==''?c.opciones:null])
+  };
+  try { return btoa(unescape(encodeURIComponent(JSON.stringify(d)))); } catch(e) { return null; }
+}
+
+function decodeSharedTemplate(encoded) {
+  const d = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+  if (!d||d.v!==1) throw new Error('invalid');
+  const needsOpts = t => ['select','radio','checkbox_multi'].includes(t);
+  return {
+    id: 'sh_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    nombre:d.n, descripcion:d.d, codigo:d.c,
+    campos: d.f.map(([id,tipo,etiqueta,req,opts])=>({
+      id, tipo, etiqueta, placeholder:'', requerido:!!req,
+      opciones: needsOpts(tipo)?(opts||['']):undefined
+    })),
+    creadoEn:new Date().toISOString(), actualizadoEn:new Date().toISOString(), _shared:true
+  };
+}
+
 // ── Init ───────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const urlTmpl = new URLSearchParams(location.search).get('tmpl');
-  if (urlTmpl) openTemplate(urlTmpl);
-  else renderList();
+  const params = new URLSearchParams(location.search);
+  const sharedEncoded = params.get('shared');
+  const urlTmpl = params.get('tmpl');
+  if (sharedEncoded) {
+    try {
+      const t = decodeSharedTemplate(sharedEncoded);
+      const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+      if (!list.find(x=>x.nombre===t.nombre&&x._shared)) { list.push(t); localStorage.setItem('skf_plantillas',JSON.stringify(list)); }
+      openTemplate(t.id);
+    } catch(e) { toast('Enlace de formulario inválido','er'); renderList(); }
+  } else if (urlTmpl) {
+    openTemplate(urlTmpl);
+  } else {
+    renderList();
+  }
 });
 
 function goBack() {
@@ -351,6 +424,51 @@ function backToList() {
   renderList();
 }
 
+// ── Delete template ────────────────────────────────────────────────
+function confirmDeleteTemplate(id) {
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const t = list.find(x=>x.id===id);
+  if (!t) return;
+  const subs = getSubsForTemplate(id);
+  const msg = subs > 0
+    ? `¿Eliminar "${t.nombre}"?\n\nTiene ${subs} envío${subs!==1?'s':''} guardado${subs!==1?'s':''}. Los envíos NO se eliminarán y seguirán en el historial.`
+    : `¿Eliminar el formulario "${t.nombre}"? Esta acción no se puede deshacer.`;
+  if (!confirm(msg)) return;
+  const updated = list.filter(x=>x.id!==id);
+  localStorage.setItem('skf_plantillas', JSON.stringify(updated));
+  sbDeletePlantilla(id).catch(()=>{});
+  toast('Formulario eliminado','ok');
+  renderList();
+}
+
+// ── QR Share ───────────────────────────────────────────────────────
+function showQR(id) {
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const t = list.find(x=>x.id===id);
+  if (!t) return;
+  const encoded = encodeTemplateForShare(t);
+  if (!encoded) { toast('Error generando enlace','er'); return; }
+  const base = location.origin + location.pathname;
+  const shareUrl = `${base}?shared=${encoded}`;
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=1e293b&color=f8fafc&margin=8&format=svg`;
+  document.getElementById('qrFormName').textContent = t.nombre;
+  document.getElementById('qrImg').src = qrApiUrl;
+  document.getElementById('qrUrlInp').value = shareUrl;
+  document.getElementById('qrModal').classList.remove('hidden');
+}
+
+function closeQRModal() {
+  document.getElementById('qrModal').classList.add('hidden');
+  document.getElementById('qrImg').src = '';
+}
+
+function copyShareUrl() {
+  const inp = document.getElementById('qrUrlInp');
+  navigator.clipboard.writeText(inp.value).then(()=>toast('Enlace copiado','ok')).catch(()=>{inp.select();document.execCommand('copy');toast('Enlace copiado','ok');});
+}
+
+document.getElementById('qrModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeQRModal(); });
+
 // ── Template list ──────────────────────────────────────────────────
 function renderList() {
   const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
@@ -378,8 +496,10 @@ function renderList() {
         <div class="tmpl-meta">${t.campos.length} campos · ${subs} envío${subs!==1?'s':''} · ${d}</div>
       </div>
       <div class="tmpl-acts">
-        <button class="btn btn-pri btn-sm" onclick="openTemplate('${t.id}')">Llenar</button>
+        <button class="btn btn-pri btn-sm" onclick="openTemplate('${t.id}')">▶ Llenar</button>
+        <button class="btn btn-sec btn-sm" onclick="showQR('${t.id}')">📱 QR</button>
         <button class="btn btn-sec btn-sm" onclick="showSubs('${t.id}')">Historial</button>
+        <button class="btn-danger" onclick="confirmDeleteTemplate('${t.id}')" title="Eliminar formulario">✕</button>
       </div>
     </div>`;
   }).join('');

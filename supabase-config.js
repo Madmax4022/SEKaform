@@ -73,6 +73,17 @@ async function sbSyncPlantilla(tmpl) {
   } catch (e) { console.warn('[SEKaform] Sync plantilla error:', e.message); }
 }
 
+async function sbDeletePlantilla(id) {
+  try {
+    const sb = await getSB();
+    if (!sb) return;
+    const user = await sbGetUser();
+    if (!user) return;
+    const { error } = await sb.from('plantillas').delete().eq('id', id).eq('user_id', user.id);
+    if (error) console.warn('[SEKaform] Delete plantilla:', error.message);
+  } catch(e) { console.warn('[SEKaform] Delete plantilla error:', e.message); }
+}
+
 async function sbSyncEnvio(envio) {
   try {
     const sb = await getSB();
