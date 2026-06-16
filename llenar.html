@@ -59,57 +59,86 @@
     .empty-state p { color: var(--mut); font-size: 0.88rem; line-height: 1.5; max-width: 320px; margin: 0 auto; }
 
     /* ── form view ── */
-    .form-wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px 100px; }
-    .form-header-meta { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-    .form-cod { font-size: 0.72rem; font-weight: 700; color: var(--pri); text-transform: uppercase; letter-spacing: .4px; }
-    .form-title-h { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; }
-    .form-desc-p { color: var(--mut); font-size: 0.88rem; line-height: 1.5; margin-bottom: 24px; }
+    .form-wrap { max-width: 680px; margin: 0 auto; padding: 20px 16px 100px; }
+    .form-header-card {
+      background: linear-gradient(135deg, var(--card) 0%, rgba(37,99,235,.07) 100%);
+      border: 1px solid var(--bor); border-radius: 16px; padding: 20px 22px 18px;
+      margin-bottom: 18px; border-left: 4px solid var(--pri);
+    }
+    .form-header-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .form-cod { font-size: 0.68rem; font-weight: 800; color: var(--pri); text-transform: uppercase; letter-spacing: .8px; background: rgba(37,99,235,.13); padding: 3px 8px; border-radius: 4px; }
+    .form-title-h { font-size: 1.35rem; font-weight: 800; margin-bottom: 5px; }
+    .form-desc-p { color: var(--mut); font-size: 0.87rem; line-height: 1.5; margin-bottom: 0; }
 
     /* section separator */
-    .form-sep { font-size: 0.88rem; font-weight: 700; color: var(--pri); padding: 10px 0; border-bottom: 1px solid var(--bor); margin: 24px 0 18px; }
-
-    /* field group */
-    .fg { margin-bottom: 18px; }
-    .fg > label {
-      display: block; font-size: 0.75rem; font-weight: 700; color: var(--mut);
-      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px;
+    .form-sep {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .8px;
+      color: var(--txt); margin: 24px 0 14px;
     }
-    .fg > label .req { color: var(--err); margin-left: 3px; }
+    .form-sep-bar { width: 3px; height: 16px; border-radius: 2px; background: var(--pri); flex-shrink: 0; }
+    .form-sep-line { flex: 1; height: 1px; background: var(--bor); }
+
+    /* field cards */
+    .fg {
+      margin-bottom: 10px;
+      background: var(--card); border: 1px solid var(--bor); border-radius: 14px;
+      padding: 14px 16px 13px; border-left: 3px solid var(--bor);
+      transition: border-left-color .2s, box-shadow .2s;
+    }
+    .fg:focus-within { box-shadow: 0 4px 24px rgba(0,0,0,.3); }
+    .fg.fc-auto  { border-left-color: var(--ok); }
+    .fg.fc-auto:focus-within  { box-shadow: 0 4px 20px rgba(26,188,156,.12); }
+    .fg.fc-sig   { border-left-color: #8b5cf6; }
+    .fg.fc-media { border-left-color: #ec4899; }
+    .fg.fc-smart { border-left-color: var(--warn); }
+    .fg.has-error { border-left-color: var(--err) !important; }
+    .fg > label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.72rem; font-weight: 700; color: var(--mut);
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; cursor: default;
+    }
+    .fg > label .req { color: var(--err); margin-left: 2px; }
+    .fg-ico {
+      width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-style: normal; background: rgba(255,255,255,.06);
+    }
     .fg input[type="text"], .fg input[type="number"], .fg input[type="email"],
     .fg input[type="tel"], .fg input[type="date"], .fg textarea, .fg select {
-      width: 100%; background: var(--card); border: 1px solid var(--bor); border-radius: 9px;
+      width: 100%; background: var(--inp); border: 1px solid var(--bor); border-radius: 9px;
       color: var(--txt); font-size: 0.95rem; font-family: inherit;
-      padding: 13px 15px; outline: none; transition: border-color .2s, box-shadow .2s;
+      padding: 12px 14px; outline: none; transition: border-color .2s, box-shadow .2s;
       -webkit-appearance: none; appearance: none;
     }
     .fg input:focus, .fg textarea:focus, .fg select:focus {
       border-color: var(--pri); box-shadow: 0 0 0 3px rgba(37,99,235,.15);
     }
-    .fg input.auto-field { background: rgba(37,99,235,.08); border-color: var(--pri); color: var(--pri); cursor: default; }
+    .fg input.auto-field { background: rgba(26,188,156,.07); border-color: rgba(26,188,156,.35); color: var(--ok); cursor: default; font-weight: 600; }
     .fg input.auto-field:focus { box-shadow: none; }
-    .fg textarea { resize: vertical; min-height: 86px; }
-    .fg select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+    .fg textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+    .fg select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; cursor: pointer; }
 
-    .fg .invalid { border-color: var(--err) !important; }
-    .fg .err-msg { color: var(--err); font-size: 0.75rem; margin-top: 5px; display: none; }
+    .fg .err-msg { color: var(--err); font-size: 0.75rem; margin-top: 6px; display: none; }
     .fg.has-error .err-msg { display: block; }
     .fg.has-error input, .fg.has-error textarea, .fg.has-error select { border-color: var(--err); }
 
-    /* radio / checkbox */
-    .opts-wrap { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-    .opts-wrap.inline { flex-direction: row; flex-wrap: wrap; }
+    /* radio / checkbox - pill cards */
+    .opts-wrap { display: flex; flex-direction: column; gap: 7px; }
+    .opts-wrap.inline { flex-direction: row; flex-wrap: wrap; gap: 7px; }
     .opt-lbl {
       display: flex; align-items: center; gap: 10px;
-      padding: 10px 14px; background: var(--card); border: 1.5px solid var(--bor);
-      border-radius: 8px; cursor: pointer; font-size: 0.9rem;
-      transition: border-color .15s, background .15s;
+      padding: 11px 15px; background: var(--inp); border: 1.5px solid var(--bor);
+      border-radius: 10px; cursor: pointer; font-size: 0.9rem; line-height: 1.3;
+      transition: border-color .15s, background .15s, color .15s; user-select: none;
     }
-    .opts-wrap.inline .opt-lbl { padding: 8px 14px; }
+    .opts-wrap.inline .opt-lbl { padding: 9px 15px; }
+    .opt-lbl:hover { border-color: var(--pri-h); background: rgba(59,130,246,.08); }
     .opt-lbl input[type="radio"], .opt-lbl input[type="checkbox"] {
-      width: 18px; height: 18px; accent-color: var(--pri); cursor: pointer; flex-shrink: 0;
+      width: 17px; height: 17px; accent-color: var(--pri); cursor: pointer; flex-shrink: 0;
       background: transparent; border: none; padding: 0;
     }
-    .opt-lbl:has(input:checked) { border-color: var(--pri); background: rgba(37,99,235,.08); }
+    .opt-lbl:has(input:checked) { border-color: var(--pri); background: rgba(37,99,235,.15); color: #93c5fd; font-weight: 600; }
 
     /* GPS field */
     .gps-field {
@@ -243,11 +272,13 @@
 <!-- VIEW: fill form -->
 <div class="view" id="vForm">
   <div class="form-wrap">
-    <div class="form-header-meta">
-      <span class="form-cod" id="fCod"></span>
+    <div class="form-header-card">
+      <div class="form-header-meta">
+        <span class="form-cod" id="fCod"></span>
+      </div>
+      <h1 class="form-title-h" id="fTitle"></h1>
+      <p class="form-desc-p" id="fDesc"></p>
     </div>
-    <h1 class="form-title-h" id="fTitle"></h1>
-    <p class="form-desc-p" id="fDesc"></p>
     <div id="fFields"></div>
   </div>
   <div class="form-footer">
@@ -408,20 +439,33 @@ function renderFields(campos) {
   setTimeout(() => autoFill(campos), 100);
 }
 
+const _FICON = {
+  texto:'T', email:'@', telefono:'☏', numero:'#', textarea:'¶', fecha:'🗓',
+  fecha_auto:'📅', hora_auto:'⏰', ubicacion:'📍',
+  si_no:'✓✗', select:'▾', radio:'◉', checkbox_multi:'☑',
+  firma:'✍', foto:'📷', separador:'—'
+};
+const _FCLASS = {
+  fecha_auto:'fc-auto', hora_auto:'fc-auto', ubicacion:'fc-auto',
+  firma:'fc-sig', foto:'fc-media',
+  si_no:'fc-smart', radio:'fc-smart', select:'fc-smart', checkbox_multi:'fc-smart'
+};
+
 function buildFieldEl(c) {
   if (c.tipo === 'separador') {
     const d = document.createElement('div');
     d.className = 'form-sep';
-    d.textContent = `— ${c.etiqueta}`;
+    d.innerHTML = `<span class="form-sep-bar"></span>${c.etiqueta}<span class="form-sep-line"></span>`;
     return d;
   }
 
   const fg = document.createElement('div');
-  fg.className = 'fg';
+  fg.className = 'fg ' + (_FCLASS[c.tipo] || '');
   fg.id = `fg_${c.id}`;
 
   const lbl = document.createElement('label');
-  lbl.innerHTML = c.etiqueta + (c.requerido ? '<span class="req">*</span>' : '');
+  const ico = _FICON[c.tipo] || 'T';
+  lbl.innerHTML = `<span class="fg-ico">${ico}</span>${c.etiqueta}${c.requerido ? '<span class="req">*</span>' : ''}`;
   fg.appendChild(lbl);
 
   const errMsg = document.createElement('div');

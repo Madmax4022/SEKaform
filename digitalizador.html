@@ -61,7 +61,7 @@
     .fg textarea{resize:vertical;min-height:68px;}
 
     /* ─ PAGE 1: source tabs + upload ─ */
-    .src-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px;}
+    .src-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:24px;}
     .src-tab{background:var(--card);border:2px solid var(--bor);border-radius:10px;padding:14px 8px;cursor:pointer;text-align:center;transition:all .18s;font-family:inherit;color:var(--txt);}
     .src-tab:hover{border-color:var(--pri);background:var(--pri-dim);}
     .src-tab.active{border-color:var(--pri);background:var(--pri-dim);}
@@ -196,7 +196,7 @@
     @keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
     @media(max-width:640px){
-      .src-tabs{grid-template-columns:repeat(2,1fr);}
+      .src-tabs{grid-template-columns:repeat(3,1fr);}
       .builder-layout{grid-template-columns:1fr;}
       .ref-side{display:none;}
     }
@@ -242,6 +242,10 @@
       <button class="src-tab" id="tab-man" onclick="selectSrc('man')">
         <span class="src-tab-ico">✍️</span>
         <span class="src-tab-lbl">Manual</span>
+      </button>
+      <button class="src-tab" id="tab-html" onclick="selectSrc('html')">
+        <span class="src-tab-ico">🗂️</span>
+        <span class="src-tab-lbl">HTML</span>
       </button>
     </div>
 
@@ -303,6 +307,15 @@
             <span class="doc-rm" onclick="clearSrc('pdf')">✕ Quitar</span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- HTML panel -->
+    <div class="src-panel" id="pan-html">
+      <div class="bulk-wrap">
+        <p>🗂️ <strong>Pega el código HTML del formulario</strong> — el sistema extrae todos los campos, tipos y opciones directamente del HTML:</p>
+        <textarea id="bulkHtml" placeholder='&lt;form&gt;&#10;  &lt;label for="nombre"&gt;Nombre completo&lt;/label&gt;&#10;  &lt;input type="text" id="nombre" name="nombre"&gt;&#10;  &lt;label for="cargo"&gt;Cargo&lt;/label&gt;&#10;  &lt;select id="cargo" name="cargo"&gt;...&lt;/select&gt;&#10;&lt;/form&gt;' rows="10"></textarea>
+        <div class="bulk-hint">Soporta: inputs, selects, textareas, labels, aria-labels, placeholders · También mejora formularios ya digitalizados en HTML.</div>
       </div>
     </div>
 
@@ -659,6 +672,19 @@ async function analyze() {
     } else if (curSrc === 'pdf') {
       if (!pdfFile) { toast('Sube un PDF primero','er'); hideProcAndGoBack(); return; }
       fields = await analyzePDF(pdfFile);
+    } else if (curSrc === 'html') {
+      const raw = document.getElementById('bulkHtml').value;
+      if (!raw.trim()) { toast('Pega el código HTML del formulario','er'); hideProcAndGoBack(); return; }
+      setProc('Analizando HTML...','Extrayendo campos del formulario...',30);
+      fields = parseHTMLFields(raw, null);
+      if (fields.length < 3) {
+        setProc('Analizando HTML...','Complementando con análisis de texto...',60);
+        const txtFields = analyzeText(raw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' '));
+        const seen = new Set(fields.map(f=>f.etiqueta.toLowerCase()));
+        txtFields.forEach(f => { if (!seen.has(f.etiqueta.toLowerCase())) { fields.push(f); seen.add(f.etiqueta.toLowerCase()); } });
+      }
+      setProc('¡Listo!',`${fields.length} campos detectados`,100);
+      await sleep(400);
     } else { // manual
       const raw = document.getElementById('bulkMan').value;
       if (!raw.trim()) { toast('Escribe los campos del formulario','er'); hideProcAndGoBack(); return; }
