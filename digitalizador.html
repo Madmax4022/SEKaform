@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Digitalizador — SEKaform</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --inp: #0f172a;
+      --pri: #2563eb;
+      --pri-h: #3b82f6;
+      --ok: #1abc9c;
+      --err: #ef4444;
+      --warn: #f59e0b;
+      --txt: #f8fafc;
+      --mut: #94a3b8;
+      --bor: #334155;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
+
+    /* ── top bar ── */
+    .topbar {
+      background: var(--card); border-bottom: 1px solid var(--bor);
+      padding: 0 20px; height: 52px;
+      display: flex; align-items: center; gap: 14px;
+      position: sticky; top: 0; z-index: 200;
+    }
+    .topbar a { color: var(--mut); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; }
+    .topbar a:hover { background: var(--bor); color: var(--txt); }
+    .topbar-title { font-size: 0.95rem; font-weight: 700; color: var(--txt); }
+
+    /* ── wizard tabs ── */
+    .wizard {
+      background: var(--card); border-bottom: 1px solid var(--bor);
+      padding: 0 20px; display: flex; gap: 0; overflow-x: auto;
+    }
+    .wz-step {
+      padding: 12px 18px; font-size: 0.82rem; font-weight: 600; color: var(--mut);
+      border-bottom: 3px solid transparent; cursor: default;
+      display: flex; align-items: center; gap: 8px; white-space: nowrap;
+      transition: color .2s, border-color .2s;
+    }
+    .wz-step.active { color: var(--pri); border-bottom-color: var(--pri); }
+    .wz-step.done { color: var(--ok); }
+    .wz-num {
+      width: 20px; height: 20px; border-radius: 50%; background: var(--bor);
+      color: var(--mut); font-size: 0.7rem; display: flex; align-items: center;
+      justify-content: center; font-weight: 800; flex-shrink: 0;
+    }
+    .wz-step.active .wz-num { background: var(--pri); color: #fff; }
+    .wz-step.done .wz-num { background: var(--ok); color: #fff; }
+
+    /* ── pages ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── shared form controls ── */
+    .wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+    .pg-sub { color: var(--mut); font-size: 0.9rem; line-height: 1.5; margin-bottom: 28px; }
+
+    .fg { margin-bottom: 18px; }
+    .fg label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+    .fg input, .fg textarea, .fg select {
+      width: 100%; background: var(--card); border: 1px solid var(--bor);
+      border-radius: 8px; color: var(--txt); font-size: 0.95rem;
+      font-family: inherit; padding: 11px 14px; outline: none; transition: border-color .2s;
+    }
+    .fg input:focus, .fg textarea:focus, .fg select:focus { border-color: var(--pri); }
+    .fg textarea { resize: vertical; min-height: 74px; }
+
+    .row-act { display: flex; justify-content: flex-end; gap: 10px; margin-top: 28px; }
+
+    .btn {
+      padding: 11px 22px; border-radius: 8px; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; border: none; transition: all .2s; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-pri { background: var(--pri); color: #fff; }
+    .btn-pri:hover:not(:disabled) { background: var(--pri-h); }
+    .btn-sec { background: var(--bor); color: var(--txt); }
+    .btn-sec:hover:not(:disabled) { background: #475569; }
+    .btn-ok { background: var(--ok); color: #fff; }
+    .btn-ok:hover:not(:disabled) { background: #17a589; }
+    .btn-ghost { background: transparent; color: var(--mut); }
+    .btn-ghost:hover:not(:disabled) { background: var(--bor); color: var(--txt); }
+    .btn-sm { padding: 7px 14px; font-size: 0.78rem; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ── dropzone ── */
+    .dropzone {
+      border: 2px dashed var(--bor); border-radius: 12px; padding: 44px 24px;
+      text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+      margin-bottom: 20px; background: var(--card);
+    }
+    .dropzone:hover, .dropzone.over { border-color: var(--pri); background: rgba(37,99,235,.06); }
+    .dz-ico { font-size: 2.8rem; display: block; margin-bottom: 10px; }
+    .dropzone h3 { font-size: 0.95rem; margin-bottom: 6px; }
+    .dropzone p { color: var(--mut); font-size: 0.82rem; }
+    .link-like { color: var(--pri); text-decoration: underline; cursor: pointer; }
+
+    .doc-prev-box {
+      background: var(--card); border: 1px solid var(--bor); border-radius: 10px;
+      padding: 16px; margin-bottom: 20px;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .doc-prev-thumb {
+      width: 88px; height: 108px; object-fit: contain;
+      border-radius: 6px; background: var(--bg); border: 1px solid var(--bor); flex-shrink: 0;
+    }
+    .doc-prev-info { flex: 1; min-width: 0; }
+    .doc-prev-name { font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-prev-meta { color: var(--mut); font-size: 0.78rem; }
+    .doc-remove { color: var(--err); cursor: pointer; font-size: 0.78rem; margin-top: 6px; display: inline-block; }
+
+    /* ── builder (page 2) ── */
+    .builder {
+      display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 105px); overflow: hidden;
+    }
+    .ref-panel { border-right: 1px solid var(--bor); overflow-y: auto; padding: 20px; background: var(--bg); }
+    .panel-lbl { font-size: 0.72rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
+    .ref-img { width: 100%; border-radius: 8px; border: 1px solid var(--bor); }
+    .ref-empty { background: var(--card); border: 1px dashed var(--bor); border-radius: 8px; padding: 36px; text-align: center; color: var(--mut); font-size: 0.82rem; line-height: 1.6; }
+
+    .fields-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+    .fp-header {
+      padding: 14px 18px; background: var(--card); border-bottom: 1px solid var(--bor);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .fp-cnt { font-size: 0.72rem; color: var(--mut); margin-top: 2px; }
+    .fields-list { flex: 1; overflow-y: auto; padding: 12px; }
+
+    .field-item {
+      background: var(--card); border: 1px solid var(--bor); border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 7px;
+      display: flex; align-items: center; gap: 9px;
+      transition: border-color .15s;
+    }
+    .field-item:hover { border-color: var(--pri); }
+    .fi-icon {
+      width: 30px; height: 30px; border-radius: 6px;
+      background: rgba(37,99,235,.15); color: var(--pri);
+      font-size: 0.85rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .fi-sep .fi-icon { background: rgba(26,188,156,.15); color: var(--ok); }
+    .fi-info { flex: 1; min-width: 0; }
+    .fi-label { font-size: 0.88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fi-type { font-size: 0.72rem; color: var(--mut); margin-top: 1px; }
+    .fi-req { font-size: 0.68rem; color: var(--err); font-weight: 800; flex-shrink: 0; }
+    .fi-acts { display: flex; gap: 2px; flex-shrink: 0; }
+    .fi-btn {
+      width: 26px; height: 26px; border-radius: 4px; border: none; background: transparent;
+      color: var(--mut); cursor: pointer; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center; transition: background .12s, color .12s;
+    }
+    .fi-btn:hover { background: var(--bor); color: var(--txt); }
+    .fi-btn.del:hover { background: rgba(239,68,68,.15); color: var(--err); }
+
+    .empty-fields { text-align: center; padding: 44px 20px; color: var(--mut); }
+    .ef-ico { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+    .empty-fields h3 { font-size: 0.95rem; margin-bottom: 7px; }
+    .empty-fields p { font-size: 0.82rem; line-height: 1.5; }
+
+    .fp-add-bar { padding: 12px; background: var(--card); border-top: 1px solid var(--bor); }
+    .builder-foot {
+      padding: 12px 20px; background: var(--card); border-top: 1px solid var(--bor);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* ── preview (page 3) ── */
+    .prev-card { background: var(--card); border: 1px solid var(--bor); border-radius: 12px; padding: 26px; margin-bottom: 20px; }
+    .pf-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 5px; }
+    .pf-desc { color: var(--mut); font-size: 0.88rem; margin-bottom: 20px; }
+    .pf-field { margin-bottom: 18px; }
+    .pf-field label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+    .pf-field label .req { color: var(--err); margin-left: 3px; }
+    .pf-field input, .pf-field textarea, .pf-field select {
+      width: 100%; background: var(--inp); border: 1px solid var(--bor); border-radius: 8px;
+      color: var(--txt); font-family: inherit; font-size: 0.9rem; padding: 10px 13px; pointer-events: none;
+    }
+    .pf-sep { font-size: 0.9rem; font-weight: 700; color: var(--pri); padding: 10px 0; border-bottom: 1px solid var(--bor); margin-bottom: 18px; }
+
+    /* ── modal ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 500; display: flex; align-items: flex-end; justify-content: center; }
+    .overlay.hidden { display: none; }
+    .sheet {
+      background: var(--card); border-radius: 20px 20px 0 0;
+      padding: 20px 20px 32px; width: 100%; max-width: 560px; max-height: 92vh;
+      overflow-y: auto; animation: slideUp .22s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .handle { width: 38px; height: 4px; background: var(--bor); border-radius: 2px; margin: 0 auto 18px; }
+    .sheet-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; }
+
+    /* type picker */
+    .type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 18px; }
+    .ty-btn {
+      background: var(--inp); border: 2px solid var(--bor); border-radius: 8px;
+      padding: 10px 6px; cursor: pointer; text-align: center; transition: all .14s; color: var(--txt); font-family: inherit;
+    }
+    .ty-btn:hover { border-color: var(--pri); }
+    .ty-btn.sel { border-color: var(--pri); background: rgba(37,99,235,.1); }
+    .ty-ico { font-size: 1.3rem; display: block; margin-bottom: 3px; }
+    .ty-lbl { font-size: 0.65rem; font-weight: 700; color: var(--mut); line-height: 1.2; }
+    .ty-btn.sel .ty-lbl { color: var(--pri); }
+
+    /* options list */
+    .opts-list { display: flex; flex-direction: column; gap: 7px; }
+    .opt-row { display: flex; gap: 7px; align-items: center; }
+    .opt-row input {
+      flex: 1; background: var(--inp); border: 1px solid var(--bor); border-radius: 6px;
+      color: var(--txt); padding: 8px 10px; font-family: inherit; font-size: 0.88rem; outline: none;
+    }
+    .opt-row input:focus { border-color: var(--pri); }
+    .opt-rm {
+      color: var(--err); background: none; border: none; cursor: pointer; width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 1rem; flex-shrink: 0;
+    }
+    .opt-rm:hover { background: rgba(239,68,68,.12); }
+    .chk-row { display: flex; align-items: center; gap: 9px; margin: 7px 0; }
+    .chk-row input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--pri); cursor: pointer; flex-shrink: 0; }
+    .chk-row label { font-size: 0.9rem; cursor: pointer; }
+
+    /* ── toast ── */
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; background: var(--card);
+      border: 1px solid var(--bor); border-radius: 10px; padding: 12px 18px;
+      display: flex; align-items: center; gap: 9px; font-size: 0.88rem; font-weight: 600;
+      z-index: 2000; animation: toastIn .22s ease;
+      box-shadow: 0 8px 28px rgba(0,0,0,.45); max-width: 300px;
+    }
+    .toast.ok { border-color: var(--ok); }
+    .toast.er { border-color: var(--err); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 700px) {
+      .builder { grid-template-columns: 1fr; height: auto; }
+      .ref-panel { display: none; }
+      .fields-panel { height: auto; min-height: 0; }
+      .fields-list { max-height: 55vh; }
+      .type-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 400px) {
+      .type-grid { grid-template-columns: repeat(3, 1fr); }
+      .wz-step .wz-lbl { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html">← Inicio</a>
+  <span class="topbar-title">Digitalizador de Documentos</span>
+</nav>
+
+<div class="wizard">
+  <div class="wz-step active" id="ws1">
+    <span class="wz-num">1</span><span class="wz-lbl">Documento</span>
+  </div>
+  <div class="wz-step" id="ws2">
+    <span class="wz-num">2</span><span class="wz-lbl">Campos</span>
+  </div>
+  <div class="wz-step" id="ws3">
+    <span class="wz-num">3</span><span class="wz-lbl">Vista previa</span>
+  </div>
+</div>
+
+<!-- PAGE 1: Document upload -->
+<div class="page active" id="p1">
+  <div class="wrap">
+    <h1 class="pg-h">Documento base</h1>
+    <p class="pg-sub">Sube el documento escaneado como referencia visual. Luego defines los campos digitales que lo reemplazarán.</p>
+
+    <div class="dropzone" id="dz" onclick="document.getElementById('fi').click()">
+      <input type="file" id="fi" accept="image/*" style="display:none">
+      <span class="dz-ico">📄</span>
+      <h3>Arrastra el documento aquí</h3>
+      <p>o <span class="link-like">selecciona un archivo</span></p>
+      <p style="margin-top:6px">JPG, PNG, GIF — máx. 10 MB</p>
+    </div>
+
+    <div id="docPrev" style="display:none">
+      <div class="doc-prev-box">
+        <img id="docThumb" class="doc-prev-thumb" alt="">
+        <div class="doc-prev-info">
+          <div class="doc-prev-name" id="docName"></div>
+          <div class="doc-prev-meta" id="docMeta"></div>
+          <span class="doc-remove" onclick="removeDoc()">✕ Quitar documento</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Nombre del formulario *</label>
+      <input type="text" id="fNom" placeholder="Ej: Inspección Sanitaria de Locales" maxlength="100">
+    </div>
+    <div class="fg">
+      <label>Descripción</label>
+      <textarea id="fDesc" placeholder="Propósito del formulario (opcional)" rows="3"></textarea>
+    </div>
+    <div class="fg">
+      <label>Código / versión</label>
+      <input type="text" id="fCod" placeholder="Ej: FORM-001-v1" maxlength="50">
+    </div>
+
+    <div class="row-act">
+      <button class="btn btn-pri" onclick="goPg(2)">Definir campos →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: Field builder -->
+<div class="page" id="p2">
+  <div class="builder">
+    <div class="ref-panel">
+      <div class="panel-lbl">Referencia del documento</div>
+      <img id="refImg" class="ref-img" alt="" style="display:none">
+      <div class="ref-empty" id="refEmpty">Sin imagen de referencia.<br>Puedes guiarte por el documento físico.</div>
+    </div>
+    <div class="fields-panel">
+      <div class="fp-header">
+        <div>
+          <div class="panel-lbl" style="margin:0">Campos del formulario</div>
+          <div class="fp-cnt" id="fpCnt">0 campos</div>
+        </div>
+        <button class="btn btn-pri btn-sm" onclick="openModal()">+ Campo</button>
+      </div>
+      <div class="fields-list" id="fieldsList">
+        <div class="empty-fields" id="emptyF">
+          <span class="ef-ico">📋</span>
+          <h3>Sin campos todavía</h3>
+          <p>Agrega textos, desplegables, fechas automáticas, firmas y más.</p>
+        </div>
+      </div>
+      <div class="fp-add-bar">
+        <button class="btn btn-pri btn-full" onclick="openModal()">+ Agregar campo</button>
+      </div>
+    </div>
+  </div>
+  <div class="builder-foot">
+    <button class="btn btn-sec" onclick="goPg(1)">← Atrás</button>
+    <button class="btn btn-pri" onclick="goPg(3)">Vista previa →</button>
+  </div>
+</div>
+
+<!-- PAGE 3: Preview & save -->
+<div class="page" id="p3">
+  <div class="wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="pg-h" id="prevH">Vista previa</h1>
+        <p style="color:var(--mut);font-size:0.82rem">Así se verá el formulario al llenarlo</p>
+      </div>
+      <button class="btn btn-ok" onclick="saveTemplate()">💾 Guardar plantilla</button>
+    </div>
+
+    <div id="prevForm" class="prev-card"></div>
+
+    <div class="row-act" style="justify-content:space-between">
+      <button class="btn btn-sec" onclick="goPg(2)">← Editar campos</button>
+      <button class="btn btn-pri" onclick="goFill()">Ir a llenar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add/Edit field -->
+<div class="overlay hidden" id="overlay" onclick="overlayClick(event)">
+  <div class="sheet" id="sheet">
+    <div class="handle"></div>
+    <div class="sheet-title" id="sheetTitle">Agregar campo</div>
+    <div class="type-grid" id="typeGrid"></div>
+    <div id="fieldProps"></div>
+    <div class="row-act">
+      <button class="btn btn-sec" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-pri" onclick="saveField()">Guardar campo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+let tmpl = { id:null, nombre:'', descripcion:'', codigo:'', imagen:null, campos:[], version:'1.0', creadoEn:null, actualizadoEn:null };
+let editId = null;
+let selType = 'texto';
+let curOpts = [];
+
+const TIPOS = {
+  texto:         { ico:'T',   lbl:'Texto corto'  },
+  textarea:      { ico:'¶',   lbl:'Texto largo'   },
+  numero:        { ico:'#',   lbl:'Número'        },
+  email:         { ico:'@',   lbl:'Correo'        },
+  telefono:      { ico:'☏',   lbl:'Teléfono'      },
+  fecha_auto:    { ico:'📅',  lbl:'Fecha auto'    },
+  hora_auto:     { ico:'⏰',  lbl:'Hora auto'     },
+  fecha:         { ico:'🗓',  lbl:'Fecha manual'  },
+  select:        { ico:'▼',   lbl:'Desplegable'   },
+  radio:         { ico:'◉',   lbl:'Opción única'  },
+  si_no:         { ico:'✓✗',  lbl:'Sí/No/N/A'    },
+  checkbox_multi:{ ico:'☑',   lbl:'Multi-opción'  },
+  firma:         { ico:'✍',   lbl:'Firma digital' },
+  foto:          { ico:'📷',  lbl:'Fotografía'    },
+  separador:     { ico:'—',   lbl:'Separador'     },
+  ubicacion:     { ico:'📍',  lbl:'Ubicación GPS' },
+};
+
+// ── Drag & Drop ────────────────────────────────────────────────────
+const dz = document.getElementById('dz');
+const fi = document.getElementById('fi');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+fi.addEventListener('change', () => { if (fi.files[0]) handleFile(fi.files[0]); });
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) { toast('Solo imágenes: JPG, PNG, GIF','er'); return; }
+  if (file.size > 10*1024*1024) { toast('Archivo muy grande (máx 10 MB)','er'); return; }
+  const r = new FileReader();
+  r.onload = e => {
+    tmpl.imagen = e.target.result;
+    document.getElementById('docThumb').src = e.target.result;
+    document.getElementById('docName').textContent = file.name;
+    document.getElementById('docMeta').textContent = `${(file.size/1024).toFixed(0)} KB`;
+    dz.style.display = 'none';
+    document.getElementById('docPrev').style.display = 'block';
+    const ri = document.getElementById('refImg');
+    ri.src = e.target.result; ri.style.display = 'block';
+    document.getElementById('refEmpty').style.display = 'none';
+  };
+  r.readAsDataURL(file);
+}
+
+function removeDoc() {
+  tmpl.imagen = null; fi.value = '';
+  dz.style.display = 'block';
+  document.getElementById('docPrev').style.display = 'none';
+  document.getElementById('refImg').style.display = 'none';
+  document.getElementById('refEmpty').style.display = 'block';
+}
+
+// ── Page navigation ────────────────────────────────────────────────
+function goPg(n) {
+  if (n === 2) {
+    const nom = document.getElementById('fNom').value.trim();
+    if (!nom) { toast('Ingresa el nombre del formulario','er'); document.getElementById('fNom').focus(); return; }
+    tmpl.nombre = nom;
+    tmpl.descripcion = document.getElementById('fDesc').value.trim();
+    tmpl.codigo = document.getElementById('fCod').value.trim();
+  }
+  if (n === 3) {
+    if (tmpl.campos.length === 0) { toast('Agrega al menos un campo','er'); return; }
+    renderPreview();
+  }
+  document.querySelectorAll('.wz-step').forEach((el,i) => {
+    el.classList.toggle('active', i+1===n);
+    el.classList.toggle('done', i+1<n);
+  });
+  document.querySelectorAll('.page').forEach((el,i) => el.classList.toggle('active', i+1===n));
+  window.scrollTo(0,0);
+}
+
+// ── Modal ──────────────────────────────────────────────────────────
+function openModal(fieldId=null) {
+  editId = fieldId;
+  selType = 'texto';
+  document.getElementById('sheetTitle').textContent = fieldId ? 'Editar campo' : 'Agregar campo';
+  if (fieldId) {
+    const c = tmpl.campos.find(x => x.id===fieldId);
+    if (c) { selType = c.tipo; renderTypeGrid(); renderProps(c); }
+    else { renderTypeGrid(); renderProps(null); }
+  } else {
+    renderTypeGrid(); renderProps(null);
+  }
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function closeModal() { document.getElementById('overlay').classList.add('hidden'); editId=null; }
+function overlayClick(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
+
+function renderTypeGrid() {
+  document.getElementById('typeGrid').innerHTML = Object.entries(TIPOS).map(([k,v]) =>
+    `<button class="ty-btn${selType===k?' sel':''}" onclick="pickType('${k}')">
+      <span class="ty-ico">${v.ico}</span>
+      <span class="ty-lbl">${v.lbl}</span>
+    </button>`
+  ).join('');
+}
+
+function pickType(t) { selType=t; renderTypeGrid(); renderProps(null); }
+
+function renderProps(campo) {
+  const isSep = selType==='separador';
+  const isAuto = ['fecha_auto','hora_auto','ubicacion'].includes(selType);
+  const hasOpts = ['select','radio','checkbox_multi'].includes(selType);
+  const isSiNo = selType==='si_no';
+  const isFirma = selType==='firma';
+
+  const et = campo?.etiqueta||'', ph=campo?.placeholder||'', req=campo?.requerido??true;
+  curOpts = campo?.opciones ? [...campo.opciones] : [''];
+
+  let h = '';
+  if (isSep) {
+    h = `<div class="fg"><label>Texto del separador *</label><input type="text" id="pEt" placeholder="Ej: Datos del Establecimiento" value="${et}"></div>`;
+  } else {
+    h = `<div class="fg"><label>Etiqueta *</label><input type="text" id="pEt" placeholder="Ej: Nombre del responsable" value="${et}"></div>`;
+    if (!isFirma && !isAuto && !isSiNo) {
+      h += `<div class="fg"><label>Texto de ayuda</label><input type="text" id="pPh" placeholder="Ej: Ingresa el nombre completo..." value="${ph}"></div>`;
+    }
+    if (hasOpts) {
+      h += `<div class="fg"><label>Opciones *</label>
+        <div class="opts-list" id="optList">
+          ${curOpts.map((o,i)=>`<div class="opt-row" id="or${i}">
+            <input type="text" placeholder="Opción ${i+1}" value="${o}" oninput="setOpt(${i},this.value)">
+            <button class="opt-rm" onclick="rmOpt(${i})">✕</button>
+          </div>`).join('')}
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addOpt()">+ Opción</button>
+      </div>`;
+    }
+    if (!isAuto) {
+      h += `<div class="chk-row"><input type="checkbox" id="pReq"${req?' checked':''}><label for="pReq">Campo requerido</label></div>`;
+    }
+  }
+  document.getElementById('fieldProps').innerHTML = h;
+}
+
+function setOpt(i,v) { curOpts[i]=v; }
+function addOpt() {
+  curOpts.push('');
+  const list = document.getElementById('optList');
+  const i = curOpts.length-1;
+  const d = document.createElement('div');
+  d.className='opt-row'; d.id=`or${i}`;
+  d.innerHTML=`<input type="text" placeholder="Opción ${i+1}" oninput="setOpt(${i},this.value)"><button class="opt-rm" onclick="rmOpt(${i})">✕</button>`;
+  list.appendChild(d);
+}
+function rmOpt(i) {
+  const list = document.getElementById('optList');
+  if (list.children.length<=1) { toast('Mínimo una opción','er'); return; }
+  // Read current values from DOM before rebuilding
+  curOpts = Array.from(list.querySelectorAll('input')).map(inp=>inp.value);
+  curOpts.splice(i,1);
+  list.innerHTML = curOpts.map((o,j)=>`<div class="opt-row" id="or${j}">
+    <input type="text" placeholder="Opción ${j+1}" value="${o}" oninput="setOpt(${j},this.value)">
+    <button class="opt-rm" onclick="rmOpt(${j})">✕</button>
+  </div>`).join('');
+}
+
+function saveField() {
+  const etEl = document.getElementById('pEt');
+  const et = etEl?.value?.trim()||'';
+  if (!et) { toast('La etiqueta es obligatoria','er'); etEl?.focus(); return; }
+
+  const hasOpts = ['select','radio','checkbox_multi'].includes(selType);
+  if (hasOpts) {
+    const inputs = document.getElementById('optList')?.querySelectorAll('input');
+    if (inputs) curOpts = Array.from(inputs).map(i=>i.value.trim()).filter(Boolean);
+    if (!curOpts.length) { toast('Agrega al menos una opción','er'); return; }
+  }
+
+  const campo = {
+    id: editId||`c${Date.now()}`,
+    tipo: selType,
+    etiqueta: et,
+    placeholder: document.getElementById('pPh')?.value?.trim()||'',
+    requerido: document.getElementById('pReq')?.checked??true,
+    opciones: hasOpts ? [...curOpts] : undefined
+  };
+  if (['fecha_auto','hora_auto','ubicacion'].includes(selType)) { campo.requerido=false; campo.autoLlenar=selType; }
+
+  if (editId) {
+    const idx=tmpl.campos.findIndex(c=>c.id===editId);
+    if (idx>=0) tmpl.campos[idx]=campo;
+  } else {
+    tmpl.campos.push(campo);
+  }
+  renderFieldList();
+  closeModal();
+  toast(editId?'Campo actualizado':'Campo agregado','ok');
+}
+
+// ── Field list ─────────────────────────────────────────────────────
+function renderFieldList() {
+  const list = document.getElementById('fieldsList');
+  const emp = document.getElementById('emptyF');
+  document.getElementById('fpCnt').textContent = `${tmpl.campos.length} campo${tmpl.campos.length!==1?'s':''}`;
+  if (!tmpl.campos.length) { emp.style.display='block'; list.querySelectorAll('.field-item').forEach(e=>e.remove()); return; }
+  emp.style.display='none';
+  list.querySelectorAll('.field-item').forEach(e=>e.remove());
+  list.insertAdjacentHTML('afterbegin', tmpl.campos.map((c,i) => {
+    const T=TIPOS[c.tipo]||{ico:'?',lbl:c.tipo};
+    const isSep=c.tipo==='separador';
+    return `<div class="field-item${isSep?' fi-sep':''}" id="fi_${c.id}">
+      <div class="fi-icon">${T.ico}</div>
+      <div class="fi-info">
+        <div class="fi-label">${c.etiqueta}</div>
+        <div class="fi-type">${T.lbl}</div>
+      </div>
+      ${c.requerido?'<span class="fi-req">*</span>':''}
+      <div class="fi-acts">
+        ${i>0?`<button class="fi-btn" onclick="mvF('${c.id}',-1)" title="Subir">↑</button>`:'<span style="width:26px"></span>'}
+        ${i<tmpl.campos.length-1?`<button class="fi-btn" onclick="mvF('${c.id}',1)" title="Bajar">↓</button>`:'<span style="width:26px"></span>'}
+        <button class="fi-btn" onclick="openModal('${c.id}')" title="Editar">✏️</button>
+        <button class="fi-btn del" onclick="delF('${c.id}')" title="Eliminar">🗑</button>
+      </div>
+    </div>`;
+  }).join(''));
+}
+
+function mvF(id,dir) {
+  const i=tmpl.campos.findIndex(c=>c.id===id), j=i+dir;
+  if (j<0||j>=tmpl.campos.length) return;
+  [tmpl.campos[i],tmpl.campos[j]]=[tmpl.campos[j],tmpl.campos[i]];
+  renderFieldList();
+}
+function delF(id) {
+  if (!confirm('¿Eliminar este campo?')) return;
+  tmpl.campos=tmpl.campos.filter(c=>c.id!==id);
+  renderFieldList();
+}
+
+// ── Preview ────────────────────────────────────────────────────────
+function renderPreview() {
+  document.getElementById('prevH').textContent = tmpl.nombre||'Vista previa';
+  const now = new Date();
+  const ds = now.toLocaleDateString('es-CO');
+  const ts = now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  let h = `<h2 class="pf-title">${tmpl.nombre}</h2>`;
+  if (tmpl.descripcion) h+=`<p class="pf-desc">${tmpl.descripcion}</p>`;
+  if (tmpl.codigo) h+=`<p style="color:var(--mut);font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px">${tmpl.codigo}</p>`;
+  tmpl.campos.forEach(c=>{h+=renderCampoPrev(c,ds,ts);});
+  document.getElementById('prevForm').innerHTML=h;
+}
+
+function renderCampoPrev(c,ds,ts) {
+  if (c.tipo==='separador') return `<div class="pf-sep">— ${c.etiqueta}</div>`;
+  const req=c.requerido?'<span class="req">*</span>':'';
+  const W=`<div class="pf-field"><label>${c.etiqueta}${req}</label>`;
+  const E=`</div>`;
+  switch (c.tipo) {
+    case 'texto': case 'email': case 'telefono': case 'numero':
+      return `${W}<input type="text" placeholder="${c.placeholder||'Ingresa aquí...'}" disabled>${E}`;
+    case 'textarea':
+      return `${W}<textarea placeholder="${c.placeholder||'Escribe aquí...'}" disabled style="min-height:72px"></textarea>${E}`;
+    case 'fecha_auto':
+      return `${W}<input type="text" value="${ds}" disabled style="background:rgba(37,99,235,.09);border-color:var(--pri);color:var(--pri)">${E}`;
+    case 'hora_auto':
+      return `${W}<input type="text" value="${ts}" disabled style="background:rgba(37,99,235,.09);border-color:var(--pri);color:var(--pri)">${E}`;
+    case 'fecha':
+      return `${W}<input type="date" disabled>${E}`;
+    case 'select':
+      return `${W}<select disabled><option>Seleccionar...</option>${(c.opciones||[]).map(o=>`<option>${o}</option>`).join('')}</select>${E}`;
+    case 'radio': case 'si_no': {
+      const opts=c.tipo==='si_no'?['Sí','No','N/A']:(c.opciones||[]);
+      return `${W}<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:4px">
+        ${opts.map(o=>`<label style="display:flex;align-items:center;gap:6px;padding:7px 13px;background:var(--inp);border:1px solid var(--bor);border-radius:6px;font-size:0.88rem">
+          <input type="radio" disabled> ${o}</label>`).join('')}</div>${E}`;
+    }
+    case 'checkbox_multi':
+      return `${W}<div style="display:flex;flex-direction:column;gap:7px;margin-top:4px">
+        ${(c.opciones||[]).map(o=>`<label style="display:flex;align-items:center;gap:8px;font-size:0.88rem">
+          <input type="checkbox" disabled> ${o}</label>`).join('')}</div>${E}`;
+    case 'firma':
+      return `${W}<div style="background:var(--inp);border:1px solid var(--bor);border-radius:8px;height:110px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:0.82rem">✍ Área de firma</div>${E}`;
+    case 'foto':
+      return `${W}<div style="background:var(--inp);border:1px dashed var(--bor);border-radius:8px;padding:22px;text-align:center;color:var(--mut);font-size:0.82rem">📷 Capturar o subir foto</div>${E}`;
+    case 'ubicacion':
+      return `${W}<div style="background:rgba(37,99,235,.09);border:1px solid var(--pri);border-radius:8px;padding:11px 15px;display:flex;align-items:center;gap:9px;font-size:0.82rem;color:var(--pri)">📍 Ubicación GPS (automática)</div>${E}`;
+    default:
+      return `${W}<input type="text" placeholder="..." disabled>${E}`;
+  }
+}
+
+// ── Save ───────────────────────────────────────────────────────────
+function saveTemplate() {
+  if (!tmpl.nombre) { toast('El formulario no tiene nombre','er'); return; }
+  if (!tmpl.campos.length) { toast('Agrega al menos un campo','er'); return; }
+  if (!tmpl.id) { tmpl.id=`tmpl_${Date.now()}`; tmpl.creadoEn=new Date().toISOString(); }
+  tmpl.actualizadoEn=new Date().toISOString();
+  let list=JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const i=list.findIndex(p=>p.id===tmpl.id);
+  if (i>=0) list[i]=tmpl; else list.push(tmpl);
+  localStorage.setItem('skf_plantillas',JSON.stringify(list));
+  toast('Plantilla guardada ✓','ok');
+}
+
+function goFill() {
+  saveTemplate();
+  if (tmpl.id) window.location.href=`llenar.html?tmpl=${tmpl.id}`;
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+let _tt;
+function toast(msg,type='ok') {
+  document.querySelectorAll('.toast').forEach(e=>e.remove());
+  clearTimeout(_tt);
+  const d=document.createElement('div');
+  d.className=`toast ${type}`;
+  d.innerHTML=`<span>${type==='ok'?'✓':'✕'}</span> ${msg}`;
+  document.body.appendChild(d);
+  _tt=setTimeout(()=>d.remove(),3200);
+}
+</script>
+</body>
+</html>

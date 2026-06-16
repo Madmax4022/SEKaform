@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Formularios — SEKaform</title>
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b; --inp: #0f172a;
+      --pri: #2563eb; --pri-h: #3b82f6;
+      --ok: #1abc9c; --err: #ef4444; --warn: #f59e0b;
+      --txt: #f8fafc; --mut: #94a3b8; --bor: #334155;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
+
+    /* ── top bar ── */
+    .topbar {
+      background: var(--card); border-bottom: 1px solid var(--bor);
+      padding: 0 20px; height: 52px;
+      display: flex; align-items: center; gap: 14px;
+      position: sticky; top: 0; z-index: 200;
+    }
+    #backBtn { color: var(--mut); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; cursor: pointer; background: none; border: none; font-family: inherit; }
+    #backBtn:hover { background: var(--bor); color: var(--txt); }
+    .topbar-title { font-size: 0.95rem; font-weight: 700; color: var(--txt); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    /* ── progress ── */
+    .prog-bar { height: 3px; background: var(--bor); }
+    .prog-fill { height: 100%; background: var(--pri); transition: width .3s ease; width: 0%; }
+
+    /* ── views ── */
+    .view { display: none; }
+    .view.on { display: block; }
+
+    /* ── template list ── */
+    .wrap { max-width: 680px; margin: 0 auto; padding: 28px 16px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+    .pg-sub { color: var(--mut); font-size: 0.88rem; line-height: 1.5; margin-bottom: 24px; }
+
+    .tmpl-card {
+      background: var(--card); border: 1px solid var(--bor); border-radius: 12px;
+      padding: 20px 22px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 16px;
+      transition: border-color .15s, transform .15s;
+    }
+    .tmpl-card:hover { border-color: var(--pri); transform: translateY(-1px); }
+    .tmpl-ico { font-size: 2rem; flex-shrink: 0; }
+    .tmpl-info { flex: 1; min-width: 0; }
+    .tmpl-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tmpl-meta { color: var(--mut); font-size: 0.78rem; line-height: 1.5; }
+    .tmpl-cod { color: var(--pri); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+    .tmpl-acts { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+
+    .empty-state { text-align: center; padding: 64px 20px; }
+    .es-ico { font-size: 3.5rem; display: block; margin-bottom: 14px; }
+    .empty-state h2 { font-size: 1.1rem; margin-bottom: 8px; }
+    .empty-state p { color: var(--mut); font-size: 0.88rem; line-height: 1.5; max-width: 320px; margin: 0 auto; }
+
+    /* ── form view ── */
+    .form-wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px 100px; }
+    .form-header-meta { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+    .form-cod { font-size: 0.72rem; font-weight: 700; color: var(--pri); text-transform: uppercase; letter-spacing: .4px; }
+    .form-title-h { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; }
+    .form-desc-p { color: var(--mut); font-size: 0.88rem; line-height: 1.5; margin-bottom: 24px; }
+
+    /* section separator */
+    .form-sep { font-size: 0.88rem; font-weight: 700; color: var(--pri); padding: 10px 0; border-bottom: 1px solid var(--bor); margin: 24px 0 18px; }
+
+    /* field group */
+    .fg { margin-bottom: 18px; }
+    .fg > label {
+      display: block; font-size: 0.75rem; font-weight: 700; color: var(--mut);
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px;
+    }
+    .fg > label .req { color: var(--err); margin-left: 3px; }
+    .fg input[type="text"], .fg input[type="number"], .fg input[type="email"],
+    .fg input[type="tel"], .fg input[type="date"], .fg textarea, .fg select {
+      width: 100%; background: var(--card); border: 1px solid var(--bor); border-radius: 9px;
+      color: var(--txt); font-size: 0.95rem; font-family: inherit;
+      padding: 13px 15px; outline: none; transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none; appearance: none;
+    }
+    .fg input:focus, .fg textarea:focus, .fg select:focus {
+      border-color: var(--pri); box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    }
+    .fg input.auto-field { background: rgba(37,99,235,.08); border-color: var(--pri); color: var(--pri); cursor: default; }
+    .fg input.auto-field:focus { box-shadow: none; }
+    .fg textarea { resize: vertical; min-height: 86px; }
+    .fg select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+
+    .fg .invalid { border-color: var(--err) !important; }
+    .fg .err-msg { color: var(--err); font-size: 0.75rem; margin-top: 5px; display: none; }
+    .fg.has-error .err-msg { display: block; }
+    .fg.has-error input, .fg.has-error textarea, .fg.has-error select { border-color: var(--err); }
+
+    /* radio / checkbox */
+    .opts-wrap { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .opts-wrap.inline { flex-direction: row; flex-wrap: wrap; }
+    .opt-lbl {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; background: var(--card); border: 1.5px solid var(--bor);
+      border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+      transition: border-color .15s, background .15s;
+    }
+    .opts-wrap.inline .opt-lbl { padding: 8px 14px; }
+    .opt-lbl input[type="radio"], .opt-lbl input[type="checkbox"] {
+      width: 18px; height: 18px; accent-color: var(--pri); cursor: pointer; flex-shrink: 0;
+      background: transparent; border: none; padding: 0;
+    }
+    .opt-lbl:has(input:checked) { border-color: var(--pri); background: rgba(37,99,235,.08); }
+
+    /* GPS field */
+    .gps-field {
+      background: rgba(37,99,235,.08); border: 1px solid var(--pri); border-radius: 9px;
+      padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+      transition: background .15s; font-size: 0.88rem; color: var(--pri);
+    }
+    .gps-field:hover { background: rgba(37,99,235,.14); }
+    .gps-field.got { color: var(--ok); border-color: var(--ok); background: rgba(26,188,156,.08); }
+    .gps-txt { flex: 1; font-size: 0.82rem; }
+
+    /* signature */
+    .sig-box { background: var(--card); border: 1.5px solid var(--bor); border-radius: 9px; overflow: hidden; position: relative; }
+    .sig-canvas { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+    .sig-toolbar {
+      padding: 8px 12px; display: flex; align-items: center; justify-content: space-between;
+      border-top: 1px solid var(--bor); background: var(--card);
+    }
+    .sig-hint { color: var(--mut); font-size: 0.75rem; }
+    .sig-clear {
+      background: none; border: 1px solid var(--bor); border-radius: 5px; color: var(--mut);
+      padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .sig-clear:hover { border-color: var(--err); color: var(--err); }
+
+    /* photo */
+    .photo-box {
+      background: var(--card); border: 2px dashed var(--bor); border-radius: 9px;
+      padding: 22px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+    }
+    .photo-box:hover { border-color: var(--pri); background: rgba(37,99,235,.05); }
+    .photo-ico { font-size: 2rem; display: block; margin-bottom: 6px; }
+    .photo-lbl { font-size: 0.82rem; color: var(--mut); }
+    .photo-preview-wrap { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 7px; border: 1px solid var(--bor); }
+
+    /* sticky footer */
+    .form-footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--card); border-top: 1px solid var(--bor);
+      padding: 12px 16px; display: flex; gap: 10px; z-index: 100;
+    }
+    .form-footer .btn { flex: 1; justify-content: center; }
+
+    /* buttons */
+    .btn {
+      padding: 12px 20px; border-radius: 9px; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; border: none; transition: all .2s; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-pri { background: var(--pri); color: #fff; }
+    .btn-pri:hover:not(:disabled) { background: var(--pri-h); }
+    .btn-sec { background: var(--bor); color: var(--txt); }
+    .btn-sec:hover:not(:disabled) { background: #475569; }
+    .btn-ok { background: var(--ok); color: #fff; }
+    .btn-ok:hover:not(:disabled) { background: #17a589; }
+    .btn-sm { padding: 7px 14px; font-size: 0.78rem; }
+    .btn-lnk { background: transparent; color: var(--pri); }
+    .btn-lnk:hover { background: rgba(37,99,235,.08); }
+
+    /* ── success modal ── */
+    .modal-over {
+      position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 500;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-over.hidden { display: none; }
+    .modal-box {
+      background: var(--card); border-radius: 16px; padding: 36px 28px;
+      max-width: 400px; width: 100%; text-align: center;
+      animation: popIn .25s ease;
+    }
+    @keyframes popIn { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:scale(1); } }
+    .modal-ico { font-size: 3.5rem; margin-bottom: 16px; }
+    .modal-h { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+    .modal-p { color: var(--mut); font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
+    .modal-id { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 10px 14px; font-family: monospace; font-size: 0.78rem; color: var(--ok); margin-bottom: 20px; word-break: break-all; }
+
+    /* ── submissions view ── */
+    .sub-card {
+      background: var(--card); border: 1px solid var(--bor); border-radius: 10px;
+      padding: 16px 18px; margin-bottom: 10px;
+    }
+    .sub-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .sub-name { font-weight: 700; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sub-date { color: var(--mut); font-size: 0.75rem; flex-shrink: 0; }
+    .sub-id { font-family: monospace; font-size: 0.72rem; color: var(--mut); }
+    .sub-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: rgba(26,188,156,.15); color: var(--ok); margin-top: 4px; }
+    .sub-badge.draft { background: rgba(245,158,11,.15); color: var(--warn); }
+
+    /* ── toast ── */
+    .toast {
+      position: fixed; bottom: 80px; right: 16px; background: var(--card);
+      border: 1px solid var(--bor); border-radius: 10px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 9px; font-size: 0.85rem; font-weight: 600;
+      z-index: 2000; animation: toastIn .2s ease; box-shadow: 0 8px 28px rgba(0,0,0,.5); max-width: 280px;
+    }
+    .toast.ok { border-color: var(--ok); }
+    .toast.er { border-color: var(--err); }
+    .toast.wa { border-color: var(--warn); }
+    @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    @media (max-width: 480px) {
+      .tmpl-acts { flex-direction: row; }
+      .form-footer .btn-sec { flex: 0 0 auto; padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <button id="backBtn" onclick="goBack()">← Atrás</button>
+  <span class="topbar-title" id="topTitle">Mis formularios</span>
+  <div class="topbar-right">
+    <button class="btn btn-sm btn-lnk" id="histBtn" onclick="showSubs()" style="display:none">Historial</button>
+    <a href="digitalizador.html" class="btn btn-sm btn-lnk" style="text-decoration:none">+ Nuevo</a>
+  </div>
+</nav>
+<div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+
+<!-- VIEW: template list -->
+<div class="view on" id="vList">
+  <div class="wrap">
+    <h1 class="pg-h">Mis formularios</h1>
+    <p class="pg-sub">Selecciona una plantilla para llenar, o crea una nueva digitalizando un documento.</p>
+    <div id="tmplList"></div>
+  </div>
+</div>
+
+<!-- VIEW: fill form -->
+<div class="view" id="vForm">
+  <div class="form-wrap">
+    <div class="form-header-meta">
+      <span class="form-cod" id="fCod"></span>
+    </div>
+    <h1 class="form-title-h" id="fTitle"></h1>
+    <p class="form-desc-p" id="fDesc"></p>
+    <div id="fFields"></div>
+  </div>
+  <div class="form-footer">
+    <button class="btn btn-sec" onclick="saveDraft()">💾 Borrador</button>
+    <button class="btn btn-pri" onclick="submitForm()">Enviar formulario ✓</button>
+  </div>
+</div>
+
+<!-- VIEW: submissions for a template -->
+<div class="view" id="vSubs">
+  <div class="wrap">
+    <h1 class="pg-h" id="subsTitle">Envíos</h1>
+    <p class="pg-sub" id="subsDesc"></p>
+    <div id="subsList"></div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-over hidden" id="successModal">
+  <div class="modal-box">
+    <div class="modal-ico">✅</div>
+    <h2 class="modal-h">¡Formulario enviado!</h2>
+    <p class="modal-p">El registro fue guardado correctamente y quedará disponible para exportar a base de datos.</p>
+    <div class="modal-id" id="successId"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-pri" style="justify-content:center" onclick="fillAgain()">Llenar otro registro</button>
+      <button class="btn btn-sec" style="justify-content:center" onclick="backToList()">Volver al inicio</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+let activeTmpl = null;
+let submission = {};  // campo.id → value
+let signatures = {};  // campo.id → { canvas, ctx }
+let draftId = null;
+
+// ── Init ───────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const urlTmpl = new URLSearchParams(location.search).get('tmpl');
+  if (urlTmpl) openTemplate(urlTmpl);
+  else renderList();
+});
+
+function goBack() {
+  const vForm = document.getElementById('vForm');
+  const vSubs = document.getElementById('vSubs');
+  if (vForm.classList.contains('on')) {
+    if (confirm('¿Salir del formulario? Los cambios no guardados se perderán.')) backToList();
+  } else if (vSubs.classList.contains('on')) {
+    backToList();
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+function show(id) {
+  ['vList','vForm','vSubs'].forEach(v => document.getElementById(v).classList.toggle('on', v===id));
+  document.getElementById('backBtn').textContent = id==='vList' ? '← Inicio' : '← Atrás';
+  document.getElementById('histBtn').style.display = id==='vForm' ? 'block' : 'none';
+}
+
+function backToList() {
+  activeTmpl=null; submission={}; signatures={}; draftId=null;
+  document.getElementById('topTitle').textContent='Mis formularios';
+  document.getElementById('progFill').style.width='0%';
+  history.replaceState(null,'','llenar.html');
+  show('vList');
+  renderList();
+}
+
+// ── Template list ──────────────────────────────────────────────────
+function renderList() {
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const el = document.getElementById('tmplList');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state">
+      <span class="es-ico">📭</span>
+      <h2>Sin plantillas todavía</h2>
+      <p>Crea tu primer formulario digital digitalizando un documento escaneado.</p>
+      <div style="margin-top:20px">
+        <a href="digitalizador.html" class="btn btn-pri" style="text-decoration:none;display:inline-flex">Digitalizar documento →</a>
+      </div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = list.map(t => {
+    const subs = getSubsForTemplate(t.id);
+    const cod = t.codigo ? `<div class="tmpl-cod">${t.codigo}</div>` : '';
+    const d = t.actualizadoEn ? new Date(t.actualizadoEn).toLocaleDateString('es-CO') : '';
+    return `<div class="tmpl-card">
+      <span class="tmpl-ico">📋</span>
+      <div class="tmpl-info">
+        ${cod}
+        <div class="tmpl-name">${t.nombre}</div>
+        <div class="tmpl-meta">${t.campos.length} campos · ${subs} envío${subs!==1?'s':''} · ${d}</div>
+      </div>
+      <div class="tmpl-acts">
+        <button class="btn btn-pri btn-sm" onclick="openTemplate('${t.id}')">Llenar</button>
+        <button class="btn btn-sec btn-sm" onclick="showSubs('${t.id}')">Historial</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getSubsForTemplate(id) {
+  const subs = JSON.parse(localStorage.getItem('skf_envios')||'[]');
+  return subs.filter(s=>s.plantillaId===id).length;
+}
+
+// ── Open & render form ─────────────────────────────────────────────
+function openTemplate(id) {
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const t = list.find(p=>p.id===id);
+  if (!t) { toast('Plantilla no encontrada','er'); return; }
+  activeTmpl = t;
+  submission = {};
+  signatures = {};
+  draftId = null;
+
+  // Check for saved draft
+  const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]');
+  const draft = drafts.find(d=>d.plantillaId===id);
+  if (draft) {
+    if (confirm('Hay un borrador guardado para este formulario. ¿Continuarlo?')) {
+      submission = draft.datos||{};
+      draftId = draft.id;
+    }
+  }
+
+  document.getElementById('topTitle').textContent = t.nombre;
+  document.getElementById('fCod').textContent = t.codigo||'';
+  document.getElementById('fTitle').textContent = t.nombre;
+  document.getElementById('fDesc').textContent = t.descripcion||'';
+  document.getElementById('histBtn').style.display='block';
+
+  renderFields(t.campos);
+  show('vForm');
+  updateProgress();
+  history.replaceState(null,'',`llenar.html?tmpl=${id}`);
+}
+
+function renderFields(campos) {
+  const container = document.getElementById('fFields');
+  container.innerHTML = '';
+  signatures = {};
+
+  campos.forEach(c => {
+    const el = buildFieldEl(c);
+    if (el) container.appendChild(el);
+  });
+
+  // Init signatures after DOM insertion
+  campos.filter(c=>c.tipo==='firma').forEach(c => initCanvas(c.id));
+
+  // Auto-fill
+  setTimeout(() => autoFill(campos), 100);
+}
+
+function buildFieldEl(c) {
+  if (c.tipo === 'separador') {
+    const d = document.createElement('div');
+    d.className = 'form-sep';
+    d.textContent = `— ${c.etiqueta}`;
+    return d;
+  }
+
+  const fg = document.createElement('div');
+  fg.className = 'fg';
+  fg.id = `fg_${c.id}`;
+
+  const lbl = document.createElement('label');
+  lbl.innerHTML = c.etiqueta + (c.requerido ? '<span class="req">*</span>' : '');
+  fg.appendChild(lbl);
+
+  const errMsg = document.createElement('div');
+  errMsg.className = 'err-msg';
+  errMsg.textContent = 'Este campo es requerido';
+
+  let inner;
+  switch (c.tipo) {
+    case 'texto': case 'email': case 'telefono':
+      inner = document.createElement('input');
+      inner.type = c.tipo==='email'?'email':c.tipo==='telefono'?'tel':'text';
+      inner.placeholder = c.placeholder||'';
+      inner.value = submission[c.id]||'';
+      inner.addEventListener('input', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      break;
+
+    case 'numero':
+      inner = document.createElement('input');
+      inner.type = 'number';
+      inner.placeholder = c.placeholder||'0';
+      inner.value = submission[c.id]||'';
+      inner.addEventListener('input', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      break;
+
+    case 'textarea':
+      inner = document.createElement('textarea');
+      inner.placeholder = c.placeholder||'';
+      inner.rows = 4;
+      inner.textContent = submission[c.id]||'';
+      inner.addEventListener('input', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      break;
+
+    case 'fecha_auto':
+      inner = document.createElement('input');
+      inner.type = 'text';
+      inner.className = 'auto-field';
+      inner.readOnly = true;
+      inner.id = `auto_${c.id}`;
+      break;
+
+    case 'hora_auto':
+      inner = document.createElement('input');
+      inner.type = 'text';
+      inner.className = 'auto-field';
+      inner.readOnly = true;
+      inner.id = `auto_${c.id}`;
+      break;
+
+    case 'fecha':
+      inner = document.createElement('input');
+      inner.type = 'date';
+      inner.value = submission[c.id]||'';
+      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      break;
+
+    case 'select': {
+      inner = document.createElement('select');
+      const def = document.createElement('option');
+      def.value=''; def.textContent='Seleccionar...';
+      inner.appendChild(def);
+      (c.opciones||[]).forEach(o => {
+        const opt=document.createElement('option');
+        opt.value=o; opt.textContent=o;
+        if (submission[c.id]===o) opt.selected=true;
+        inner.appendChild(opt);
+      });
+      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      break;
+    }
+
+    case 'radio': case 'si_no': {
+      const opts = c.tipo==='si_no' ? ['Sí','No','N/A'] : (c.opciones||[]);
+      inner = document.createElement('div');
+      inner.className = 'opts-wrap' + (opts.length<=4?' inline':'');
+      opts.forEach(o => {
+        const lbl2 = document.createElement('label');
+        lbl2.className='opt-lbl';
+        const inp = document.createElement('input');
+        inp.type='radio'; inp.name=`r_${c.id}`; inp.value=o;
+        if (submission[c.id]===o) inp.checked=true;
+        inp.addEventListener('change', () => { submission[c.id]=o; clearErr(c.id); updateProgress(); });
+        lbl2.appendChild(inp);
+        lbl2.appendChild(document.createTextNode(o));
+        inner.appendChild(lbl2);
+      });
+      break;
+    }
+
+    case 'checkbox_multi': {
+      const saved = Array.isArray(submission[c.id]) ? submission[c.id] : [];
+      inner = document.createElement('div');
+      inner.className='opts-wrap';
+      (c.opciones||[]).forEach(o => {
+        const lbl2=document.createElement('label');
+        lbl2.className='opt-lbl';
+        const inp=document.createElement('input');
+        inp.type='checkbox'; inp.value=o;
+        if (saved.includes(o)) inp.checked=true;
+        inp.addEventListener('change', () => {
+          const cur = Array.isArray(submission[c.id]) ? submission[c.id] : [];
+          submission[c.id] = inp.checked ? [...cur,o] : cur.filter(x=>x!==o);
+          clearErr(c.id); updateProgress();
+        });
+        lbl2.appendChild(inp);
+        lbl2.appendChild(document.createTextNode(o));
+        inner.appendChild(lbl2);
+      });
+      break;
+    }
+
+    case 'firma': {
+      inner = document.createElement('div');
+      inner.className='sig-box';
+      inner.id=`sigbox_${c.id}`;
+      inner.innerHTML=`<canvas class="sig-canvas" id="sig_${c.id}" height="160"></canvas>
+        <div class="sig-toolbar">
+          <span class="sig-hint">✍ Dibuja tu firma</span>
+          <button class="sig-clear" onclick="clearSig('${c.id}')">Limpiar</button>
+        </div>`;
+      break;
+    }
+
+    case 'foto': {
+      const fileId=`foto_${c.id}`;
+      inner = document.createElement('div');
+      inner.innerHTML=`
+        <div class="photo-box" onclick="document.getElementById('${fileId}').click()">
+          <input type="file" id="${fileId}" accept="image/*" capture="environment" style="display:none" multiple>
+          <span class="photo-ico">📷</span>
+          <div class="photo-lbl">Toca para capturar o seleccionar foto</div>
+        </div>
+        <div class="photo-preview-wrap" id="pp_${c.id}"></div>`;
+      const fInput = inner.querySelector('input');
+      fInput.addEventListener('change', () => handlePhotos(c.id, fInput));
+      break;
+    }
+
+    case 'ubicacion': {
+      const gpsId=`gps_${c.id}`;
+      inner = document.createElement('div');
+      inner.className='gps-field';
+      inner.id=gpsId;
+      inner.onclick = () => getGPS(c.id, gpsId);
+      inner.innerHTML=`<span>📍</span><span class="gps-txt">${submission[c.id]||'Toca para obtener ubicación GPS'}</span>`;
+      if (submission[c.id]) inner.classList.add('got');
+      break;
+    }
+
+    default:
+      inner = document.createElement('input');
+      inner.type='text';
+      inner.value=submission[c.id]||'';
+      inner.addEventListener('input', () => { submission[c.id]=inner.value; updateProgress(); });
+  }
+
+  if (inner) {
+    fg.appendChild(inner);
+    fg.appendChild(errMsg);
+  }
+  return fg;
+}
+
+// ── Canvas signature ───────────────────────────────────────────────
+function initCanvas(cId) {
+  const canvas = document.getElementById(`sig_${cId}`);
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth || canvas.parentElement.offsetWidth || 300;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#f1f5f9';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  signatures[cId] = { canvas, ctx };
+
+  let drawing=false, lx=0, ly=0;
+  function pos(e) {
+    const r=canvas.getBoundingClientRect();
+    if (e.touches) return {x:e.touches[0].clientX-r.left, y:e.touches[0].clientY-r.top};
+    return {x:e.offsetX, y:e.offsetY};
+  }
+  canvas.addEventListener('mousedown', e=>{drawing=true; const p=pos(e); lx=p.x; ly=p.y;});
+  canvas.addEventListener('mousemove', e=>{
+    if(!drawing) return;
+    const p=pos(e);
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.stroke();
+    lx=p.x; ly=p.y;
+    submission[cId]=canvas.toDataURL();
+    clearErr(cId); updateProgress();
+  });
+  canvas.addEventListener('mouseup', ()=>{drawing=false;});
+  canvas.addEventListener('mouseleave', ()=>{drawing=false;});
+  canvas.addEventListener('touchstart', e=>{e.preventDefault(); drawing=true; const p=pos(e); lx=p.x; ly=p.y;},{passive:false});
+  canvas.addEventListener('touchmove', e=>{
+    e.preventDefault(); if(!drawing) return;
+    const p=pos(e);
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.stroke();
+    lx=p.x; ly=p.y;
+    submission[cId]=canvas.toDataURL();
+    clearErr(cId); updateProgress();
+  },{passive:false});
+  canvas.addEventListener('touchend', ()=>{drawing=false;},{passive:false});
+
+  // Restore saved signature if exists
+  if (submission[cId] && submission[cId].startsWith('data:image')) {
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img,0,0);
+    img.src = submission[cId];
+  }
+}
+
+function clearSig(cId) {
+  const s=signatures[cId];
+  if (!s) return;
+  s.ctx.clearRect(0,0,s.canvas.width,s.canvas.height);
+  delete submission[cId];
+  updateProgress();
+}
+
+// ── Photo upload ───────────────────────────────────────────────────
+function handlePhotos(cId, input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  const wrap = document.getElementById(`pp_${cId}`);
+  const existing = Array.isArray(submission[cId]) ? submission[cId] : [];
+  files.forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    const r = new FileReader();
+    r.onload = e => {
+      existing.push(e.target.result);
+      submission[cId] = existing;
+      const img = document.createElement('img');
+      img.className='photo-thumb'; img.src=e.target.result;
+      wrap.appendChild(img);
+      clearErr(cId); updateProgress();
+    };
+    r.readAsDataURL(f);
+  });
+}
+
+// ── GPS ────────────────────────────────────────────────────────────
+function getGPS(cId, gpsId) {
+  const box = document.getElementById(gpsId);
+  const txt = box?.querySelector('.gps-txt');
+  if (txt) txt.textContent='Obteniendo ubicación...';
+  if (!navigator.geolocation) {
+    if (txt) txt.textContent='GPS no disponible en este dispositivo';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const coords=`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+    submission[cId]=coords;
+    if (txt) txt.textContent=`📍 ${coords}`;
+    if (box) box.classList.add('got');
+    updateProgress();
+  }, err => {
+    if (txt) txt.textContent='No se pudo obtener la ubicación';
+    toast('Error al obtener GPS: '+err.message,'wa');
+  }, {timeout:10000, enableHighAccuracy:true});
+}
+
+// ── Auto-fill ──────────────────────────────────────────────────────
+function autoFill(campos) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('es-CO');
+  const timeStr = now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  campos.forEach(c => {
+    if (c.tipo==='fecha_auto') {
+      const el=document.getElementById(`auto_${c.id}`);
+      if (el) el.value=dateStr;
+      submission[c.id]=dateStr;
+    }
+    if (c.tipo==='hora_auto') {
+      const el=document.getElementById(`auto_${c.id}`);
+      if (el) el.value=timeStr;
+      submission[c.id]=timeStr;
+      // Keep updating time
+      setInterval(() => {
+        const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        if (el) el.value=t;
+        submission[c.id]=t;
+      }, 1000);
+    }
+  });
+}
+
+// ── Progress ───────────────────────────────────────────────────────
+function updateProgress() {
+  if (!activeTmpl) return;
+  const req = activeTmpl.campos.filter(c=>c.requerido && c.tipo!=='separador');
+  const filled = req.filter(c => {
+    const v=submission[c.id];
+    if (Array.isArray(v)) return v.length>0;
+    return v && String(v).trim().length>0;
+  });
+  const pct = req.length ? Math.round(filled.length/req.length*100) : 100;
+  document.getElementById('progFill').style.width=pct+'%';
+}
+
+// ── Validation ─────────────────────────────────────────────────────
+function validate() {
+  let ok=true;
+  if (!activeTmpl) return false;
+  activeTmpl.campos.forEach(c => {
+    if (!c.requerido || c.tipo==='separador') return;
+    const v=submission[c.id];
+    const empty = !v || (Array.isArray(v)?v.length===0:String(v).trim().length===0);
+    if (empty) { markErr(c.id); ok=false; }
+    else clearErr(c.id);
+  });
+  return ok;
+}
+function markErr(cId) { const fg=document.getElementById(`fg_${cId}`); if(fg) fg.classList.add('has-error'); }
+function clearErr(cId) { const fg=document.getElementById(`fg_${cId}`); if(fg) fg.classList.remove('has-error'); }
+
+// ── Save draft ─────────────────────────────────────────────────────
+function saveDraft() {
+  if (!activeTmpl) return;
+  const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]');
+  const draft = {
+    id: draftId || `bor_${Date.now()}`,
+    plantillaId: activeTmpl.id,
+    plantillaNombre: activeTmpl.nombre,
+    datos: {...submission},
+    guardadoEn: new Date().toISOString()
+  };
+  draftId = draft.id;
+  const i = drafts.findIndex(d=>d.id===draftId);
+  if (i>=0) drafts[i]=draft; else drafts.push(draft);
+  localStorage.setItem('skf_borradores',JSON.stringify(drafts));
+  toast('Borrador guardado ✓','ok');
+}
+
+// ── Submit ─────────────────────────────────────────────────────────
+function submitForm() {
+  if (!validate()) {
+    toast('Completa los campos requeridos','er');
+    // Scroll to first error
+    const first=document.querySelector('.has-error');
+    if (first) first.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+
+  const envio = {
+    id: `env_${Date.now()}`,
+    plantillaId: activeTmpl.id,
+    plantillaNombre: activeTmpl.nombre,
+    estado: 'enviado',
+    datos: {...submission},
+    creadoEn: new Date().toISOString(),
+    enviadoEn: new Date().toISOString()
+  };
+
+  const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
+  envios.push(envio);
+  localStorage.setItem('skf_envios',JSON.stringify(envios));
+
+  // Remove draft if existed
+  if (draftId) {
+    const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]').filter(d=>d.id!==draftId);
+    localStorage.setItem('skf_borradores',JSON.stringify(drafts));
+  }
+
+  document.getElementById('successId').textContent = envio.id;
+  document.getElementById('successModal').classList.remove('hidden');
+}
+
+function fillAgain() {
+  document.getElementById('successModal').classList.add('hidden');
+  submission={}; signatures={}; draftId=null;
+  renderFields(activeTmpl.campos);
+  updateProgress();
+  window.scrollTo(0,0);
+}
+
+// ── Submissions view ───────────────────────────────────────────────
+function showSubs(tmplId) {
+  const id = tmplId || activeTmpl?.id;
+  if (!id) { toast('No hay plantilla seleccionada','er'); return; }
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const t = list.find(p=>p.id===id);
+  const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
+  const subs = envios.filter(e=>e.plantillaId===id).reverse();
+
+  document.getElementById('subsTitle').textContent = `Envíos: ${t?.nombre||''}`;
+  document.getElementById('subsDesc').textContent = `${subs.length} registro${subs.length!==1?'s':''} guardado${subs.length!==1?'s':''}`;
+
+  const el = document.getElementById('subsList');
+  if (!subs.length) {
+    el.innerHTML='<p style="color:var(--mut);text-align:center;padding:40px 0">Sin envíos todavía</p>';
+  } else {
+    el.innerHTML = subs.map(s => {
+      const d = new Date(s.enviadoEn||s.creadoEn).toLocaleString('es-CO');
+      return `<div class="sub-card">
+        <div class="sub-top">
+          <span class="sub-name">${s.plantillaNombre}</span>
+          <span class="sub-date">${d}</span>
+        </div>
+        <div class="sub-id">${s.id}</div>
+        <span class="sub-badge${s.estado!=='enviado'?' draft':''}">${s.estado==='enviado'?'✓ Enviado':'Borrador'}</span>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('topTitle').textContent='Historial de envíos';
+  show('vSubs');
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+let _tt;
+function toast(msg,type='ok') {
+  document.querySelectorAll('.toast').forEach(e=>e.remove());
+  clearTimeout(_tt);
+  const d=document.createElement('div');
+  d.className=`toast ${type}`;
+  d.innerHTML=`<span>${type==='ok'?'✓':type==='er'?'✕':'!'}</span> ${msg}`;
+  document.body.appendChild(d);
+  _tt=setTimeout(()=>d.remove(),3200);
+}
+</script>
+</body>
+</html>
