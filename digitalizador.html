@@ -451,24 +451,118 @@ const TIPO_MAP = Object.fromEntries(TIPOS.filter(t=>t.k).map(t=>[t.k,t]));
 // ══════════════════════════════════════════════════════════════════
 // SMART TYPE DETECTION
 // ══════════════════════════════════════════════════════════════════
-function sugerirTipo(label) {
-  const l = label.toLowerCase()
+function _norm(s) {
+  return String(s).toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g,'')
-    .replace(/[¿?¡!*:]+/g,'').trim();
+    .replace(/[¿?¡!*:;]+/g,'').trim();
+}
 
-  if (/firma|rubrica|huella|sello|autorizacion|autoriza|signature/.test(l)) return 'firma';
-  if (/^fecha|fecha (de|del)|^date|periodo|vigencia|vencimiento/.test(l)) return 'fecha_auto';
-  if (/^hora|hora (de|del)|^time|horario/.test(l)) return 'hora_auto';
-  if (/foto|fotografia|imagen|evidencia|registro (foto|visual)|captura|picture|screenshot/.test(l)) return 'foto';
-  if (/ubicacion|localizacion|gps|coordenadas|domicilio|localidad|geoloc/.test(l)) return 'ubicacion';
-  if (/\bcumple\b|cumplimiento|aplica|existe|posee|tiene |cuenta con|verifica|realiza|^si\/no|^yes\/no/.test(l)) return 'si_no';
-  if (/telefono|celular|movil|fono|cel\.|phone|whatsapp/.test(l)) return 'telefono';
+function sugerirTipo(label) {
+  const l = _norm(label);
+
+  // ── Firma ──────────────────────────────────────────────────────
+  if (/firma|rubrica|huella|sello|autorizacion\b|autoriza\b|signature/.test(l)) return 'firma';
+
+  // ── Fecha automática ───────────────────────────────────────────
+  if (/^fecha\b|fecha (de|del|inicio|fin|elaboracion|emision|nacimiento|ingreso|vencimiento|visita|inspeccion|reporte)|^date\b|periodo\b|vigencia\b|vencimiento\b/.test(l)) return 'fecha_auto';
+
+  // ── Hora automática ────────────────────────────────────────────
+  if (/^hora\b|hora (de|del|inicio|fin|llegada|salida|apertura|cierre)|^time\b|horario\b/.test(l)) return 'hora_auto';
+
+  // ── Foto / evidencia ───────────────────────────────────────────
+  if (/foto|fotografia|imagen|evidencia\b|registro (foto|visual|grafico)|captura|picture|screenshot/.test(l)) return 'foto';
+
+  // ── GPS ────────────────────────────────────────────────────────
+  if (/\bubicacion\b|\blocalizacion\b|\bgps\b|coordenadas|geoloc/.test(l)) return 'ubicacion';
+
+  // ── Escala 1–5 (calificación numérica) → radio pre-poblado ────
+  if (/calificacion\b|puntaje\b|puntuacion\b|puntuaje\b|valoracion\b|rating\b|score\b/.test(l)) return 'radio';
+  if (/nivel de (calidad|servicio|satisfaccion|atencion)|grado de (cumplimiento|satisfaccion|calidad)/.test(l)) return 'radio';
+
+  // ── Escala cualitativa (evaluación) → radio pre-poblado ───────
+  if (/\bevaluacion\b|concepto (de|del|tecnico)\b|apreciacion\b|percepcion\b|satisfaccion\b|calidad (del|de la|de los)/.test(l)) return 'radio';
+
+  // ── Sí / No / N/A ─────────────────────────────────────────────
+  if (/^(si\/no|yes\/no|conforme|cumple|aplica|existe|verifica)/.test(l)) return 'si_no';
+  if (/\bcumple\b|\baplica\b|\bexiste\b|\bposee\b|\bcuenta con\b|\bverifica\b|\brealiza\b|\bejec(u|ú)ta\b|\bimplementa\b|\bdispone\b|\bregistra\b|\bevidencia\b/.test(l)) return 'si_no';
+  if (/\bcumplimiento\b/.test(l) && !/nivel|porcentaje|indice/.test(l)) return 'si_no';
+
+  // ── Teléfono ──────────────────────────────────────────────────
+  if (/telefono|celular|movil\b|cel\b|fono|phone|whatsapp/.test(l)) return 'telefono';
+
+  // ── Email ─────────────────────────────────────────────────────
   if (/correo|email|e-mail|mail/.test(l)) return 'email';
-  if (/nit|cedula|rut|codigo|cantidad|total|valor|nro\.|tarifa|capacidad|empleados|trabajadores|numero (de|del)/.test(l)) return 'numero';
-  if (/ciudad|municipio|departamento|pais|tipo (de|del)|categoria|area|cargo|genero|estado|sexo|estrato|zona|modalidad|regimen|actividad economica|sector/.test(l)) return 'select';
-  if (/observacion|descripcion|comentario|nota|detalle|justificacion|especificacion|aclaracion|conclusion|resultado|diagnostico/.test(l)) return 'textarea';
-  if (/^datos (de|del)|^informacion (de|del)|^seccion|^modulo|^bloque|^parte \d|^capitulo/.test(l)) return 'separador';
+
+  // ── Número ────────────────────────────────────────────────────
+  if (/\bnit\b|\bcedula\b|\brut\b|\bcodigo\b|cantidad\b|total\b|valor\b|\bnro\b|tarifa\b|capacidad\b|empleados|trabajadores|numero (de|del)|consecutivo|presupuesto/.test(l)) return 'numero';
+
+  // ── Desplegable ────────────────────────────────────────────────
+  if (/ciudad|municipio|departamento|pais|tipo (de|del)|categoria|area\b|cargo\b|genero|estado\b|sexo|estrato|zona\b|modalidad|regimen|actividad economica|sector\b|profesion|ocupacion|turno\b|jornada|escolaridad|nivel academico|nivel educativo/.test(l)) return 'select';
+
+  // ── Textarea ──────────────────────────────────────────────────
+  if (/observacion|descripcion|comentario|nota\b|detalle|justificacion|especificacion|aclaracion|conclusion|resultado|diagnostico|plan de accion|recomendacion|hallazgo|medida correctiva/.test(l)) return 'textarea';
+
+  // ── Separador ─────────────────────────────────────────────────
+  if (/^datos (de|del)|^informacion (de|del)|^seccion\b|^modulo\b|^bloque\b|^parte \d|^capitulo\b|^item\b|^criterio\b/.test(l)) return 'separador';
+
   return 'texto';
+}
+
+// ── Opciones automáticas según la etiqueta ─────────────────────
+function sugerirOpciones(label) {
+  const l = _norm(label);
+
+  // Escala numérica 1–5
+  if (/calificacion\b|puntaje\b|puntuacion\b|puntuaje\b|valoracion\b|rating\b|score\b/.test(l) ||
+      /nivel de (calidad|servicio|satisfaccion|atencion)|grado de/.test(l)) {
+    return ['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente'];
+  }
+
+  // Escala cualitativa
+  if (/\bevaluacion\b|concepto\b|apreciacion\b|percepcion\b|satisfaccion\b|calidad (del|de la|de los)/.test(l)) {
+    return ['Deficiente','Regular','Bueno','Muy Bueno','Excelente'];
+  }
+
+  // Conformidad / resultado inspección
+  if (/conformidad|resultado|hallazgo\b|condicion\b/.test(l)) {
+    return ['Conforme','No Conforme','Observación','N/A'];
+  }
+
+  // Género / Sexo
+  if (/genero|sexo/.test(l)) return ['Masculino','Femenino','Otro'];
+
+  // Tipo de contrato / vinculación
+  if (/tipo de contrato|modalidad de contrato|vinculacion/.test(l)) {
+    return ['Indefinido','Fijo','Obra labor','Prestación de servicios'];
+  }
+
+  // Escolaridad / nivel académico
+  if (/escolaridad|nivel academico|nivel educativo/.test(l)) {
+    return ['Primaria','Bachillerato','Técnico','Tecnólogo','Universitario','Especialización','Maestría'];
+  }
+
+  // Turno / jornada
+  if (/turno\b|jornada\b/.test(l)) return ['Mañana','Tarde','Noche','Completa'];
+
+  // Cargo / rol
+  if (/^cargo\b/.test(l)) {
+    return ['Operario','Técnico','Auxiliar','Profesional','Supervisor','Coordinador','Jefe','Gerente','Otro'];
+  }
+
+  // Área / dependencia
+  if (/^area\b|dependencia/.test(l)) {
+    return ['Producción','Administración','Recursos Humanos','Calidad','Logística','Mantenimiento','SST','Otro'];
+  }
+
+  // Estado
+  if (/^estado\b|estado del/.test(l)) return ['Activo','Inactivo','Suspendido','Pendiente'];
+
+  // Departamento colombiano
+  if (/^departamento\b/.test(l)) {
+    return ['Bogotá D.C.','Antioquia','Valle del Cauca','Atlántico','Santander','Bolívar','Cundinamarca','Otro'];
+  }
+
+  return [];
 }
 
 function needsOptions(tipo) { return ['select','radio','checkbox_multi'].includes(tipo); }
@@ -578,7 +672,7 @@ async function analyze() {
       etiqueta: f.etiqueta,
       placeholder: f.placeholder||'',
       requerido: (f.tipo||'texto')!=='separador',
-      opciones: f.opciones && f.opciones.length ? f.opciones : (needsOptions(f.tipo) ? [''] : undefined),
+      opciones: f.opciones && f.opciones.length ? f.opciones : (needsOptions(f.tipo) ? (sugerirOpciones(f.etiqueta).length ? sugerirOpciones(f.etiqueta) : ['']) : undefined),
       _auto: true
     }));
 
@@ -873,6 +967,21 @@ function analyzeText(rawText) {
       i++; continue;
     }
 
+    // Multi-field line: "Nombre: ___ Cargo: ___ Firma: ___"
+    const multiMatches = [...line.matchAll(/([^:_\n]{3,40})\s*[:：]\s*[_\.]{3,}/g)];
+    if (multiMatches.length >= 2) {
+      for (const m of multiMatches) {
+        const lbl = m[1].replace(/^[•·▪▸►\-–\d\.\)]+\s*/,'').trim();
+        if (lbl.length > 2 && !seen.has(lbl.toLowerCase())) {
+          seen.add(lbl.toLowerCase());
+          const _t = sugerirTipo(lbl);
+          const _o = sugerirOpciones(lbl);
+          fields.push({etiqueta: lbl, tipo: _t, opciones: _o.length ? _o : undefined});
+        }
+      }
+      i++; continue;
+    }
+
     // Is this line a label?
     const isLabel =
       line.endsWith(':') || line.endsWith('：') ||
@@ -883,7 +992,9 @@ function analyzeText(rawText) {
 
     if (isLabel && !seen.has(clean.toLowerCase())) {
       seen.add(clean.toLowerCase());
-      fields.push({etiqueta: clean, tipo: sugerirTipo(clean)});
+      const _t = sugerirTipo(clean);
+      const _o = sugerirOpciones(clean);
+      fields.push({etiqueta: clean, tipo: _t, opciones: _o.length ? _o : undefined});
     }
 
     i++;
@@ -969,7 +1080,8 @@ function addSingle() {
   const inp=document.getElementById('addInp');
   const label=inp.value.trim(); if(!label) return;
   const tipo=sugerirTipo(label);
-  tmpl.campos.push({id:`c${Date.now()}`,tipo,etiqueta:label,placeholder:'',requerido:tipo!=='separador',opciones:needsOptions(tipo)?['']:undefined});
+  const _ao = sugerirOpciones(label);
+  tmpl.campos.push({id:`c${Date.now()}`,tipo,etiqueta:label,placeholder:'',requerido:tipo!=='separador',opciones:needsOptions(tipo)?(_ao.length?_ao:['']):undefined});
   inp.value='';
   renderSuggList();
   setTimeout(()=>document.getElementById(`sc_${tmpl.campos[tmpl.campos.length-1].id}`)?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
@@ -1027,7 +1139,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.type-chip')&&!e.tar
 function changeType(cId,k){
   const c=tmpl.campos.find(x=>x.id===cId);if(!c)return;
   c.tipo=k;c._auto=false;
-  if(needsOptions(k)&&!c.opciones)c.opciones=[''];
+  if(needsOptions(k)&&!c.opciones){const _so=sugerirOpciones(c.etiqueta);c.opciones=_so.length?_so:[''];}
   if(!needsOptions(k))delete c.opciones;
   closeMenu();renderSuggList();
 }
