@@ -217,6 +217,7 @@
       .form-footer .btn-sec { flex: 0 0 auto; padding: 12px 16px; }
     }
   </style>
+  <script src="supabase-config.js"></script>
 </head>
 <body>
 
@@ -776,6 +777,8 @@ function submitForm() {
   const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
   envios.push(envio);
   localStorage.setItem('skf_envios',JSON.stringify(envios));
+  // Non-blocking cloud sync
+  sbSyncEnvio(envio).catch(()=>{});
 
   // Remove draft if existed
   if (draftId) {

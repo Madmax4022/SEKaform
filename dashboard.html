@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — SEKaform</title>
+  <style>
+    :root {
+      --bg:#0f172a; --card:#1e293b; --card2:#243048;
+      --pri:#2563eb; --pri-h:#3b82f6; --pri-dim:rgba(37,99,235,.12);
+      --ok:#1abc9c; --ok-dim:rgba(26,188,156,.12);
+      --warn:#f59e0b; --warn-dim:rgba(245,158,11,.12);
+      --purple:#8b5cf6; --purple-dim:rgba(139,92,246,.12);
+      --err:#ef4444;
+      --txt:#f8fafc; --mut:#94a3b8; --bor:#334155;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+    /* topbar */
+    .topbar{background:var(--card);border-bottom:1px solid var(--bor);padding:0 24px;height:54px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+    .topbar-logo{font-size:1rem;font-weight:900;letter-spacing:-.5px;}
+    .topbar-logo span{color:var(--pri);}
+    .topbar-sep{color:var(--bor);font-size:1.2rem;}
+    .topbar-section{font-size:.88rem;font-weight:700;color:var(--mut);}
+    .spacer{flex:1;}
+    .topbar a{color:var(--mut);text-decoration:none;font-size:.82rem;padding:6px 10px;border-radius:6px;transition:background .15s,color .15s;}
+    .topbar a:hover{background:var(--bor);color:var(--txt);}
+    #userBadge{font-size:.78rem;background:var(--ok-dim);border:1px solid rgba(26,188,156,.3);color:var(--ok);border-radius:20px;padding:4px 12px;white-space:nowrap;}
+    #logoutBtn{font-size:.78rem;cursor:pointer;background:none;border:none;color:var(--mut);padding:6px 10px;border-radius:6px;font-family:inherit;transition:background .15s;}
+    #logoutBtn:hover{background:var(--bor);color:var(--err);}
+
+    /* layout */
+    .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px;}
+    .pg-h{font-size:1.5rem;font-weight:800;margin-bottom:4px;}
+    .pg-sub{color:var(--mut);font-size:.88rem;margin-bottom:32px;}
+
+    /* stat cards */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;}
+    .stat-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:22px 20px;}
+    .stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-bottom:10px;}
+    .stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-bottom:4px;}
+    .stat-desc{font-size:.75rem;color:var(--mut);}
+    .stat-card.c-pri .stat-num{color:var(--pri);}
+    .stat-card.c-ok .stat-num{color:var(--ok);}
+    .stat-card.c-warn .stat-num{color:var(--warn);}
+    .stat-card.c-purple .stat-num{color:var(--purple);}
+
+    /* chart grid */
+    .chart-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:32px;}
+    .chart-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:22px 20px;}
+    .chart-title{font-size:.88rem;font-weight:700;margin-bottom:16px;color:var(--txt);}
+    .chart-wrap{position:relative;height:200px;}
+
+    /* table */
+    .table-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;overflow:hidden;}
+    .table-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--bor);}
+    .table-head h2{font-size:.95rem;font-weight:700;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:11px 16px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);background:var(--card2);}
+    tbody tr{border-top:1px solid var(--bor);transition:background .12s;}
+    tbody tr:hover{background:rgba(255,255,255,.025);}
+    td{padding:13px 16px;font-size:.85rem;color:var(--txt);}
+    td.mut{color:var(--mut);}
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;}
+    .badge.ok{background:var(--ok-dim);color:var(--ok);}
+    .badge.draft{background:var(--warn-dim);color:var(--warn);}
+
+    /* empty state */
+    .empty{text-align:center;padding:60px 20px;color:var(--mut);}
+    .empty-ico{font-size:3rem;display:block;margin-bottom:14px;}
+    .empty h3{font-size:1rem;margin-bottom:8px;color:var(--txt);}
+    .empty p{font-size:.85rem;line-height:1.6;max-width:300px;margin:0 auto;}
+
+    /* source badge */
+    .src-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;background:var(--pri-dim);color:var(--pri);margin-bottom:24px;}
+    .src-badge.cloud{background:var(--ok-dim);color:var(--ok);}
+
+    /* loading */
+    .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px;color:var(--mut);}
+    .spinner{width:36px;height:36px;border:3px solid var(--bor);border-top-color:var(--pri);border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* cloud setup banner */
+    .setup-banner{background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.3);border-radius:12px;padding:16px 20px;margin-bottom:28px;display:none;}
+    .setup-banner.on{display:flex;align-items:flex-start;gap:14px;}
+    .setup-banner-ico{font-size:1.5rem;flex-shrink:0;}
+    .setup-banner h3{font-size:.9rem;font-weight:700;margin-bottom:4px;}
+    .setup-banner p{font-size:.82rem;color:var(--mut);line-height:1.55;}
+    .setup-banner a{color:var(--pri);}
+
+    @media(max-width:900px){
+      .stats-grid{grid-template-columns:repeat(2,1fr);}
+      .chart-grid{grid-template-columns:1fr;}
+    }
+    @media(max-width:540px){
+      .stats-grid{grid-template-columns:1fr 1fr;}
+      .stat-num{font-size:1.8rem;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">SEK<span>a</span>form</div>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-section">Dashboard</span>
+  <div class="spacer"></div>
+  <a href="index.html">← Inicio</a>
+  <span id="userBadge" style="display:none"></span>
+  <button id="logoutBtn" style="display:none" onclick="logout()">Salir</button>
+</div>
+
+<div class="wrap">
+  <h1 class="pg-h">Inteligencia de Negocios</h1>
+  <p class="pg-sub">Análisis de formularios y envíos de tu organización</p>
+
+  <div class="setup-banner" id="setupBanner">
+    <div class="setup-banner-ico">☁</div>
+    <div>
+      <h3>Conecta Supabase para datos en la nube</h3>
+      <p>Actualmente ves solo los datos de <strong>este dispositivo</strong>.
+        Para sincronizar entre equipos y usuarios, configura Supabase en
+        <code>supabase-config.js</code> y ejecuta <code>supabase-schema.sql</code>.
+        <a href="login.html">Ingresar con cuenta →</a>
+      </p>
+    </div>
+  </div>
+
+  <div id="srcBadge" class="src-badge" style="display:none"></div>
+
+  <div id="loadingState" class="loading">
+    <div class="spinner"></div>
+    <span>Cargando datos...</span>
+  </div>
+
+  <div id="mainContent" style="display:none">
+
+    <!-- stat cards -->
+    <div class="stats-grid">
+      <div class="stat-card c-pri">
+        <div class="stat-label">Formularios</div>
+        <div class="stat-num" id="sForms">0</div>
+        <div class="stat-desc">plantillas creadas</div>
+      </div>
+      <div class="stat-card c-ok">
+        <div class="stat-label">Envíos totales</div>
+        <div class="stat-num" id="sTotal">0</div>
+        <div class="stat-desc">registros capturados</div>
+      </div>
+      <div class="stat-card c-warn">
+        <div class="stat-label">Este mes</div>
+        <div class="stat-num" id="sMonth">0</div>
+        <div class="stat-desc">envíos en <span id="monthName"></span></div>
+      </div>
+      <div class="stat-card c-purple">
+        <div class="stat-label">Últimos 7 días</div>
+        <div class="stat-num" id="sWeek">0</div>
+        <div class="stat-desc">envíos recientes</div>
+      </div>
+    </div>
+
+    <!-- charts -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Envíos por día — últimos 30 días</div>
+        <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Envíos por formulario</div>
+        <div class="chart-wrap"><canvas id="chartForms"></canvas></div>
+      </div>
+    </div>
+
+    <!-- recent submissions table -->
+    <div class="table-card">
+      <div class="table-head">
+        <h2>Envíos recientes</h2>
+        <span style="font-size:.78rem;color:var(--mut)" id="tableCount"></span>
+      </div>
+      <div id="tableBody"></div>
+    </div>
+
+  </div><!-- /mainContent -->
+</div>
+
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+const CHART_GRID  = 'rgba(51,65,85,.6)';
+const CHART_TEXT  = '#94a3b8';
+const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// ── Auth ────────────────────────────────────────────────────────
+async function logout() {
+  await sbSignOut();
+  window.location.href = 'login.html';
+}
+
+// ── Data loading ─────────────────────────────────────────────────
+async function loadData() {
+  let plantillas = [], envios = [], fromCloud = false;
+
+  const sbData = await Promise.all([sbLoadPlantillas(), sbLoadEnvios()]);
+  if (sbData[0] !== null && sbData[1] !== null) {
+    plantillas = sbData[0];
+    envios     = sbData[1];
+    fromCloud  = true;
+  } else {
+    plantillas = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
+    const raw  = JSON.parse(localStorage.getItem('skf_envios') || '[]');
+    envios     = [...raw].sort((a,b) => new Date(b.enviadoEn||b.creadoEn) - new Date(a.enviadoEn||a.creadoEn));
+  }
+
+  return { plantillas, envios, fromCloud };
+}
+
+// ── Stats ────────────────────────────────────────────────────────
+function computeStats(envios) {
+  const now  = new Date();
+  const y    = now.getFullYear(), m = now.getMonth();
+  const week = new Date(now - 7*864e5);
+
+  return {
+    total  : envios.length,
+    month  : envios.filter(e => { const d=new Date(e.enviado_en||e.enviadoEn||e.creadoEn); return d.getFullYear()===y && d.getMonth()===m; }).length,
+    week   : envios.filter(e => new Date(e.enviado_en||e.enviadoEn||e.creadoEn) >= week).length
+  };
+}
+
+// ── Daily chart ──────────────────────────────────────────────────
+function buildDailyChart(envios) {
+  const labels = [], counts = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    labels.push(i===0 ? 'Hoy' : `${d.getDate()} ${MONTHS_ES[d.getMonth()]}`);
+    counts.push(envios.filter(e => {
+      const ed = new Date(e.enviado_en||e.enviadoEn||e.creadoEn);
+      return ed.toISOString().slice(0,10) === key;
+    }).length);
+  }
+
+  new Chart(document.getElementById('chartDaily'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: counts,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,.15)',
+        borderWidth: 2,
+        fill: true,
+        tension: .35,
+        pointRadius: 3,
+        pointBackgroundColor: '#2563eb'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: CHART_TEXT, maxTicksLimit: 7, font:{size:11} }, grid: { color: CHART_GRID } },
+        y: { ticks: { color: CHART_TEXT, precision: 0, font:{size:11} }, grid: { color: CHART_GRID }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ── By-form chart ────────────────────────────────────────────────
+function buildFormChart(envios, plantillas) {
+  const countMap = {};
+  envios.forEach(e => {
+    const key = e.plantilla_nombre || e.plantillaNombre || 'Sin nombre';
+    countMap[key] = (countMap[key]||0) + 1;
+  });
+
+  const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  if (!sorted.length) {
+    document.getElementById('chartForms').parentNode.innerHTML =
+      '<p style="color:var(--mut);text-align:center;padding:60px 0;font-size:.85rem">Sin envíos todavía</p>';
+    return;
+  }
+
+  const COLORS = ['#2563eb','#1abc9c','#8b5cf6','#f59e0b','#ec4899','#f97316','#06b6d4'];
+  new Chart(document.getElementById('chartForms'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([k]) => k.length>22 ? k.slice(0,20)+'…' : k),
+      datasets: [{
+        data: sorted.map(([,v]) => v),
+        backgroundColor: sorted.map((_,i) => COLORS[i % COLORS.length] + 'cc'),
+        borderColor:     sorted.map((_,i) => COLORS[i % COLORS.length]),
+        borderWidth: 1,
+        borderRadius: 5
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: CHART_TEXT, precision: 0, font:{size:11} }, grid: { color: CHART_GRID }, beginAtZero: true },
+        y: { ticks: { color: CHART_TEXT, font:{size:11} }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Table ─────────────────────────────────────────────────────────
+function buildTable(envios) {
+  const count = envios.length;
+  document.getElementById('tableCount').textContent = `${count} registro${count!==1?'s':''}`;
+
+  if (!count) {
+    document.getElementById('tableBody').innerHTML =
+      `<div class="empty"><span class="empty-ico">📋</span><h3>Sin envíos todavía</h3><p>Los registros capturados en campo aparecerán aquí.</p></div>`;
+    return;
+  }
+
+  const rows = envios.slice(0,50).map(e => {
+    const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
+    const d   = raw ? new Date(raw).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '—';
+    const estado = e.estado || 'enviado';
+    const nombre = e.plantilla_nombre || e.plantillaNombre || '—';
+    const id = (e.id||'').slice(-8);
+    return `<tr>
+      <td>${nombre}</td>
+      <td class="mut">${d}</td>
+      <td><span class="badge ${estado==='enviado'?'ok':'draft'}">${estado==='enviado'?'✓ Enviado':'Borrador'}</span></td>
+      <td class="mut" style="font-size:.72rem;font-family:monospace">${id}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tableBody').innerHTML = `
+    <table>
+      <thead><tr><th>Formulario</th><th>Fecha</th><th>Estado</th><th>ID</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+async function init() {
+  const now = new Date();
+  document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
+
+  // Check auth state
+  const user = await sbGetUser();
+  if (user) {
+    document.getElementById('userBadge').textContent = '● ' + user.email;
+    document.getElementById('userBadge').style.display = 'inline-flex';
+    document.getElementById('logoutBtn').style.display = 'inline-block';
+  }
+
+  const { plantillas, envios, fromCloud } = await loadData();
+
+  // Source badge
+  const badge = document.getElementById('srcBadge');
+  badge.textContent = fromCloud ? '☁ Datos en la nube (Supabase)' : '💾 Datos locales (este dispositivo)';
+  badge.className   = 'src-badge' + (fromCloud ? ' cloud' : '');
+  badge.style.display = 'inline-flex';
+
+  if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
+
+  // Stats
+  const stats = computeStats(envios);
+  document.getElementById('sForms').textContent = plantillas.length;
+  document.getElementById('sTotal').textContent = stats.total;
+  document.getElementById('sMonth').textContent = stats.month;
+  document.getElementById('sWeek').textContent  = stats.week;
+
+  // Charts
+  buildDailyChart(envios);
+  buildFormChart(envios, plantillas);
+  buildTable(envios);
+
+  document.getElementById('loadingState').style.display  = 'none';
+  document.getElementById('mainContent').style.display   = 'block';
+}
+
+init().catch(err => {
+  console.error(err);
+  document.getElementById('loadingState').innerHTML =
+    '<span style="color:var(--err)">Error cargando datos. Recarga la página.</span>';
+});
+</script>
+</body>
+</html>

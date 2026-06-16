@@ -49,6 +49,11 @@
 
     footer { text-align: center; margin-top: 80px; font-size: 0.82rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 24px; }
 
+    .auth-bar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 32px; min-height: 28px; }
+    .auth-chip { font-size: 0.75rem; background: rgba(26,188,156,.12); border: 1px solid rgba(26,188,156,.3); color: var(--ok); border-radius: 20px; padding: 4px 12px; }
+    .auth-link { font-size: 0.78rem; color: var(--mut); text-decoration: none; padding: 4px 10px; border-radius: 6px; transition: background .15s; }
+    .auth-link:hover { background: var(--bor); color: var(--txt); }
+
     @media (max-width: 600px) {
       .grid { grid-template-columns: 1fr; }
       header h1 { font-size: 2rem; }
@@ -62,6 +67,10 @@
       <p>Convierte documentos físicos en formularios digitales inteligentes.<br>
       Firmas, fechas automáticas, GPS, desplegables y más — sin código.</p>
     </header>
+
+    <div class="auth-bar" id="authBar">
+      <a class="auth-link" href="login.html" id="authLink">Iniciar sesión ☁</a>
+    </div>
 
     <div class="grid">
 
@@ -85,9 +94,31 @@
         <span class="card-cta">Mis formularios →</span>
       </a>
 
+      <a href="dashboard.html" class="card" style="grid-column:1/-1">
+        <span class="card-ico">📊</span>
+        <div>
+          <div class="card-tag">Inteligencia de negocios</div>
+          <h2>Dashboard y análisis</h2>
+        </div>
+        <p>Visualiza todos los envíos de tu organización: tendencias por día, formularios más usados, registros recientes y métricas de cumplimiento. Conecta Supabase para datos en la nube.</p>
+        <span class="card-cta">Ver dashboard →</span>
+      </a>
+
     </div>
 
     <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
+
+    <script src="supabase-config.js"></script>
+    <script>
+    (async () => {
+      if (!SKF_CONFIGURED) return;
+      const user = await sbGetUser();
+      const bar = document.getElementById('authBar');
+      if (user) {
+        bar.innerHTML = `<span class="auth-chip">☁ ${user.email}</span><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
+      }
+    })();
+    </script>
   </div>
 </body>
 </html>

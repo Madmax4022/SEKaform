@@ -204,6 +204,7 @@
       .src-tab-lbl{display:none;}
     }
   </style>
+  <script src="supabase-config.js"></script>
 </head>
 <body>
 
@@ -1111,6 +1112,8 @@ function save(){
   try{localStorage.setItem('skf_plantillas',JSON.stringify(listToStore));}
   catch(e){toast('Guardado sin imagen (localStorage lleno)','wa');}
   toast('Plantilla guardada ✓','ok');
+  // Non-blocking cloud sync
+  sbSyncPlantilla(tmpl).catch(()=>{});
 }
 
 function goFill(){save();if(tmpl.id)window.location.href=`llenar.html?tmpl=${tmpl.id}`;}
