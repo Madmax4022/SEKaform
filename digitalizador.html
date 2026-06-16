@@ -203,16 +203,16 @@
     @media(max-width:400px){
       .src-tab-lbl{display:none;}
     }
-    .qual-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--warn);margin-top:9px;line-height:1.4;}
+    .qual-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--warn);margin-top:9px;}
     .qual-btns{display:flex;gap:7px;margin-top:7px;}
-    .card-warn .sugg-top{border-left:3px solid var(--warn);padding-left:8px;margin-left:-8px;}
-    .template-suggest{background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.22);border-radius:12px;padding:13px 16px;margin-bottom:14px;font-size:.85rem;}
-    .tmpl-match-title{font-weight:700;margin-bottom:6px;line-height:1.4;}
-    .tmpl-match-sub{color:var(--mut);font-size:.76rem;margin-bottom:9px;}
-    .conf-badge{background:rgba(26,188,156,.15);color:var(--ok);font-size:.67rem;font-weight:700;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;}
+    .card-warn{border-color:rgba(245,158,11,.4) !important;}
+    .template-suggest{background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.25);border-radius:10px;padding:13px 15px;margin-bottom:14px;font-size:.85rem;}
+    .tmpl-match-title{font-weight:700;margin-bottom:6px;}
+    .tmpl-match-sub{color:var(--mut);font-size:.76rem;margin-bottom:8px;}
+    .conf-badge{background:rgba(26,188,156,.15);color:var(--ok);font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;}
     .tmpl-missing-list{display:flex;flex-wrap:wrap;gap:7px;}
-    .missing-chip{background:var(--card);border:1px solid var(--bor);border-radius:20px;padding:5px 6px 5px 11px;font-size:.78rem;display:inline-flex;align-items:center;gap:6px;}
-    .missing-chip button{background:var(--pri);color:#fff;border:none;border-radius:50%;width:19px;height:19px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;padding:0;font-weight:700;transition:background .15s;flex-shrink:0;}
+    .missing-chip{background:var(--card);border:1px solid var(--bor);border-radius:20px;padding:4px 6px 4px 11px;font-size:.78rem;display:inline-flex;align-items:center;gap:5px;}
+    .missing-chip button{background:var(--pri);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;padding:0;font-weight:700;transition:background .15s;}
     .missing-chip button:hover{background:var(--pri-h);}
   </style>
   <script src="supabase-config.js"></script>
@@ -693,7 +693,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Fecha límite de cumplimiento',tipo:'fecha_auto'},{etiqueta:'Firma del secretario',tipo:'firma'},
   ]},
   {id:'orden_trabajo',nombre:'Orden de Trabajo / Servicio',
-   keywords:['orden','trabajo','servicio','mantenimiento','correctivo','preventivo','tecnico','falla','equipo'],
+   keywords:['orden','trabajo','servicio','mantenimiento','correctivo','preventivo','tecnico','falla','equipo','actividades realizadas'],
    campos_clave:[
     {etiqueta:'Número de orden',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
     {etiqueta:'Cliente / Empresa',tipo:'texto'},
@@ -704,7 +704,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del cliente',tipo:'firma'},
   ]},
   {id:'evaluacion_desempeno',nombre:'Evaluación de Desempeño',
-   keywords:['desempeno','evaluacion','competencia','indicador','meta','logro','colaborador','periodo','resultado'],
+   keywords:['desempeno','evaluacion','competencia','indicador','meta','logro','colaborador','periodo','resultado','calificacion'],
    campos_clave:[
     {etiqueta:'Nombre del colaborador',tipo:'texto'},{etiqueta:'Cargo',tipo:'select'},
     {etiqueta:'Área / Departamento',tipo:'select'},{etiqueta:'Periodo evaluado',tipo:'texto'},
@@ -735,7 +735,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Aprobado por',tipo:'firma'},
   ]},
   {id:'inspeccion_sanitaria',nombre:'Inspección Sanitaria / Higiene',
-   keywords:['sanitaria','higiene','alimento','limpieza','desinfeccion','plagas','temperatura','inocuidad','bpm'],
+   keywords:['sanitaria','higiene','alimento','limpieza','desinfeccion','plagas','temperatura','inocuidad','establecimiento','bpm'],
    campos_clave:[
     {etiqueta:'Nombre del establecimiento',tipo:'texto'},{etiqueta:'Fecha de inspección',tipo:'fecha_auto'},
     {etiqueta:'Tipo de establecimiento',tipo:'select'},{etiqueta:'Temperatura de almacenamiento (°C)',tipo:'numero'},
@@ -883,6 +883,7 @@ async function analyze() {
       placeholder: f.placeholder||'',
       requerido: (f.tipo||'texto')!=='separador',
       opciones: f.opciones && f.opciones.length ? f.opciones : (needsOptions(f.tipo) ? (sugerirOpciones(f.etiqueta).length ? sugerirOpciones(f.etiqueta) : ['']) : undefined),
+      _quality: f._quality,
       _auto: true
     }));
 
@@ -906,17 +907,19 @@ async function analyze() {
     }
 
     const suggestEl = document.getElementById('templateSuggest');
-    if (suggestEl) {
-      const match = matchTemplate(tmpl.campos);
-      if (match && match.missing.length > 0) {
-        const confLabel = match.score >= 6 ? 'Alta confianza' : match.score >= 3 ? 'Confianza media' : 'Posible coincidencia';
-        suggestEl.innerHTML = `<div class="tmpl-match-title">🎯 Tipo detectado: <strong>${match.template.nombre}</strong> <span class="conf-badge">${confLabel}</span></div>
-          <div class="tmpl-match-sub">Campos del estándar que podrían faltar — toca <strong>+</strong> para agregar:</div>
-          <div class="tmpl-missing-list">${match.missing.map(f=>`<span class="missing-chip">${TIPO_MAP[f.tipo]?.ico||'T'} ${esc(f.etiqueta)}<button onclick='addMissingField(${JSON.stringify(f).replace(/'/g,"\\'")})'  >+</button></span>`).join('')}</div>`;
-        suggestEl.style.display='block';
-      } else {
-        suggestEl.style.display='none';
-      }
+    const match = matchTemplate(tmpl.campos);
+    if (match && match.missing.length > 0) {
+      const confLabel = match.score >= 6 ? 'Alta confianza' : match.score >= 3 ? 'Confianza media' : 'Posible coincidencia';
+      suggestEl.innerHTML = `<div class="tmpl-match-title">🎯 Formulario detectado: <strong>${match.template.nombre}</strong> <span class="conf-badge">${confLabel}</span></div>
+        <div class="tmpl-match-sub">Campos que podrían estar faltando:</div>
+        <div class="tmpl-missing-list" id="tmplMissingList">
+          ${match.missing.map((f,i)=>`<span class="missing-chip" id="mc_${i}">${TIPO_MAP[f.tipo]?.ico||'T'} ${f.etiqueta}
+            <button onclick="addMissingField(${JSON.stringify(f).replace(/"/g,'&quot;')})">+</button>
+          </span>`).join('')}
+        </div>`;
+      suggestEl.style.display='block';
+    } else {
+      suggestEl.style.display='none';
     }
 
     renderSuggList();
@@ -1317,9 +1320,9 @@ function buildCard(c,i) {
     <label for="req_${c.id}">Requerido</label></div>`:'';
 
   const qualWarn = c._quality === 'review' ? `<div class="qual-warn">
-    ⚠️ Etiqueta posiblemente ilegible — revisa y confirma antes de guardar
+    ⚠️ Etiqueta posiblemente ilegible — revisa y confirma
     <div class="qual-btns">
-      <button class="btn btn-sm btn-ok" onclick="approveLabel('${c.id}')">✓ Aprobar así</button>
+      <button class="btn btn-sm btn-ok" onclick="approveLabel('${c.id}')">✓ Aprobar</button>
       <button class="btn btn-sm btn-sec" onclick="focusLabel('${c.id}')">✏️ Editar</button>
     </div>
   </div>` : '';
@@ -1360,7 +1363,7 @@ function approveLabel(id){const c=tmpl.campos.find(x=>x.id===id);if(c){c._qualit
 function focusLabel(id){setTimeout(()=>{const inp=document.querySelector(`#sc_${id} .sugg-lbl input`);if(inp){inp.focus();inp.select();}},50);}
 function addMissingField(f){
   const _ao=sugerirOpciones(f.etiqueta);
-  const opts=f.opciones&&f.opciones.length?f.opciones:(_ao.length?_ao:(needsOptions(f.tipo)?['']:undefined));
+  const opts=f.opciones||(_ao.length?_ao:(needsOptions(f.tipo)?[f.etiqueta]:undefined));
   tmpl.campos.push({id:`c${Date.now()}_${Math.random().toString(36).slice(2,5)}`,tipo:f.tipo,etiqueta:f.etiqueta,placeholder:'',requerido:f.tipo!=='separador',opciones:needsOptions(f.tipo)?opts:undefined,_quality:'ok'});
   renderSuggList();
   setTimeout(()=>document.querySelector(`#sc_${tmpl.campos[tmpl.campos.length-1].id}`)?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
