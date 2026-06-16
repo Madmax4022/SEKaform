@@ -185,7 +185,7 @@
 </div>
 
 <script src="supabase-config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script src="chart.min.js"></script>
 <script>
 const CHART_GRID  = 'rgba(51,65,85,.6)';
 const CHART_TEXT  = '#94a3b8';
@@ -370,9 +370,14 @@ async function init() {
   document.getElementById('sMonth').textContent = stats.month;
   document.getElementById('sWeek').textContent  = stats.week;
 
-  // Charts
-  buildDailyChart(envios);
-  buildFormChart(envios, plantillas);
+  // Charts (guard against Chart.js not loaded)
+  if (typeof Chart !== 'undefined') {
+    buildDailyChart(envios);
+    buildFormChart(envios, plantillas);
+  } else {
+    document.getElementById('chartDaily').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:60px 0">Gráficas no disponibles sin conexión</p>';
+    document.getElementById('chartForms').parentNode.innerHTML = '';
+  }
   buildTable(envios);
 
   document.getElementById('loadingState').style.display  = 'none';
