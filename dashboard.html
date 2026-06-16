@@ -54,17 +54,31 @@
 
     /* table */
     .table-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;overflow:hidden;}
-    .table-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--bor);}
+    .table-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:18px 20px;border-bottom:1px solid var(--bor);}
     .table-head h2{font-size:.95rem;font-weight:700;}
+    .table-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .filter-sel{background:var(--card2);border:1px solid var(--bor);color:var(--txt);border-radius:7px;padding:5px 10px;font-size:.78rem;font-family:inherit;outline:none;cursor:pointer;max-width:200px;}
+    .filter-sel:focus{border-color:var(--pri);}
+    .btn-export{background:var(--ok-dim);border:1px solid rgba(26,188,156,.3);color:var(--ok);border-radius:7px;padding:6px 13px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;}
+    .btn-export:hover{background:rgba(26,188,156,.22);}
+    .table-wrap{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
     thead th{padding:11px 16px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);background:var(--card2);}
-    tbody tr{border-top:1px solid var(--bor);transition:background .12s;}
-    tbody tr:hover{background:rgba(255,255,255,.025);}
-    td{padding:13px 16px;font-size:.85rem;color:var(--txt);}
+    tbody tr.data-row{border-top:1px solid var(--bor);transition:background .12s;cursor:pointer;}
+    tbody tr.data-row:hover{background:rgba(255,255,255,.03);}
+    td{padding:12px 16px;font-size:.85rem;color:var(--txt);}
     td.mut{color:var(--mut);}
     .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;}
     .badge.ok{background:var(--ok-dim);color:var(--ok);}
     .badge.draft{background:var(--warn-dim);color:var(--warn);}
+    tr.detail-row td{padding:0;border-top:none;}
+    .detail-cell{background:rgba(0,0,0,.2);padding:12px 16px 14px 28px;border-bottom:1px solid var(--bor);}
+    .detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:7px;}
+    .detail-item{background:var(--card2);border:1px solid var(--bor);border-radius:8px;padding:8px 12px;}
+    .detail-lbl{font-size:.67rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+    .detail-val{font-size:.82rem;word-break:break-word;line-height:1.4;}
+    .detail-img{max-width:72px;border-radius:5px;margin-top:4px;display:block;}
+    .detail-expand-hint{font-size:.72rem;color:var(--mut);margin-top:2px;display:inline-block;}
 
     /* empty state */
     .empty{text-align:center;padding:60px 20px;color:var(--mut);}
@@ -175,10 +189,18 @@
     <!-- recent submissions table -->
     <div class="table-card">
       <div class="table-head">
-        <h2>Envíos recientes</h2>
-        <span style="font-size:.78rem;color:var(--mut)" id="tableCount"></span>
+        <div>
+          <h2>Registros capturados</h2>
+          <span style="font-size:.75rem;color:var(--mut)" id="tableCount"></span>
+        </div>
+        <div class="table-actions">
+          <select class="filter-sel" id="formFilter" onchange="applyFilter()">
+            <option value="">Todos los formularios</option>
+          </select>
+          <button class="btn-export" onclick="exportCSV()">⬇ Exportar CSV</button>
+        </div>
       </div>
-      <div id="tableBody"></div>
+      <div class="table-wrap"><div id="tableBody"></div></div>
     </div>
 
   </div><!-- /mainContent -->
@@ -199,19 +221,22 @@ async function logout() {
 
 // ── Data loading ─────────────────────────────────────────────────
 async function loadData() {
-  let plantillas = [], envios = [], fromCloud = false;
+  const localP = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
+  const localE = JSON.parse(localStorage.getItem('skf_envios') || '[]');
+  let plantillas = localP, envios = localE, fromCloud = false;
 
   const sbData = await Promise.all([sbLoadPlantillas(), sbLoadEnvios()]);
   if (sbData[0] !== null && sbData[1] !== null) {
-    plantillas = sbData[0];
-    envios     = sbData[1];
-    fromCloud  = true;
-  } else {
-    plantillas = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
-    const raw  = JSON.parse(localStorage.getItem('skf_envios') || '[]');
-    envios     = [...raw].sort((a,b) => new Date(b.enviadoEn||b.creadoEn) - new Date(a.enviadoEn||a.creadoEn));
+    fromCloud = true;
+    const cloudP = sbData[0], cloudE = sbData[1];
+    const cloudPIds = new Set(cloudP.map(p=>p.id));
+    const cloudEIds = new Set(cloudE.map(e=>e.id));
+    plantillas = [...cloudP, ...localP.filter(p=>!cloudPIds.has(p.id))];
+    envios = [...cloudE, ...localE.filter(e=>!cloudEIds.has(e.id))];
   }
 
+  const sortFn = (a,b) => new Date(b.enviado_en||b.enviadoEn||b.creadoEn||0) - new Date(a.enviado_en||a.enviadoEn||a.creadoEn||0);
+  envios.sort(sortFn);
   return { plantillas, envios, fromCloud };
 }
 
@@ -309,9 +334,24 @@ function buildFormChart(envios, plantillas) {
 }
 
 // ── Table ─────────────────────────────────────────────────────────
-function buildTable(envios) {
-  const count = envios.length;
+let _allEnvios = [], _allPlantillas = [], _activeFilter = '';
+
+function buildCampoMap(plantillas) {
+  const m = {};
+  plantillas.forEach(p => {
+    m[p.id] = {};
+    (p.campos||[]).forEach(c => { m[p.id][c.id] = {etiqueta:c.etiqueta, tipo:c.tipo}; });
+  });
+  return m;
+}
+
+function buildTable(envios, plantillas) {
+  _allEnvios = envios; _allPlantillas = plantillas;
+  const filtered = _activeFilter ? envios.filter(e=>(e.plantilla_nombre||e.plantillaNombre||'')===_activeFilter) : envios;
+  const count = filtered.length;
   document.getElementById('tableCount').textContent = `${count} registro${count!==1?'s':''}`;
+
+  const campoMap = buildCampoMap(plantillas);
 
   if (!count) {
     document.getElementById('tableBody').innerHTML =
@@ -319,17 +359,32 @@ function buildTable(envios) {
     return;
   }
 
-  const rows = envios.slice(0,50).map(e => {
+  const rows = filtered.slice(0,100).map((e,i) => {
     const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
-    const d   = raw ? new Date(raw).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '—';
-    const estado = e.estado || 'enviado';
-    const nombre = e.plantilla_nombre || e.plantillaNombre || '—';
+    const d = raw ? new Date(raw).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '—';
+    const estado = e.estado||'enviado';
+    const nombre = e.plantilla_nombre||e.plantillaNombre||'—';
     const id = (e.id||'').slice(-8);
-    return `<tr>
-      <td>${nombre}</td>
+    const pId = e.plantilla_id||e.plantillaId||'';
+    const datos = e.datos||{};
+    const campoEntries = Object.entries(datos).filter(([,v])=>v!==null&&v!==undefined&&v!=='');
+    const detailItems = campoEntries.map(([k,v])=>{
+      const campo = campoMap[pId]?.[k];
+      const lbl = campo?.etiqueta||k;
+      let val;
+      if (Array.isArray(v)) val = v.join(', ');
+      else if (typeof v==='string'&&v.startsWith('data:image')) val = `<img src="${v}" class="detail-img">`;
+      else val = String(v||'—');
+      return `<div class="detail-item"><div class="detail-lbl">${lbl}</div><div class="detail-val">${val}</div></div>`;
+    }).join('');
+    return `<tr class="data-row" onclick="toggleDetail('det_${i}')">
+      <td>${nombre} <span class="detail-expand-hint">▸ ${campoEntries.length} campo${campoEntries.length!==1?'s':''}</span></td>
       <td class="mut">${d}</td>
       <td><span class="badge ${estado==='enviado'?'ok':'draft'}">${estado==='enviado'?'✓ Enviado':'Borrador'}</span></td>
       <td class="mut" style="font-size:.72rem;font-family:monospace">${id}</td>
+    </tr>
+    <tr class="detail-row" id="det_${i}" style="display:none">
+      <td colspan="4"><div class="detail-cell"><div class="detail-grid">${detailItems||'<span style="color:var(--mut);font-size:.82rem">Sin datos registrados</span>'}</div></div></td>
     </tr>`;
   }).join('');
 
@@ -338,6 +393,54 @@ function buildTable(envios) {
       <thead><tr><th>Formulario</th><th>Fecha</th><th>Estado</th><th>ID</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+function toggleDetail(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display==='none' ? 'table-row' : 'none';
+}
+
+function applyFilter() {
+  _activeFilter = document.getElementById('formFilter').value;
+  buildTable(_allEnvios, _allPlantillas);
+}
+
+function exportCSV() {
+  const envios = _activeFilter ? _allEnvios.filter(e=>(e.plantilla_nombre||e.plantillaNombre||'')===_activeFilter) : _allEnvios;
+  if (!envios.length) { alert('No hay registros para exportar.'); return; }
+  const campoMap = buildCampoMap(_allPlantillas);
+  const colKeys = []; const colLabels = {};
+  envios.forEach(e => {
+    const pId = e.plantilla_id||e.plantillaId||'';
+    Object.keys(e.datos||{}).forEach(k => {
+      const col = `${pId}§${k}`;
+      if (!colLabels[col]) { colLabels[col] = campoMap[pId]?.[k]?.etiqueta||k; colKeys.push(col); }
+    });
+  });
+  const unique = [...new Map(colKeys.map(k=>[k,k])).values()];
+  const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
+  const header = ['Formulario','Fecha','Estado','ID',...unique.map(k=>colLabels[k])].map(esc).join(',');
+  const rows = envios.map(e => {
+    const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
+    const fecha = raw ? new Date(raw).toLocaleString('es-CO') : '';
+    const pId = e.plantilla_id||e.plantillaId||'';
+    const vals = unique.map(col => {
+      const [cPId,k] = col.split('§');
+      if (cPId!==pId) return '';
+      const v = (e.datos||{})[k];
+      if (Array.isArray(v)) return v.join('; ');
+      if (typeof v==='string'&&v.startsWith('data:image')) return '[imagen]';
+      return String(v??'');
+    });
+    return [e.plantilla_nombre||e.plantillaNombre||'',fecha,e.estado||'enviado',(e.id||'').slice(-12),...vals].map(esc).join(',');
+  });
+  const csv = [header,...rows].join('\r\n');
+  const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`SEKaform-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Init ──────────────────────────────────────────────────────────
@@ -378,7 +481,12 @@ async function init() {
     document.getElementById('chartDaily').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:60px 0">Gráficas no disponibles sin conexión</p>';
     document.getElementById('chartForms').parentNode.innerHTML = '';
   }
-  buildTable(envios);
+  // Populate form filter dropdown
+  const formNames = [...new Set(envios.map(e=>e.plantilla_nombre||e.plantillaNombre||'').filter(Boolean))].sort();
+  const sel = document.getElementById('formFilter');
+  formNames.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+
+  buildTable(envios, plantillas);
 
   document.getElementById('loadingState').style.display  = 'none';
   document.getElementById('mainContent').style.display   = 'block';
