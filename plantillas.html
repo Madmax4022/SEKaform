@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo de Plantillas — SEKaform</title>
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b;
+      --pri: #2563eb; --pri-h: #3b82f6;
+      --ok: #1abc9c;
+      --txt: #f8fafc; --mut: #94a3b8; --bor: #334155;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); margin: 0; padding: 0; }
+    .wrapper { max-width: 1000px; margin: 0 auto; padding: 40px 20px 60px; }
+
+    nav.topbar { display:flex; align-items:center; gap:14px; padding:16px 20px; border-bottom:1px solid var(--bor); }
+    nav.topbar a { color: var(--mut); text-decoration:none; font-size:.9rem; }
+    nav.topbar a:hover { color: var(--txt); }
+    .topbar-title { font-weight:800; font-size:.95rem; }
+
+    header.pg-hd { margin-bottom: 32px; }
+    .pg-tag { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: var(--ok); margin-bottom: 6px; }
+    .pg-title { font-size: 1.8rem; font-weight: 900; margin: 0 0 8px; letter-spacing: -.5px; }
+    .pg-sub { color: var(--mut); font-size: .92rem; line-height: 1.6; margin: 0; max-width: 640px; }
+
+    .filters { display:flex; gap:8px; margin: 22px 0 28px; flex-wrap:wrap; }
+    .filt-btn {
+      background: var(--card); border: 1px solid var(--bor); color: var(--mut);
+      padding: 8px 16px; border-radius: 20px; font-size: .82rem; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .filt-btn:hover { border-color: var(--pri); color: var(--txt); }
+    .filt-btn.active { background: var(--ok); border-color: var(--ok); color: #06281f; }
+
+    .grid-t { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    @media (max-width: 700px) { .grid-t { grid-template-columns: 1fr; } }
+
+    .tcard {
+      background: var(--card); border: 1px solid var(--bor); border-radius: 14px;
+      padding: 20px 20px 18px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .tcard-sector { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ok); }
+    .tcard h3 { font-size: 1rem; font-weight: 800; margin: 0; }
+    .tcard-count { font-size: .78rem; color: var(--mut); }
+    .tcard-fields { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+    .tfld {
+      font-size: .68rem; padding: 3px 8px; border-radius: 20px;
+      background: rgba(37,99,235,.12); color: #93c5fd; border: 1px solid rgba(37,99,235,.2);
+    }
+    .tfld-more { background: transparent; color: var(--mut); border-color: var(--bor); }
+    .tcard-cta {
+      margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      background: var(--pri); color: #fff; padding: 10px 18px;
+      border-radius: 8px; font-weight: 700; font-size: .85rem; text-decoration: none;
+      transition: background .2s;
+    }
+    .tcard-cta:hover { background: var(--pri-h); }
+
+    .empty-state { text-align:center; padding: 60px 20px; color: var(--mut); }
+
+    footer { text-align: center; margin-top: 50px; font-size: 0.82rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 24px; }
+  </style>
+  <script src="form-library.js"></script>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html">← Inicio</a>
+  <span class="topbar-title">Catálogo de Plantillas</span>
+</nav>
+
+<div class="wrapper">
+  <header class="pg-hd">
+    <div class="pg-tag" id="pgTag">Repositorio de plantillas</div>
+    <h1 class="pg-title" id="pgTitle">Formularios disponibles</h1>
+    <p class="pg-sub" id="pgSub">Elige una plantilla precargada para empezar a digitalizar de inmediato, o vuelve atrás y digitaliza tu propio documento desde cero.</p>
+  </header>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="grid-t" id="grid"></div>
+
+  <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
+</div>
+
+<script>
+const VERTICAL_LABELS = { sst: 'SST — Seguridad y Salud en el Trabajo', general: 'Plantillas generales' };
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+function currentFilter() {
+  return new URLSearchParams(location.search).get('v') || 'todas';
+}
+
+function setFilter(v) {
+  const url = new URL(location.href);
+  if (v === 'todas') url.searchParams.delete('v');
+  else url.searchParams.set('v', v);
+  history.replaceState(null, '', url);
+  render();
+}
+
+function renderFilters() {
+  const verticals = ['todas', ...new Set(FORM_LIBRARY.map(t => t.vertical))];
+  const active = currentFilter();
+  document.getElementById('filters').innerHTML = verticals.map(v => {
+    const lbl = v === 'todas' ? 'Todas' : (VERTICAL_LABELS[v] || v);
+    return `<button class="filt-btn${v===active?' active':''}" onclick="setFilter('${v}')">${esc(lbl)}</button>`;
+  }).join('');
+}
+
+function render() {
+  renderFilters();
+  const active = currentFilter();
+  const list = active === 'todas' ? FORM_LIBRARY : FORM_LIBRARY.filter(t => t.vertical === active);
+
+  if (active === 'sst') {
+    document.getElementById('pgTag').textContent = 'Salud Ocupacional';
+    document.getElementById('pgTitle').textContent = 'SST — Seguridad y Salud en el Trabajo';
+    document.getElementById('pgSub').textContent = 'Plantillas preconfiguradas según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007. Elige una para cargarla directamente en el digitalizador.';
+  } else {
+    document.getElementById('pgTag').textContent = 'Repositorio de plantillas';
+    document.getElementById('pgTitle').textContent = 'Formularios disponibles';
+    document.getElementById('pgSub').textContent = 'Elige una plantilla precargada para empezar a digitalizar de inmediato, o vuelve atrás y digitaliza tu propio documento desde cero.';
+  }
+
+  const grid = document.getElementById('grid');
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state">No hay plantillas en esta categoría todavía.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(t => {
+    const fieldNames = t.campos_clave.slice(0, 4).map(c => c.etiqueta);
+    const extra = t.campos_clave.length - fieldNames.length;
+    return `<div class="tcard">
+      <div class="tcard-sector">${esc(VERTICAL_LABELS[t.vertical] || t.vertical)}</div>
+      <h3>${esc(t.nombre)}</h3>
+      <div class="tcard-count">${t.campos_clave.length} campos preconfigurados</div>
+      <div class="tcard-fields">
+        ${fieldNames.map(f => `<span class="tfld">${esc(f)}</span>`).join('')}
+        ${extra > 0 ? `<span class="tfld tfld-more">+${extra} más</span>` : ''}
+      </div>
+      <a class="tcard-cta" href="digitalizador.html?preset=${encodeURIComponent(t.id)}">Usar esta plantilla →</a>
+    </div>`;
+  }).join('');
+}
+
+render();
+</script>
+</body>
+</html>

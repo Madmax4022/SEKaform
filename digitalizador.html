@@ -216,6 +216,7 @@
     .missing-chip button:hover{background:var(--pri-h);}
   </style>
   <script src="supabase-config.js"></script>
+  <script src="form-library.js"></script>
 </head>
 <body>
 
@@ -675,247 +676,7 @@ function clearSrc(src) {
   if (src==='pdf') { pdfFile=null; fiPdf.value=''; dzPdf.style.display='block'; document.getElementById('prevPdf').style.display='none'; }
 }
 
-// ══════════════════════════════════════════════════════════════════
-// FORM TEMPLATE LIBRARY (20 templates — 14 generales + 6 SST Ley 1562/2012)
-// ══════════════════════════════════════════════════════════════════
-const FORM_LIBRARY = [
-  {id:'asistencia',nombre:'Registro de Asistencia a Capacitación',
-   keywords:['asistencia','capacitacion','participante','instructor','facilitador','tema','objetivo'],
-   campos_clave:[
-    {etiqueta:'Nombre completo del participante',tipo:'texto'},
-    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de inicio',tipo:'hora_auto'},
-    {etiqueta:'Hora de finalización',tipo:'hora_auto'},
-    {etiqueta:'Facilitador / Instructor',tipo:'texto'},
-    {etiqueta:'Cargo',tipo:'select',opciones:['Operario','Técnico','Profesional','Supervisor','Coordinador','Otro']},
-    {etiqueta:'Firma del participante',tipo:'firma'},
-    {etiqueta:'¿Completó la capacitación?',tipo:'si_no'},
-  ]},
-  {id:'inspeccion_sst',nombre:'Lista de Verificación SST',
-   keywords:['inspeccion','verificacion','sst','seguridad','salud','trabajo','cumple','riesgo','epp','hallazgo'],
-   campos_clave:[
-    {etiqueta:'Empresa / Establecimiento',tipo:'texto'},{etiqueta:'Fecha de inspección',tipo:'fecha_auto'},
-    {etiqueta:'Área inspeccionada',tipo:'select',opciones:['Producción','Almacén','Oficinas','Mantenimiento','Otro']},
-    {etiqueta:'Inspector responsable',tipo:'texto'},
-    {etiqueta:'Calificación',tipo:'radio',opciones:['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente']},
-    {etiqueta:'Observaciones / Hallazgos',tipo:'textarea'},{etiqueta:'Acción correctiva',tipo:'textarea'},
-    {etiqueta:'Fotografía de evidencia',tipo:'foto'},{etiqueta:'Firma del inspector',tipo:'firma'},
-    {etiqueta:'Ubicación GPS',tipo:'ubicacion'},
-  ]},
-  {id:'acta_reunion',nombre:'Acta de Reunión',
-   keywords:['reunion','acta','acuerdo','compromiso','asistente','orden del dia','seguimiento','responsable'],
-   campos_clave:[
-    {etiqueta:'Objeto / Asunto de la reunión',tipo:'texto'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Lugar / Modalidad',tipo:'select',opciones:['Presencial','Virtual','Híbrida']},
-    {etiqueta:'Nombre del asistente',tipo:'texto'},
-    {etiqueta:'Compromisos / Acuerdos',tipo:'textarea'},{etiqueta:'Responsable del compromiso',tipo:'texto'},
-    {etiqueta:'Fecha límite de cumplimiento',tipo:'fecha_auto'},{etiqueta:'Firma del secretario',tipo:'firma'},
-  ]},
-  {id:'orden_trabajo',nombre:'Orden de Trabajo / Servicio',
-   keywords:['orden','trabajo','servicio','mantenimiento','correctivo','preventivo','tecnico','falla','equipo','actividades realizadas'],
-   campos_clave:[
-    {etiqueta:'Número de orden',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Cliente / Empresa',tipo:'texto'},
-    {etiqueta:'Tipo de mantenimiento',tipo:'select',opciones:['Correctivo','Preventivo','Predictivo','Instalación']},
-    {etiqueta:'Descripción del problema',tipo:'textarea'},{etiqueta:'Actividades realizadas',tipo:'textarea'},
-    {etiqueta:'Repuestos / Materiales',tipo:'textarea'},{etiqueta:'Técnico responsable',tipo:'texto'},
-    {etiqueta:'Fotografía antes',tipo:'foto'},{etiqueta:'Fotografía después',tipo:'foto'},
-    {etiqueta:'Firma del cliente',tipo:'firma'},
-  ]},
-  {id:'evaluacion_desempeno',nombre:'Evaluación de Desempeño',
-   keywords:['desempeno','evaluacion','competencia','indicador','meta','logro','colaborador','periodo','resultado','calificacion'],
-   campos_clave:[
-    {etiqueta:'Nombre del colaborador',tipo:'texto'},{etiqueta:'Cargo',tipo:'select'},
-    {etiqueta:'Área / Departamento',tipo:'select'},{etiqueta:'Periodo evaluado',tipo:'texto'},
-    {etiqueta:'Calificación general',tipo:'radio',opciones:['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente']},
-    {etiqueta:'Logros del periodo',tipo:'textarea'},{etiqueta:'Oportunidades de mejora',tipo:'textarea'},
-    {etiqueta:'Plan de desarrollo',tipo:'textarea'},{etiqueta:'Firma del evaluado',tipo:'firma'},
-    {etiqueta:'Firma del evaluador',tipo:'firma'},
-  ]},
-  {id:'visita_comercial',nombre:'Reporte de Visita Comercial',
-   keywords:['visita','comercial','cliente','prospecto','cotizacion','oportunidad','venta','negocio','seguimiento'],
-   campos_clave:[
-    {etiqueta:'Fecha de visita',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
-    {etiqueta:'Nombre del cliente / empresa',tipo:'texto'},{etiqueta:'Contacto / Persona atendida',tipo:'texto'},
-    {etiqueta:'Teléfono',tipo:'telefono'},{etiqueta:'Correo electrónico',tipo:'email'},
-    {etiqueta:'Objetivo de la visita',tipo:'textarea'},
-    {etiqueta:'Resultado',tipo:'select',opciones:['Interesado','No interesado','Requiere seguimiento','Cotización enviada','Negocio cerrado']},
-    {etiqueta:'Próximos pasos',tipo:'textarea'},{etiqueta:'Ubicación GPS',tipo:'ubicacion'},
-    {etiqueta:'Firma del vendedor',tipo:'firma'},
-  ]},
-  {id:'solicitud_compra',nombre:'Solicitud de Compra / Pedido',
-   keywords:['solicitud','compra','pedido','requisicion','proveedor','cotizacion','articulo','cantidad','precio'],
-   campos_clave:[
-    {etiqueta:'Número de solicitud',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Solicitante',tipo:'texto'},{etiqueta:'Área / Departamento',tipo:'select'},
-    {etiqueta:'Descripción del artículo',tipo:'texto'},{etiqueta:'Cantidad',tipo:'numero'},
-    {etiqueta:'Unidad de medida',tipo:'select',opciones:['Unidad','Caja','Kg','Litro','Metro','Paquete']},
-    {etiqueta:'Justificación / Uso',tipo:'textarea'},{etiqueta:'Firma del solicitante',tipo:'firma'},
-    {etiqueta:'Aprobado por',tipo:'firma'},
-  ]},
-  {id:'inspeccion_sanitaria',nombre:'Inspección Sanitaria / Higiene',
-   keywords:['sanitaria','higiene','alimento','limpieza','desinfeccion','plagas','temperatura','inocuidad','establecimiento','bpm'],
-   campos_clave:[
-    {etiqueta:'Nombre del establecimiento',tipo:'texto'},{etiqueta:'Fecha de inspección',tipo:'fecha_auto'},
-    {etiqueta:'Tipo de establecimiento',tipo:'select'},{etiqueta:'Temperatura de almacenamiento (°C)',tipo:'numero'},
-    {etiqueta:'Condición de limpieza',tipo:'radio',opciones:['Deficiente','Regular','Bueno','Muy Bueno','Excelente']},
-    {etiqueta:'¿Control de plagas vigente?',tipo:'si_no'},{etiqueta:'Observaciones',tipo:'textarea'},
-    {etiqueta:'Fotografía de evidencia',tipo:'foto'},{etiqueta:'Firma del inspector',tipo:'firma'},
-    {etiqueta:'Ubicación GPS',tipo:'ubicacion'},
-  ]},
-  {id:'permiso_trabajo',nombre:'Permiso de Trabajo',
-   keywords:['permiso','altura','espacio confinado','electrico','caliente','riesgo','ats','atp','trabajador'],
-   campos_clave:[
-    {etiqueta:'Número de permiso',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora_auto'},
-    {etiqueta:'Tipo de trabajo',tipo:'select',opciones:['Trabajo en altura','Espacio confinado','Trabajo en caliente','Trabajo eléctrico','Otro']},
-    {etiqueta:'Descripción del trabajo',tipo:'textarea'},
-    {etiqueta:'¿Se realizó análisis de riesgos?',tipo:'si_no'},
-    {etiqueta:'EPP requerido',tipo:'checkbox_multi',opciones:['Casco','Guantes','Arnés','Gafas','Botas','Tapabocas']},
-    {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del supervisor',tipo:'firma'},
-  ]},
-  {id:'entrega_recibo',nombre:'Acta de Entrega / Recibo de Bienes',
-   keywords:['entrega','recibo','bien','activo','devolucion','recibido por','entregado por','estado del bien'],
-   campos_clave:[
-    {etiqueta:'Fecha de entrega',tipo:'fecha_auto'},{etiqueta:'Descripción del bien',tipo:'texto'},
-    {etiqueta:'Serial / Código',tipo:'texto'},{etiqueta:'Cantidad',tipo:'numero'},
-    {etiqueta:'Estado del bien',tipo:'select',opciones:['Nuevo','Bueno','Regular','Malo']},
-    {etiqueta:'Entregado por',tipo:'texto'},{etiqueta:'Recibido por',tipo:'texto'},
-    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Fotografía del bien',tipo:'foto'},
-    {etiqueta:'Firma de quien entrega',tipo:'firma'},{etiqueta:'Firma de quien recibe',tipo:'firma'},
-  ]},
-  {id:'incidente_accidente',nombre:'Reporte de Incidente / Accidente Laboral',
-   keywords:['incidente','accidente','lesion','trabajador','causa','testigo','investigacion','herido','medica'],
-   campos_clave:[
-    {etiqueta:'Fecha del incidente',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
-    {etiqueta:'Trabajador involucrado',tipo:'texto'},{etiqueta:'Cargo',tipo:'select'},
-    {etiqueta:'Tipo de evento',tipo:'select',opciones:['Incidente','Accidente de trabajo','Enfermedad laboral','Casi accidente']},
-    {etiqueta:'Descripción del evento',tipo:'textarea'},{etiqueta:'Causa raíz',tipo:'textarea'},
-    {etiqueta:'¿Hubo atención médica?',tipo:'si_no'},{etiqueta:'Días de incapacidad',tipo:'numero'},
-    {etiqueta:'Fotografía de la escena',tipo:'foto'},{etiqueta:'Ubicación GPS del incidente',tipo:'ubicacion'},
-    {etiqueta:'Firma del jefe inmediato',tipo:'firma'},
-  ]},
-  {id:'hoja_de_vida',nombre:'Hoja de Vida / Solicitud de Empleo',
-   keywords:['hoja de vida','curriculum','empleo','aspirante','candidato','experiencia','educacion','referencias','salario'],
-   campos_clave:[
-    {etiqueta:'Nombres y apellidos',tipo:'texto'},{etiqueta:'Número de cédula',tipo:'numero'},
-    {etiqueta:'Fecha de nacimiento',tipo:'fecha'},{etiqueta:'Teléfono celular',tipo:'telefono'},
-    {etiqueta:'Correo electrónico',tipo:'email'},
-    {etiqueta:'Nivel educativo',tipo:'select',opciones:['Bachillerato','Técnico','Tecnólogo','Universitario','Especialización','Maestría']},
-    {etiqueta:'Cargo aspirado',tipo:'texto'},{etiqueta:'Experiencia laboral previa',tipo:'textarea'},
-    {etiqueta:'Salario aspirado',tipo:'numero'},{etiqueta:'Fotografía',tipo:'foto'},
-    {etiqueta:'Firma del aspirante',tipo:'firma'},
-  ]},
-  {id:'encuesta_satisfaccion',nombre:'Encuesta de Satisfacción al Cliente',
-   keywords:['satisfaccion','encuesta','opinion','calidad del servicio','recomendaria','atencion','experiencia','califique'],
-   campos_clave:[
-    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Servicio / Producto evaluado',tipo:'texto'},
-    {etiqueta:'Calificación general',tipo:'radio',opciones:['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente']},
-    {etiqueta:'¿Recomendaría nuestro servicio?',tipo:'si_no'},
-    {etiqueta:'Aspectos positivos',tipo:'textarea'},{etiqueta:'Aspectos a mejorar',tipo:'textarea'},
-    {etiqueta:'Nombre del cliente (opcional)',tipo:'texto'},{etiqueta:'Correo (opcional)',tipo:'email'},
-  ]},
-  {id:'calibracion',nombre:'Registro de Calibración / Mantenimiento de Equipos',
-   keywords:['calibracion','instrumento','patron','verificacion','tolerancia','medicion','resultado de calibracion'],
-   campos_clave:[
-    {etiqueta:'Número de registro',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Equipo / Instrumento',tipo:'texto'},{etiqueta:'Serial / Código',tipo:'texto'},
-    {etiqueta:'Tipo de mantenimiento',tipo:'select',opciones:['Preventivo','Correctivo','Calibración','Verificación']},
-    {etiqueta:'Resultado de la calibración',tipo:'select',opciones:['Conforme','No conforme','Fuera de tolerancia']},
-    {etiqueta:'Próxima calibración',tipo:'fecha'},{etiqueta:'Observaciones técnicas',tipo:'textarea'},
-    {etiqueta:'Técnico responsable',tipo:'texto'},{etiqueta:'Firma del técnico',tipo:'firma'},
-  ]},
-
-  // ── SST Verticales (Ley 1562/2012 · Decreto 1072/2015) ─────────
-  {id:'matriz_peligros',nombre:'Matriz de Identificación de Peligros y Valoración de Riesgos (GTC-45)',
-   keywords:['matriz','peligro','riesgo','gtc','valoracion','control','consecuencia','probabilidad','nivel de riesgo','intervencion'],
-   campos_clave:[
-    {etiqueta:'Proceso / Actividad',tipo:'texto'},{etiqueta:'Área / Lugar',tipo:'select',opciones:['Producción','Almacén','Oficinas','Mantenimiento','Exteriores','Otro']},
-    {etiqueta:'Tipo de peligro',tipo:'select',opciones:['Físico','Químico','Biológico','Biomecánico','Psicosocial','Condiciones de seguridad','Fenómenos naturales']},
-    {etiqueta:'Fuente del peligro',tipo:'texto'},{etiqueta:'Descripción del peligro',tipo:'textarea'},
-    {etiqueta:'Efectos posibles',tipo:'textarea'},
-    {etiqueta:'Nivel de deficiencia',tipo:'radio',opciones:['MA - Muy alto (10)','A - Alto (6)','M - Medio (2)','B - Bajo (0)']},
-    {etiqueta:'Nivel de exposición',tipo:'radio',opciones:['EC - Continua (4)','EF - Frecuente (3)','EO - Ocasional (2)','EE - Esporádica (1)']},
-    {etiqueta:'Nivel de consecuencia',tipo:'radio',opciones:['Catastrófico (100)','Muy grave (60)','Grave (25)','Leve (10)']},
-    {etiqueta:'¿Existen controles actuales?',tipo:'si_no'},{etiqueta:'Medidas de intervención',tipo:'textarea'},
-    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Fecha de ejecución',tipo:'fecha_auto'},
-    {etiqueta:'Ubicación GPS',tipo:'ubicacion'},{etiqueta:'Fotografía del riesgo',tipo:'foto'},
-  ]},
-
-  {id:'acta_copasst',nombre:'Acta de Reunión COPASST',
-   keywords:['copasst','copasos','comite paritario','representante empleador','representante trabajadores','presidente copasst','secretario copasst','sgsst'],
-   campos_clave:[
-    {etiqueta:'Número de acta',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora_auto'},
-    {etiqueta:'Tipo de reunión',tipo:'select',opciones:['Ordinaria mensual','Extraordinaria']},
-    {etiqueta:'Presidente del COPASST',tipo:'texto'},{etiqueta:'Secretario del COPASST',tipo:'texto'},
-    {etiqueta:'Representante del empleador',tipo:'texto'},{etiqueta:'Representante de los trabajadores',tipo:'texto'},
-    {etiqueta:'Orden del día',tipo:'textarea'},{etiqueta:'Temas tratados y decisiones',tipo:'textarea'},
-    {etiqueta:'Compromisos / Responsables',tipo:'textarea'},{etiqueta:'Fecha de seguimiento',tipo:'fecha_auto'},
-    {etiqueta:'Firma del presidente',tipo:'firma'},{etiqueta:'Firma del secretario',tipo:'firma'},
-  ]},
-
-  {id:'entrega_epp',nombre:'Entrega de Elementos de Protección Personal (EPP)',
-   keywords:['epp','elementos de proteccion personal','dotacion','casco','botas de seguridad','arnés','proteccion personal','kit epp','recibido conforme','entrega dotacion'],
-   campos_clave:[
-    {etiqueta:'Fecha de entrega',tipo:'fecha_auto'},{etiqueta:'Nombre del trabajador',tipo:'texto'},
-    {etiqueta:'Cargo',tipo:'select',opciones:['Operario','Técnico','Supervisor','Coordinador','Inspector','Otro']},
-    {etiqueta:'Área',tipo:'select',opciones:['Producción','Almacén','Mantenimiento','Obra','Laboratorio','Otro']},
-    {etiqueta:'Elemento de protección entregado',tipo:'select',opciones:['Casco','Guantes de vaqueta','Guantes de nitrilo','Botas de seguridad','Gafas de seguridad','Protección auditiva','Tapabocas','Arnés','Overol','Otro']},
-    {etiqueta:'Talla / Referencia',tipo:'texto'},{etiqueta:'Cantidad',tipo:'numero'},
-    {etiqueta:'Motivo de entrega',tipo:'select',opciones:['Primera entrega','Reposición por desgaste','Reposición por pérdida','Cambio de cargo']},
-    {etiqueta:'Fecha de vencimiento del EPP',tipo:'fecha'},
-    {etiqueta:'Observaciones',tipo:'textarea'},
-    {etiqueta:'Firma del trabajador (recibí conforme)',tipo:'firma'},
-    {etiqueta:'Firma del responsable de entrega',tipo:'firma'},
-  ]},
-
-  {id:'investigacion_at',nombre:'Investigación de Accidente de Trabajo (Res. 1401/2007)',
-   keywords:['causas basicas','causas inmediatas','accion correctiva','plan de accion','factores contribuyentes','causas raiz','resolucion 1401','investigacion de accidente'],
-   campos_clave:[
-    {etiqueta:'Fecha del accidente',tipo:'fecha_auto'},{etiqueta:'Hora del accidente',tipo:'hora_auto'},
-    {etiqueta:'Fecha de investigación',tipo:'fecha_auto'},{etiqueta:'Trabajador accidentado',tipo:'texto'},
-    {etiqueta:'Cargo',tipo:'select'},{etiqueta:'ARL',tipo:'select',opciones:['Positiva','Sura','Colmena','Axa Colpatria','Bolívar','Liberty','Otro']},
-    {etiqueta:'Días de incapacidad',tipo:'numero'},
-    {etiqueta:'Descripción detallada del accidente',tipo:'textarea'},
-    {etiqueta:'Causas inmediatas — actos inseguros',tipo:'textarea'},
-    {etiqueta:'Causas inmediatas — condiciones inseguras',tipo:'textarea'},
-    {etiqueta:'Causas básicas — factores personales',tipo:'textarea'},
-    {etiqueta:'Causas básicas — factores del trabajo',tipo:'textarea'},
-    {etiqueta:'Plan de acción correctiva',tipo:'textarea'},{etiqueta:'Responsable del plan',tipo:'texto'},
-    {etiqueta:'Fecha límite de acción',tipo:'fecha_auto'},{etiqueta:'¿Se reportó a la ARL?',tipo:'si_no'},
-    {etiqueta:'Fotografía de la escena',tipo:'foto'},{etiqueta:'Ubicación GPS',tipo:'ubicacion'},
-    {etiqueta:'Firma del investigador',tipo:'firma'},{etiqueta:'Firma del representante legal',tipo:'firma'},
-  ]},
-
-  {id:'inspeccion_botiquin',nombre:'Inspección de Botiquín y Brigada de Emergencias',
-   keywords:['botiquin','brigada','emergencia','extintor','primeros auxilios','camilla','kit de emergencia','evacuacion','punto de encuentro'],
-   campos_clave:[
-    {etiqueta:'Fecha de inspección',tipo:'fecha_auto'},{etiqueta:'Área / Ubicación',tipo:'texto'},
-    {etiqueta:'Inspector',tipo:'texto'},
-    {etiqueta:'¿Botiquín visible y accesible?',tipo:'si_no'},
-    {etiqueta:'¿Analgésicos disponibles?',tipo:'si_no'},{etiqueta:'¿Vendas y gasas?',tipo:'si_no'},
-    {etiqueta:'¿Antisépticos (alcohol, agua oxigenada)?',tipo:'si_no'},
-    {etiqueta:'¿Guantes desechables?',tipo:'si_no'},{etiqueta:'¿Extintor cercano y vigente?',tipo:'si_no'},
-    {etiqueta:'Fecha de vencimiento del elemento más próximo a vencer',tipo:'fecha'},
-    {etiqueta:'Elementos faltantes o vencidos',tipo:'textarea'},
-    {etiqueta:'Observaciones generales',tipo:'textarea'},
-    {etiqueta:'Fotografía del botiquín',tipo:'foto'},
-    {etiqueta:'Firma del inspector',tipo:'firma'},
-  ]},
-
-  {id:'examen_medico_sst',nombre:'Remisión / Resultado de Examen Médico Ocupacional',
-   keywords:['examen medico','medico ocupacional','profesiograma','aptitud','ingreso','periodico','retiro','apto','restriccion','eps'],
-   campos_clave:[
-    {etiqueta:'Nombre del trabajador',tipo:'texto'},{etiqueta:'Número de cédula',tipo:'numero'},
-    {etiqueta:'Cargo',tipo:'select'},{etiqueta:'Área',tipo:'select'},
-    {etiqueta:'Tipo de examen',tipo:'select',opciones:['Ingreso','Periódico','Retiro','Post-incapacidad','Reubicación laboral','Cambio de cargo']},
-    {etiqueta:'Fecha de remisión',tipo:'fecha_auto'},{etiqueta:'IPS / Médico ocupacional',tipo:'texto'},
-    {etiqueta:'Resultado',tipo:'select',opciones:['Apto','Apto con restricciones','No apto temporalmente','No apto permanentemente']},
-    {etiqueta:'Restricciones / Recomendaciones médicas',tipo:'textarea'},
-    {etiqueta:'Fecha del próximo examen',tipo:'fecha'},
-    {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del responsable SST',tipo:'firma'},
-  ]},
-];
+// FORM_LIBRARY ahora vive en form-library.js (compartido con plantillas.html)
 
 function matchTemplate(fields) {
   const fieldText = fields.map(f => _norm(f.etiqueta)).join(' ');
@@ -1663,8 +1424,34 @@ function toast(msg,type='ok'){
   document.body.appendChild(d);_tt=setTimeout(()=>d.remove(),3500);
 }
 
+// Load a FORM_LIBRARY template directly into the wizard via ?preset=<id>
+function loadPreset(presetId) {
+  const t = FORM_LIBRARY.find(x => x.id === presetId);
+  if (!t) return false;
+  tmpl.nombre = t.nombre;
+  tmpl.campos = t.campos_clave.map((f,i) => ({
+    id: `c${Date.now()}_${i}_${Math.random().toString(36).slice(2,5)}`,
+    tipo: f.tipo,
+    etiqueta: f.etiqueta,
+    placeholder: '',
+    requerido: f.tipo !== 'separador',
+    opciones: needsOptions(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
+    _quality: 'ok'
+  }));
+  const fNomEl = document.getElementById('fNom');
+  if (fNomEl) fNomEl.value = t.nombre;
+  renderSuggList();
+  goPg(2);
+  toast(`Plantilla "${t.nombre}" cargada — revisa y ajusta los campos`, 'ok');
+  return true;
+}
+
 // Init
 renderSuggList();
+(function initFromQuery() {
+  const preset = new URLSearchParams(location.search).get('preset');
+  if (preset) loadPreset(preset);
+})();
 </script>
 </body>
 </html>
