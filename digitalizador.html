@@ -487,6 +487,16 @@ function stripLeadingNoise(s) {
   return String(s||'').replace(/^(?!¿|¡)[^\p{L}\p{N}]+/u, '').trim();
 }
 
+// Pone en mayúscula la primera letra de la etiqueta (el resto se deja igual,
+// para no destruir acrónimos o palabras que el OCR ya capturó en mayúscula).
+function capitalizeLabel(s) {
+  const l = String(s||'');
+  if (!l) return l;
+  const i = l.search(/\p{L}/u);
+  if (i === -1) return l;
+  return l.slice(0, i) + l.charAt(i).toUpperCase() + l.slice(i + 1);
+}
+
 function sugerirTipo(label) {
   const l = _norm(label);
 
@@ -539,7 +549,7 @@ function sugerirTipo(label) {
   if (/observacion|descripcion|comentario|nota\b|detalle|justificacion|especificacion|aclaracion|conclusion|resultado|diagnostico|plan de accion|recomendacion|hallazgo|medida correctiva/.test(l)) return 'textarea';
 
   // ── Separador ─────────────────────────────────────────────────
-  if (/^datos (de|del)|^informacion (de|del)|^seccion\b|^modulo\b|^bloque\b|^parte \d|^capitulo\b|^item\b|^criterio\b/.test(l)) return 'separador';
+  if (/^datos (de|del)|^informacion\b|^seccion\b|^modulo\b|^bloque\b|^parte \d|^capitulo\b|^item\b|^criterio\b/.test(l)) return 'separador';
 
   return 'texto';
 }
@@ -1150,6 +1160,11 @@ function analyzeText(rawText) {
     if (/^[-=_\.·•]{3,}$/.test(line)) { i++; continue; }
     if (line.length > 110) { i++; continue; }
 
+    // Leading "1." / "2)" numbering, before it gets stripped — used below to
+    // recognize checklist rows (a numbered item with no question mark/colon
+    // is almost always meant to be ticked off, not typed into).
+    const wasNumbered = /^\s*\d+[\.\)]\s+/.test(line);
+
     // Clean the line
     let clean = line
       .replace(/\s*[_\.]{3,}.*$/, '')     // trailing fill line
@@ -1178,7 +1193,7 @@ function analyzeText(rawText) {
       if (q.length > 2) clean = stripLeadingNoise(q.replace(/\s*[:：]\s*$/, '').trim());
       if (clean.length>2 && !seen.has(clean.toLowerCase())) {
         seen.add(clean.toLowerCase());
-        fields.push({etiqueta:clean, tipo:'si_no', _quality:labelQuality(clean)});
+        fields.push({etiqueta:capitalizeLabel(clean), tipo:'si_no', _quality:labelQuality(clean)});
       }
       i++; continue;
     }
@@ -1192,20 +1207,23 @@ function analyzeText(rawText) {
           seen.add(lbl.toLowerCase());
           const _t = sugerirTipo(lbl);
           const _o = sugerirOpciones(lbl);
-          fields.push({etiqueta: lbl, tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(lbl)});
+          fields.push({etiqueta: capitalizeLabel(lbl), tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(lbl)});
         }
       }
       i++; continue;
     }
 
     // Document/section titles masquerading as fields (e.g. "FORMATO DE INSPECCIÓN...",
-    // a heading line that merely happens to sit right above a real fill-in field).
+    // a heading line that merely happens to sit right above a real fill-in field;
+    // or a short Title Case heading like "Información General" that introduces a
+    // numbered checklist right below it).
     const rawEndsWithFieldMarker = /[:：?？]\s*$/.test(line);
     const isTitleKeyword = /^(formato|formulario|acta de|registro de|informe de|reporte de|procedimiento|instructivo|manual de|pol[ií]tica de|gu[ií]a de|lista de chequeo|lista de verificaci[oó]n)\b/.test(_norm(clean));
     const isAllCapsHeading = i===0 && clean.length>=18 && clean.split(/\s+/).length>=3 && /[A-ZÁÉÍÓÚÑ]/.test(clean) && !/[a-záéíóúñ]/.test(clean);
-    if (!rawEndsWithFieldMarker && (isTitleKeyword || isAllCapsHeading) && !seen.has(clean.toLowerCase())) {
+    const isHeadingBeforeList = clean.length<=45 && /^[A-ZÁÉÍÓÚÑ]/.test(clean) && /^\s*\d+[\.\)]\s+/.test(next);
+    if (!rawEndsWithFieldMarker && (isTitleKeyword || isAllCapsHeading || isHeadingBeforeList) && !seen.has(clean.toLowerCase())) {
       seen.add(clean.toLowerCase());
-      fields.push({etiqueta: clean, tipo: 'separador', _quality:'ok'});
+      fields.push({etiqueta: capitalizeLabel(clean), tipo: 'separador', _quality:'ok'});
       i++; continue;
     }
 
@@ -1219,9 +1237,12 @@ function analyzeText(rawText) {
 
     if (isLabel && !seen.has(clean.toLowerCase())) {
       seen.add(clean.toLowerCase());
-      const _t = sugerirTipo(clean);
+      let _t = sugerirTipo(clean);
+      // Fila numerada sin ":" ni "?" (p. ej. "1. Cédula de ciudadanía") → es un
+      // ítem de checklist para marcar, no una pregunta abierta para escribir.
+      if (_t === 'texto' && wasNumbered && !rawEndsWithFieldMarker) _t = 'si_no';
       const _o = sugerirOpciones(clean);
-      fields.push({etiqueta: clean, tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(clean)});
+      fields.push({etiqueta: capitalizeLabel(clean), tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(clean)});
     }
 
     i++;
