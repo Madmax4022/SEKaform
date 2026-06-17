@@ -378,8 +378,45 @@ function decodeSharedTemplate(encoded) {
   };
 }
 
+// ── Cloud sync ─────────────────────────────────────────────────────
+// Cloud rows use Postgres snake_case columns; local storage uses the
+// camelCase shape produced by digitalizador.html. Normalize on pull so
+// the rest of this file can keep reading t.actualizadoEn / s.plantillaId.
+function normalizePlantillaFromCloud(p) {
+  return {
+    id: p.id, nombre: p.nombre, descripcion: p.descripcion||'', codigo: p.codigo||'',
+    campos: p.campos||[], version: '1.0',
+    creadoEn: p.creado_en||p.creadoEn, actualizadoEn: p.actualizado_en||p.actualizadoEn
+  };
+}
+function normalizeEnvioFromCloud(e) {
+  return {
+    id: e.id, plantillaId: e.plantilla_id||e.plantillaId, plantillaNombre: e.plantilla_nombre||e.plantillaNombre,
+    estado: e.estado||'enviado', datos: e.datos||{},
+    creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn
+  };
+}
+async function syncFromCloud() {
+  try {
+    const [cloudP, cloudE] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios()]);
+    if (cloudP) {
+      const localP = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+      const normP = cloudP.map(normalizePlantillaFromCloud);
+      const cloudIds = new Set(normP.map(p=>p.id));
+      localStorage.setItem('skf_plantillas', JSON.stringify([...normP, ...localP.filter(p=>!cloudIds.has(p.id))]));
+    }
+    if (cloudE) {
+      const localE = JSON.parse(localStorage.getItem('skf_envios')||'[]');
+      const normE = cloudE.map(normalizeEnvioFromCloud);
+      const cloudIds = new Set(normE.map(e=>e.id));
+      localStorage.setItem('skf_envios', JSON.stringify([...normE, ...localE.filter(e=>!cloudIds.has(e.id))]));
+    }
+  } catch(e) { /* offline-first: keep local data as-is */ }
+}
+
 // ── Init ───────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await syncFromCloud();
   const params = new URLSearchParams(location.search);
   const sharedEncoded = params.get('shared');
   const urlTmpl = params.get('tmpl');
