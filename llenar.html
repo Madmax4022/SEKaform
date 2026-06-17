@@ -995,41 +995,51 @@ function saveDraft() {
 
 // ── Submit ─────────────────────────────────────────────────────────
 function submitForm() {
-  if (!validate()) {
-    toast('Completa los campos requeridos','er');
-    // Scroll to first error
-    const first=document.querySelector('.has-error');
-    if (first) first.scrollIntoView({behavior:'smooth',block:'center'});
-    return;
+  // Dismiss mobile keyboard first — some mobile browsers misplace fixed-position
+  // elements (the footer/buttons) while the keyboard is open, causing taps near
+  // the bottom of the screen to miss their target.
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+
+  try {
+    if (!validate()) {
+      toast('Completa los campos requeridos','er');
+      // Scroll to first error
+      const first=document.querySelector('.has-error');
+      if (first) first.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+
+    const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
+    const numero = envios.filter(e=>e.plantillaId===activeTmpl.id).reduce((max,e)=>Math.max(max,e.numero||0),0) + 1;
+
+    const envio = {
+      id: `env_${Date.now()}`,
+      numero,
+      plantillaId: activeTmpl.id,
+      plantillaNombre: activeTmpl.nombre,
+      estado: 'enviado',
+      datos: {...submission},
+      creadoEn: new Date().toISOString(),
+      enviadoEn: new Date().toISOString()
+    };
+
+    envios.push(envio);
+    localStorage.setItem('skf_envios',JSON.stringify(envios));
+    // Non-blocking cloud sync
+    sbSyncEnvio(envio).catch(()=>{});
+
+    // Remove draft if existed
+    if (draftId) {
+      const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]').filter(d=>d.id!==draftId);
+      localStorage.setItem('skf_borradores',JSON.stringify(drafts));
+    }
+
+    document.getElementById('successId').textContent = `Envío #${numero}`;
+    document.getElementById('successModal').classList.remove('hidden');
+  } catch (e) {
+    console.error('[SEKaform] submitForm error:', e);
+    toast('No se pudo enviar: ' + e.message, 'er');
   }
-
-  const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
-  const numero = envios.filter(e=>e.plantillaId===activeTmpl.id).reduce((max,e)=>Math.max(max,e.numero||0),0) + 1;
-
-  const envio = {
-    id: `env_${Date.now()}`,
-    numero,
-    plantillaId: activeTmpl.id,
-    plantillaNombre: activeTmpl.nombre,
-    estado: 'enviado',
-    datos: {...submission},
-    creadoEn: new Date().toISOString(),
-    enviadoEn: new Date().toISOString()
-  };
-
-  envios.push(envio);
-  localStorage.setItem('skf_envios',JSON.stringify(envios));
-  // Non-blocking cloud sync
-  sbSyncEnvio(envio).catch(()=>{});
-
-  // Remove draft if existed
-  if (draftId) {
-    const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]').filter(d=>d.id!==draftId);
-    localStorage.setItem('skf_borradores',JSON.stringify(drafts));
-  }
-
-  document.getElementById('successId').textContent = `Envío #${numero}`;
-  document.getElementById('successModal').classList.remove('hidden');
 }
 
 function fillAgain() {
