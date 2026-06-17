@@ -462,7 +462,7 @@ const TIPOS = [
   {k:'select',     ico:'▼',  lbl:'Desplegable',         desc:'Lista opciones',chip:'chip-smart'},
   {k:'radio',      ico:'◉',  lbl:'Opción única',        desc:'Radio buttons', chip:'chip-smart'},
   {k:'checkbox',   ico:'☑',  lbl:'Casilla de verificación',desc:'Marcar/Sin marcar',chip:'chip-smart'},
-  {k:'checkbox_multi',ico:'☑',lbl:'Múltiple opción',   desc:'Casillas',      chip:'chip-smart'},
+  {k:'checkbox_multi',ico:'📋',lbl:'Opción múltiple',  desc:'Varias casillas',chip:'chip-smart'},
   {g:'Multimedia'},
   {k:'firma',      ico:'✍',  lbl:'Firma digital',       desc:'Canvas táctil', chip:'chip-sig'},
   {k:'foto',       ico:'📷', lbl:'Fotografía',          desc:'Cámara/galería',chip:'chip-photo'},
@@ -731,7 +731,7 @@ async function analyze() {
       if (!raw.trim()) { toast('Pega el código HTML del formulario','er'); hideProcAndGoBack(); return; }
       setProc('Analizando HTML...','Extrayendo campos del formulario...',30);
       fields = parseHTMLFields(raw, null);
-      if (fields.length < 3) {
+      if (fields.length === 0) {
         setProc('Analizando HTML...','Complementando con análisis de texto...',60);
         const txtFields = analyzeText(raw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' '));
         const seen = new Set(fields.map(f=>f.etiqueta.toLowerCase()));
@@ -769,7 +769,7 @@ async function analyze() {
       const sigCount = tmpl.campos.filter(c=>c.tipo==='firma').length;
       const selCount = tmpl.campos.filter(c=>['select','radio','si_no','escala_1_5','checkbox_multi'].includes(c.tipo)).length;
       const badCount = tmpl.campos.filter(c=>c._quality==='review').length;
-      msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} selección`
+      msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} de selección`
         + (badCount ? ` · <span style="color:var(--warn)">⚠️ ${badCount} etiqueta${badCount!==1?'s':''} a revisar</span>` : '');
       sumEl.style.display='flex';
     } else {
@@ -905,7 +905,35 @@ function parseHTMLFields(html, sourceUrl) {
     'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="search"]), select, textarea'
   );
 
+  // Radio buttons (always) and checkboxes (when 2+ share a name) form a single
+  // logical field with one option per input — group them instead of emitting
+  // one broken field per option with no question and no choices.
+  const handledGroups = new Set();
+
   formEls.forEach(el => {
+    const type = (el.type||'text').toLowerCase();
+    const isRadio = el.tagName==='INPUT' && type==='radio';
+    const isGroupableCheckbox = el.tagName==='INPUT' && type==='checkbox' && el.name &&
+      doc.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(el.name)}"]`).length > 1;
+
+    if ((isRadio || isGroupableCheckbox) && el.name) {
+      const groupKey = (isRadio?'radio:':'chk:') + el.name;
+      if (handledGroups.has(groupKey)) return;
+      handledGroups.add(groupKey);
+
+      const members = Array.from(doc.querySelectorAll(`input[type="${type}"][name="${CSS.escape(el.name)}"]`));
+      const opts = members.map(m => getHTMLLabel(doc, m)).filter(o => o && o.length>0);
+      // Suppress each option's own label so the text-fallback pass below doesn't
+      // re-detect "Masculino", "Femenino"... as standalone ghost fields.
+      opts.forEach(o => seen.add(o.toLowerCase()));
+      const groupLabel = getGroupLabel(doc, members, el.name);
+      if (opts.length && groupLabel && !seen.has(groupLabel.toLowerCase())) {
+        seen.add(groupLabel.toLowerCase());
+        fields.push({etiqueta:groupLabel, tipo: isRadio?'radio':'checkbox_multi', opciones:opts});
+      }
+      return;
+    }
+
     const label = getHTMLLabel(doc, el);
     if (!label || label.length < 2 || seen.has(label.toLowerCase())) return;
     seen.add(label.toLowerCase());
@@ -919,12 +947,12 @@ function parseHTMLFields(html, sourceUrl) {
     } else if (el.tagName === 'TEXTAREA') {
       tipo = 'textarea';
     } else {
-      switch((el.type||'text').toLowerCase()) {
+      switch(type) {
         case 'email': tipo='email'; break;
         case 'tel': tipo='telefono'; break;
         case 'number': tipo='numero'; break;
         case 'date': case 'datetime-local': tipo='fecha'; break;
-        case 'checkbox': tipo='si_no'; break;
+        case 'checkbox': tipo='checkbox'; break;
         case 'radio': tipo='radio'; break;
         case 'file': tipo='foto'; break;
         default: tipo=sugerirTipo(label);
@@ -934,8 +962,10 @@ function parseHTMLFields(html, sourceUrl) {
     fields.push({etiqueta:label, tipo, opciones:opts&&opts.length?opts:undefined});
   });
 
-  // 2. If too few found, fallback to text analysis
-  if (fields.length < 3) {
+  // 2. No real form controls at all (e.g. plain webpage with no <input>/<select>) → fall
+  // back to text analysis. If real controls exist, trust the structured parse — re-mining
+  // the rendered text would just re-detect already-grouped option labels as ghost fields.
+  if (formEls.length === 0) {
     const text = (doc.body?.innerText || doc.body?.textContent || '').substring(0, 8000);
     const textFields = analyzeText(text);
     textFields.forEach(f => {
@@ -947,6 +977,24 @@ function parseHTMLFields(html, sourceUrl) {
   }
 
   return fields;
+}
+
+// Question text for a radio/checkbox group: prefer a wrapping <fieldset><legend>,
+// otherwise humanize the shared "name" attribute (e.g. "tipo_contrato" → "Tipo Contrato").
+function getGroupLabel(doc, members, name) {
+  for (const el of members) {
+    const fs = el.closest('fieldset');
+    const legend = fs && fs.querySelector('legend');
+    if (legend && legend.textContent.trim().length>1) {
+      return stripLeadingNoise(legend.textContent.trim().replace(/[*:：]+$/,''));
+    }
+  }
+  return humanizeName(name) || null;
+}
+
+// "tipo_contrato" / "tipoContrato" / "epp[]" → "Tipo Contrato" / "Tipo Contrato" / "Epp"
+function humanizeName(name) {
+  return String(name||'').replace(/\[\d*\]$/,'').replace(/[-_]/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/\b\w/g,c=>c.toUpperCase()).trim();
 }
 
 function getHTMLLabel(doc, el) {
@@ -982,7 +1030,7 @@ function getHTMLLabel(doc, el) {
   }
   // 6. name → human readable
   const name = el.getAttribute('name')||el.getAttribute('id')||'';
-  if (name.length>1) return name.replace(/[-_]/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/\b\w/g,c=>c.toUpperCase()).trim();
+  if (name.length>1) return humanizeName(name);
   return null;
 }
 
@@ -1088,11 +1136,15 @@ function analyzeText(rawText) {
 
     if (clean.length < 3 || clean.length > 100) { i++; continue; }
 
-    // Detect checkbox options in line (e.g. "☐ Sí ☐ No ☐ N/A")
+    // Detect checkbox options in line (e.g. "☐ Sí ☐ No ☐ N/A" or "¿Algo? ☐ Sí ☐ No")
     if ((line.match(/[☐□▢]/g)||[]).length >= 2 || (line.match(/\[\s*\]/g)||[]).length >= 2) {
-      // Extract the question part before the checkboxes
-      const q = line.replace(/[☐□▢\[\]]/g,'').replace(/\b(si|no|n\/a|yes|nope|aplica|cumple)\b/gi,'').trim();
-      if (q.length > 2) clean = q.replace(/\s*[:：]\s*$/, '').trim();
+      // Strip the checkbox glyphs and their Sí/No/N-A labels, keep only the question text
+      const q = line
+        .replace(/[☐□▢\[\]]/g,'')
+        .replace(/(?<![\p{L}\p{N}])(s[ií]|no|n\/?a|yes|nope|aplica|cumple)(?![\p{L}\p{N}])/giu,'')
+        .replace(/\s+/g,' ')
+        .trim();
+      if (q.length > 2) clean = stripLeadingNoise(q.replace(/\s*[:：]\s*$/, '').trim());
       if (clean.length>2 && !seen.has(clean.toLowerCase())) {
         seen.add(clean.toLowerCase());
         fields.push({etiqueta:clean, tipo:'si_no', _quality:labelQuality(clean)});
@@ -1112,6 +1164,17 @@ function analyzeText(rawText) {
           fields.push({etiqueta: lbl, tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(lbl)});
         }
       }
+      i++; continue;
+    }
+
+    // Document/section titles masquerading as fields (e.g. "FORMATO DE INSPECCIÓN...",
+    // a heading line that merely happens to sit right above a real fill-in field).
+    const rawEndsWithFieldMarker = /[:：?？]\s*$/.test(line);
+    const isTitleKeyword = /^(formato|formulario|acta de|registro de|informe de|reporte de|procedimiento|instructivo|manual de|pol[ií]tica de|gu[ií]a de|lista de chequeo|lista de verificaci[oó]n)\b/.test(_norm(clean));
+    const isAllCapsHeading = i===0 && clean.length>=18 && clean.split(/\s+/).length>=3 && /[A-ZÁÉÍÓÚÑ]/.test(clean) && !/[a-záéíóúñ]/.test(clean);
+    if (!rawEndsWithFieldMarker && (isTitleKeyword || isAllCapsHeading) && !seen.has(clean.toLowerCase())) {
+      seen.add(clean.toLowerCase());
+      fields.push({etiqueta: clean, tipo: 'separador', _quality:'ok'});
       i++; continue;
     }
 
