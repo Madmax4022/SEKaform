@@ -93,7 +93,12 @@
 </div>
 
 <script>
-const VERTICAL_LABELS = { sst: 'SST — Seguridad y Salud en el Trabajo', general: 'Plantillas generales' };
+const VERTICAL_LABELS = {
+  sst: 'SST — Seguridad y Salud en el Trabajo',
+  construccion: 'Construcción',
+  alimentos: 'Alimentos & Restaurantes',
+  general: 'Plantillas generales'
+};
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
@@ -127,6 +132,14 @@ function render() {
     document.getElementById('pgTag').textContent = 'Salud Ocupacional';
     document.getElementById('pgTitle').textContent = 'SST — Seguridad y Salud en el Trabajo';
     document.getElementById('pgSub').textContent = 'Plantillas preconfiguradas según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007 — listas para usar tal cual.';
+  } else if (active === 'construccion') {
+    document.getElementById('pgTag').textContent = 'Construcción';
+    document.getElementById('pgTitle').textContent = 'Construcción — Seguridad en obra y control de avance';
+    document.getElementById('pgSub').textContent = 'Permisos de trabajo en alturas, inspección de andamios, bitácora de obra y control de acceso — listas para usar tal cual.';
+  } else if (active === 'alimentos') {
+    document.getElementById('pgTag').textContent = 'Alimentos & Restaurantes';
+    document.getElementById('pgTitle').textContent = 'Alimentos — INVIMA, HACCP y BPM';
+    document.getElementById('pgSub').textContent = 'Control de temperatura, limpieza y desinfección, control de plagas y trazabilidad de lote — listas para usar tal cual.';
   } else {
     document.getElementById('pgTag').textContent = 'Repositorio de plantillas';
     document.getElementById('pgTitle').textContent = 'Formularios disponibles';
