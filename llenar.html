@@ -427,6 +427,7 @@ function show(id) {
 }
 
 function backToList() {
+  document.getElementById('successModal').classList.add('hidden');
   activeTmpl=null; submission={}; signatures={}; draftId=null;
   document.getElementById('topTitle').textContent='Mis formularios';
   document.getElementById('progFill').style.width='0%';
