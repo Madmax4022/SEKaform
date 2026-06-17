@@ -4,28 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Formularios — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
   <style>
-    :root {
-      --bg: #0f172a; --card: #1e293b; --inp: #0f172a;
-      --pri: #2563eb; --pri-h: #3b82f6;
-      --ok: #1abc9c; --err: #ef4444; --warn: #f59e0b;
-      --txt: #f8fafc; --mut: #94a3b8; --bor: #334155;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
-
-    /* ── top bar ── */
-    .topbar {
-      background: var(--card); border-bottom: 1px solid var(--bor);
-      padding: 0 20px; height: 52px;
-      display: flex; align-items: center; gap: 14px;
-      position: sticky; top: 0; z-index: 200;
-    }
-    #backBtn { color: var(--mut); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; cursor: pointer; background: none; border: none; font-family: inherit; }
-    #backBtn:hover { background: var(--bor); color: var(--txt); }
-    .topbar-title { font-size: 0.95rem; font-weight: 700; color: var(--txt); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
     /* ── progress ── */
     .prog-bar { height: 3px; background: var(--bor); }
     .prog-fill { height: 100%; background: var(--pri); transition: width .3s ease; width: 0%; }
@@ -206,19 +186,6 @@
     .form-footer .btn { flex: 1; justify-content: center; }
 
     /* buttons */
-    .btn {
-      padding: 12px 20px; border-radius: 9px; font-size: 0.9rem; font-weight: 700;
-      cursor: pointer; border: none; transition: all .2s; font-family: inherit;
-      display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
-    }
-    .btn:disabled { opacity: .4; cursor: not-allowed; }
-    .btn-pri { background: var(--pri); color: #fff; }
-    .btn-pri:hover:not(:disabled) { background: var(--pri-h); }
-    .btn-sec { background: var(--bor); color: var(--txt); }
-    .btn-sec:hover:not(:disabled) { background: #475569; }
-    .btn-ok { background: var(--ok); color: #fff; }
-    .btn-ok:hover:not(:disabled) { background: #17a589; }
-    .btn-sm { padding: 7px 14px; font-size: 0.78rem; }
     .btn-lnk { background: transparent; color: var(--pri); }
     .btn-lnk:hover { background: rgba(37,99,235,.08); }
 
@@ -273,7 +240,7 @@
 <body>
 
 <nav class="topbar">
-  <button id="backBtn" onclick="goBack()">← Atrás</button>
+  <button id="backBtn" class="topbar-back" onclick="goBack()">← Atrás</button>
   <span class="topbar-title" id="topTitle">Mis formularios</span>
   <div class="topbar-right">
     <button class="btn btn-sm btn-lnk" id="histBtn" onclick="showSubs()" style="display:none">Historial</button>

@@ -4,32 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
   <style>
-    :root {
-      --bg:#0f172a; --card:#1e293b; --card2:#243048;
-      --pri:#2563eb; --pri-h:#3b82f6; --pri-dim:rgba(37,99,235,.12);
-      --ok:#1abc9c; --ok-dim:rgba(26,188,156,.12);
-      --warn:#f59e0b; --warn-dim:rgba(245,158,11,.12);
-      --purple:#8b5cf6; --purple-dim:rgba(139,92,246,.12);
-      --err:#ef4444;
-      --txt:#f8fafc; --mut:#94a3b8; --bor:#334155;
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
-
-    /* topbar */
-    .topbar{background:var(--card);border-bottom:1px solid var(--bor);padding:0 24px;height:54px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
-    .topbar-logo{font-size:1rem;font-weight:900;letter-spacing:-.5px;}
-    .topbar-logo span{color:var(--pri);}
-    .topbar-sep{color:var(--bor);font-size:1.2rem;}
-    .topbar-section{font-size:.88rem;font-weight:700;color:var(--mut);}
-    .spacer{flex:1;}
-    .topbar a{color:var(--mut);text-decoration:none;font-size:.82rem;padding:6px 10px;border-radius:6px;transition:background .15s,color .15s;}
-    .topbar a:hover{background:var(--bor);color:var(--txt);}
-    #userBadge{font-size:.78rem;background:var(--ok-dim);border:1px solid rgba(26,188,156,.3);color:var(--ok);border-radius:20px;padding:4px 12px;white-space:nowrap;}
-    #logoutBtn{font-size:.78rem;cursor:pointer;background:none;border:none;color:var(--mut);padding:6px 10px;border-radius:6px;font-family:inherit;transition:background .15s;}
-    #logoutBtn:hover{background:var(--bor);color:var(--err);}
-
     /* layout */
     .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px;}
     .pg-h{font-size:1.5rem;font-weight:800;margin-bottom:4px;}
@@ -115,15 +91,19 @@
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-logo">SEK<span>a</span>form</div>
-  <span class="topbar-sep">/</span>
-  <span class="topbar-section">Dashboard</span>
-  <div class="spacer"></div>
-  <a href="index.html">← Inicio</a>
-  <span id="userBadge" style="display:none"></span>
-  <button id="logoutBtn" style="display:none" onclick="logout()">Salir</button>
-</div>
+<nav class="topbar">
+  <a href="index.html" class="topbar-logo">SEK<span>a</span>form</a>
+  <div class="topbar-nav">
+    <a href="plantillas.html" class="topbar-link">Plantillas</a>
+    <a href="digitalizador.html" class="topbar-link">Digitalizar</a>
+    <a href="llenar.html" class="topbar-link">Mis formularios</a>
+    <a href="dashboard.html" class="topbar-link active">Dashboard</a>
+  </div>
+  <div class="topbar-right">
+    <span id="userBadge" class="auth-chip" style="display:none"></span>
+    <button id="logoutBtn" class="auth-link" style="display:none" onclick="logout()">Salir</button>
+  </div>
+</nav>
 
 <div class="wrap">
   <h1 class="pg-h">Inteligencia de Negocios</h1>

@@ -4,26 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Digitalizador — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
   <style>
-    :root {
-      --bg:#0f172a; --card:#1e293b; --card2:#243048; --inp:#0a1020;
-      --pri:#2563eb; --pri-h:#3b82f6; --pri-dim:rgba(37,99,235,.13);
-      --ok:#1abc9c; --ok-dim:rgba(26,188,156,.13);
-      --err:#ef4444; --warn:#f59e0b;
-      --txt:#f8fafc; --mut:#94a3b8; --bor:#334155;
-      --purple:#8b5cf6; --purple-dim:rgba(139,92,246,.13);
-      --orange:#f97316; --orange-dim:rgba(249,115,22,.13);
-      --pink:#ec4899; --pink-dim:rgba(236,72,153,.13);
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
-
-    /* ─ topbar ─ */
-    .topbar{background:var(--card);border-bottom:1px solid var(--bor);padding:0 20px;height:52px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:300;}
-    .topbar a{color:var(--mut);text-decoration:none;font-size:.85rem;padding:6px 10px;border-radius:6px;transition:background .15s,color .15s;}
-    .topbar a:hover{background:var(--bor);color:var(--txt);}
-    .topbar-title{font-size:.95rem;font-weight:700;flex:1;}
-
     /* ─ wizard ─ */
     .wizard{background:var(--card);border-bottom:1px solid var(--bor);padding:0 20px;display:flex;overflow-x:auto;gap:0;}
     .wz{padding:12px 16px;font-size:.8rem;font-weight:600;color:var(--mut);border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:color .2s,border-color .2s;}
@@ -42,18 +24,8 @@
     .pg-h{font-size:1.45rem;font-weight:800;margin-bottom:5px;}
     .pg-sub{color:var(--mut);font-size:.88rem;line-height:1.55;margin-bottom:26px;}
     .row-act{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
-    .btn{padding:11px 22px;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;font-family:inherit;display:inline-flex;align-items:center;gap:7px;}
-    .btn:disabled{opacity:.4;cursor:not-allowed;}
-    .btn-pri{background:var(--pri);color:#fff;}
-    .btn-pri:hover:not(:disabled){background:var(--pri-h);}
-    .btn-sec{background:var(--bor);color:var(--txt);}
-    .btn-sec:hover:not(:disabled){background:#475569;}
-    .btn-ok{background:var(--ok);color:#fff;}
-    .btn-ok:hover:not(:disabled){background:#17a589;}
     .btn-ghost{background:transparent;color:var(--mut);}
     .btn-ghost:hover:not(:disabled){background:var(--bor);color:var(--txt);}
-    .btn-sm{padding:6px 13px;font-size:.78rem;}
-    .btn-full{width:100%;justify-content:center;}
     .fg{margin-bottom:16px;}
     .fg label{display:block;font-size:.75rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
     .fg input,.fg textarea,.fg select{width:100%;background:var(--card);border:1px solid var(--bor);border-radius:8px;color:var(--txt);font-size:.95rem;font-family:inherit;padding:11px 14px;outline:none;transition:border-color .2s;}
@@ -229,7 +201,7 @@
 <body>
 
 <nav class="topbar">
-  <a href="index.html">← Inicio</a>
+  <a href="index.html" class="topbar-back">← Inicio</a>
   <span class="topbar-title">Digitalizador Inteligente</span>
 </nav>
 

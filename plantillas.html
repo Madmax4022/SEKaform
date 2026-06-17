@@ -4,21 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catálogo de Plantillas — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
   <style>
-    :root {
-      --bg: #0f172a; --card: #1e293b;
-      --pri: #2563eb; --pri-h: #3b82f6;
-      --ok: #1abc9c;
-      --txt: #f8fafc; --mut: #94a3b8; --bor: #334155;
-    }
-    * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); margin: 0; padding: 0; }
     .wrapper { max-width: 1000px; margin: 0 auto; padding: 40px 20px 60px; }
-
-    nav.topbar { display:flex; align-items:center; gap:14px; padding:16px 20px; border-bottom:1px solid var(--bor); }
-    nav.topbar a { color: var(--mut); text-decoration:none; font-size:.9rem; }
-    nav.topbar a:hover { color: var(--txt); }
-    .topbar-title { font-weight:800; font-size:.95rem; }
 
     header.pg-hd { margin-bottom: 32px; }
     .pg-tag { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: var(--ok); margin-bottom: 6px; }
@@ -67,15 +55,20 @@
 
     .empty-state { text-align:center; padding: 60px 20px; color: var(--mut); }
 
-    footer { text-align: center; margin-top: 50px; font-size: 0.82rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 24px; }
+    footer { margin-top: 50px; }
   </style>
   <script src="form-library.js"></script>
 </head>
 <body>
 
 <nav class="topbar">
-  <a href="index.html">← Inicio</a>
-  <span class="topbar-title">Catálogo de Plantillas</span>
+  <a href="index.html" class="topbar-logo">SEK<span>a</span>form</a>
+  <div class="topbar-nav">
+    <a href="plantillas.html" class="topbar-link active">Plantillas</a>
+    <a href="digitalizador.html" class="topbar-link">Digitalizar</a>
+    <a href="llenar.html" class="topbar-link">Mis formularios</a>
+    <a href="dashboard.html" class="topbar-link">Dashboard</a>
+  </div>
 </nav>
 
 <div class="wrapper">

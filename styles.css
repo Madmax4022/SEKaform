@@ -1,0 +1,55 @@
+/* SEKaform — design system compartido (variables, reset, topbar/nav, botones, footer) */
+
+:root {
+  --bg:#0f172a; --card:#1e293b; --card2:#243048; --inp:#0a1020;
+  --pri:#2563eb; --pri-h:#3b82f6; --pri-dim:rgba(37,99,235,.13);
+  --ok:#1abc9c; --ok-dim:rgba(26,188,156,.13);
+  --err:#ef4444; --warn:#f59e0b; --warn-dim:rgba(245,158,11,.13);
+  --purple:#8b5cf6; --purple-dim:rgba(139,92,246,.13);
+  --orange:#f97316; --orange-dim:rgba(249,115,22,.13);
+  --pink:#ec4899; --pink-dim:rgba(236,72,153,.13);
+  --txt:#f8fafc; --mut:#94a3b8; --bor:#334155;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
+
+/* ── Topbar / navegación ─────────────────────────────────────────── */
+.topbar {
+  background: var(--card); border-bottom: 1px solid var(--bor);
+  padding: 0 20px; height: 52px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 200;
+}
+.topbar-logo { font-size: 1rem; font-weight: 900; letter-spacing: -.5px; color: var(--txt); text-decoration: none; flex-shrink: 0; }
+.topbar-logo span { color: var(--pri); }
+.topbar-nav { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; }
+.topbar-link { color: var(--mut); text-decoration: none; font-size: .85rem; font-weight: 600; padding: 7px 12px; border-radius: 6px; transition: background .15s, color .15s; white-space: nowrap; }
+.topbar-link:hover { background: var(--bor); color: var(--txt); }
+.topbar-link.active { color: var(--pri); background: var(--pri-dim); }
+.topbar-title { font-size: .95rem; font-weight: 700; color: var(--txt); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.topbar-back { color: var(--mut); text-decoration: none; font-size: .85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; cursor: pointer; background: none; border: none; font-family: inherit; }
+.topbar-back:hover { background: var(--bor); color: var(--txt); }
+
+.auth-chip { font-size: .75rem; background: var(--ok-dim); border: 1px solid rgba(26,188,156,.3); color: var(--ok); border-radius: 20px; padding: 4px 12px; white-space: nowrap; }
+.auth-link { font-size: .78rem; cursor: pointer; background: none; border: none; color: var(--mut); text-decoration: none; padding: 6px 10px; border-radius: 6px; font-family: inherit; transition: background .15s; }
+.auth-link:hover { background: var(--bor); color: var(--txt); }
+
+/* ── Botones ─────────────────────────────────────────────────────── */
+.btn {
+  padding: 12px 20px; border-radius: 9px; font-size: .9rem; font-weight: 700;
+  cursor: pointer; border: none; transition: all .2s; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-pri { background: var(--pri); color: #fff; }
+.btn-pri:hover:not(:disabled) { background: var(--pri-h); }
+.btn-sec { background: var(--bor); color: var(--txt); }
+.btn-sec:hover:not(:disabled) { background: #475569; }
+.btn-ok { background: var(--ok); color: #fff; }
+.btn-ok:hover:not(:disabled) { background: #17a589; }
+.btn-sm { padding: 7px 14px; font-size: .78rem; }
+.btn-full { width: 100%; justify-content: center; }
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+footer { text-align: center; font-size: .82rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 24px; }
