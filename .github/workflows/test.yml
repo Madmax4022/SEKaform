@@ -1,0 +1,20 @@
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  analyzeText:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Ejecutar pruebas de analyzeText
+        run: node tests/analyzeText.test.cjs
