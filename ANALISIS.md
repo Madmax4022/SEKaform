@@ -47,24 +47,17 @@ Cuando se detecta un campo de selección, el sistema sugiere opciones predefinid
 - Resultado de inspección → Conforme / No Conforme / Observación / N/A
 - Turno → Mañana / Tarde / Noche / Mixto
 
-### 2.4 Biblioteca de 14 formularios B2B
+### 2.4 Catálogo de 43 plantillas por vertical
 
-El sistema compara los campos detectados contra 14 plantillas predefinidas comunes en Colombia y sugiere coincidencias con campos faltantes:
+El sistema compara los campos detectados contra un catálogo predefinido (`form-library.js`, compartido entre `digitalizador.html` y el índice navegable `plantillas.html`) y sugiere coincidencias con campos faltantes. Las plantillas están organizadas por vertical, siguiendo el orden de priorización Tier 1 de `ESTRATEGIA.md`:
 
-1. Registro de Asistencia a Capacitación
-2. Lista de Verificación SST (Seguridad y Salud en el Trabajo)
-3. Acta de Reunión
-4. Orden de Trabajo / Servicio
-5. Evaluación de Desempeño
-6. Visita Comercial / CRM
-7. Solicitud de Compra
-8. Inspección Sanitaria
-9. Permiso de Trabajo
-10. Entrega / Recibo de Bienes
-11. Reporte de Incidente / Accidente
-12. Hoja de Vida
-13. Encuesta de Satisfacción
-14. Registro de Calibración de Equipos
+- **SST (10)**: Registro de Asistencia a Capacitación, Lista de Verificación SST, Permiso de Trabajo, Reporte de Incidente/Accidente, Matriz de Peligros (GTC-45), Acta COPASST, Entrega de EPP, Investigación de Accidente de Trabajo (Res. 1401/2007), Inspección de Botiquín y Brigada, Examen Médico Ocupacional
+- **Construcción (8)**: Control de Ingreso a Obra, Permiso de Trabajo en Alturas, Inspección de Andamios, Preoperacional de Maquinaria Pesada, Bitácora Diaria de Obra, Inspección de Seguridad en Obra, Acta de Entrega de Avance, Reporte de No Conformidad
+- **Alimentos (8)**: Inspección Sanitaria/Higiene, Control de Temperatura HACCP, Limpieza y Desinfección, Control de Plagas (MIP), Recepción de Materia Prima, Trazabilidad de Lote, Capacitación en Manipulación de Alimentos, No Conformidad INVIMA
+- **Salud — clínicas y laboratorios (8)**: Triage de Urgencias, Consentimiento Informado, Historia Clínica de Ingreso, Esterilización de Equipos, Manejo de Residuos Hospitalarios (PGIRASA), Control de Medicamentos de Control Especial, Lista de Verificación de Habilitación, Reporte de Evento Adverso
+- **General (9)**: Acta de Reunión, Orden de Trabajo/Servicio, Evaluación de Desempeño, Visita Comercial/CRM, Solicitud de Compra, Entrega/Recibo de Bienes, Hoja de Vida, Encuesta de Satisfacción, Registro de Calibración de Equipos
+
+Próximo vertical en el roadmap: Transporte & Logística (Tier 2).
 
 ### 2.5 Control de calidad OCR
 

@@ -418,4 +418,96 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Fecha límite de cierre',tipo:'fecha'},
     {etiqueta:'Evidencia fotográfica',tipo:'foto'},{etiqueta:'Firma del responsable de calidad',tipo:'firma'},
   ]},
+
+  // ── Salud Verticales (clínicas, IPS, laboratorios) ────────────
+  {id:'triage_urgencias',vertical:'salud',nombre:'Triage de Urgencias',
+   keywords:['triage','urgencias','clasificacion','prioridad','paciente','signos vitales','motivo de consulta'],
+   campos_clave:[
+    {etiqueta:'Nombre del paciente',tipo:'texto'},{etiqueta:'Documento de identidad',tipo:'numero'},
+    {etiqueta:'Fecha de ingreso',tipo:'fecha_auto'},{etiqueta:'Hora de ingreso',tipo:'hora_auto'},
+    {etiqueta:'Motivo de consulta',tipo:'textarea'},
+    {etiqueta:'Presión arterial',tipo:'texto'},{etiqueta:'Frecuencia cardíaca',tipo:'numero'},
+    {etiqueta:'Frecuencia respiratoria',tipo:'numero'},{etiqueta:'Temperatura (°C)',tipo:'numero'},
+    {etiqueta:'Saturación de oxígeno (%)',tipo:'numero'},
+    {etiqueta:'Nivel de triage',tipo:'select',opciones:['I - Resucitación','II - Emergencia','III - Urgencia','IV - Urgencia menor','V - No urgencia']},
+    {etiqueta:'Profesional que clasifica',tipo:'texto'},{etiqueta:'Firma del profesional',tipo:'firma'},
+  ]},
+
+  {id:'consentimiento_informado',vertical:'salud',nombre:'Consentimiento Informado',
+   keywords:['consentimiento informado','procedimiento','riesgos','autorizacion','paciente','representante legal'],
+   campos_clave:[
+    {etiqueta:'Nombre del paciente',tipo:'texto'},{etiqueta:'Documento de identidad',tipo:'numero'},
+    {etiqueta:'Procedimiento a realizar',tipo:'texto'},{etiqueta:'Médico tratante',tipo:'texto'},
+    {etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'¿Riesgos explicados al paciente?',tipo:'si_no'},
+    {etiqueta:'¿Paciente autoriza el procedimiento?',tipo:'si_no'},
+    {etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Firma del paciente / representante',tipo:'firma'},{etiqueta:'Firma del médico',tipo:'firma'},
+  ]},
+
+  {id:'historia_clinica_ingreso',vertical:'salud',nombre:'Historia Clínica — Ingreso',
+   keywords:['historia clinica','ingreso','antecedentes','anamnesis','examen fisico','diagnostico'],
+   campos_clave:[
+    {etiqueta:'Nombre del paciente',tipo:'texto'},{etiqueta:'Documento de identidad',tipo:'numero'},
+    {etiqueta:'Fecha de ingreso',tipo:'fecha_auto'},{etiqueta:'Edad',tipo:'numero'},
+    {etiqueta:'Motivo de consulta',tipo:'textarea'},{etiqueta:'Antecedentes personales',tipo:'textarea'},
+    {etiqueta:'Antecedentes familiares',tipo:'textarea'},{etiqueta:'Examen físico',tipo:'textarea'},
+    {etiqueta:'Diagnóstico',tipo:'textarea'},{etiqueta:'Plan de manejo',tipo:'textarea'},
+    {etiqueta:'Médico responsable',tipo:'texto'},{etiqueta:'Firma del médico',tipo:'firma'},
+  ]},
+
+  {id:'esterilizacion_equipos',vertical:'salud',nombre:'Control de Esterilización de Equipos e Instrumental',
+   keywords:['esterilizacion','autoclave','instrumental','indicador biologico','indicador quimico','lote de esterilizacion'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Equipo / Autoclave',tipo:'texto'},
+    {etiqueta:'Número de lote',tipo:'texto'},
+    {etiqueta:'Tipo de carga',tipo:'select',opciones:['Instrumental quirúrgico','Textiles','Material de curación','Otro']},
+    {etiqueta:'Temperatura alcanzada (°C)',tipo:'numero'},{etiqueta:'Tiempo de exposición (min)',tipo:'numero'},
+    {etiqueta:'¿Indicador químico correcto?',tipo:'si_no'},{etiqueta:'¿Indicador biológico correcto?',tipo:'si_no'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'manejo_residuos_hospitalarios',vertical:'salud',nombre:'Manejo de Residuos Hospitalarios (PGIRASA)',
+   keywords:['residuos hospitalarios','pgirasa','peligrosos','cortopunzante','anatomopatologico','recoleccion','segregacion'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},
+    {etiqueta:'Área generadora',tipo:'select',opciones:['Urgencias','Hospitalización','Cirugía','Laboratorio','Consulta externa','Otro']},
+    {etiqueta:'Tipo de residuo',tipo:'select',opciones:['Biosanitario','Cortopunzante','Anatomopatológico','Químico','Ordinario']},
+    {etiqueta:'Cantidad (kg)',tipo:'numero'},
+    {etiqueta:'¿Segregación correcta en la fuente?',tipo:'si_no'},{etiqueta:'¿Rotulado conforme a la norma?',tipo:'si_no'},
+    {etiqueta:'Responsable de recolección',tipo:'texto'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'control_medicamentos',vertical:'salud',nombre:'Control de Medicamentos de Control Especial',
+   keywords:['medicamentos','control especial','psicotropico','estupefaciente','custodia','farmacia','kardex'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Medicamento',tipo:'texto'},{etiqueta:'Lote',tipo:'texto'},
+    {etiqueta:'Cantidad en existencia',tipo:'numero'},{etiqueta:'Cantidad dispensada',tipo:'numero'},
+    {etiqueta:'Paciente / Servicio destino',tipo:'texto'},{etiqueta:'Responsable de farmacia',tipo:'texto'},
+    {etiqueta:'Firma de quien dispensa',tipo:'firma'},{etiqueta:'Firma de quien recibe',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_habilitacion',vertical:'salud',nombre:'Lista de Verificación de Habilitación de Servicios de Salud',
+   keywords:['habilitacion','estandares','infraestructura','dotacion','autoevaluacion','servicio de salud','calidad'],
+   campos_clave:[
+    {etiqueta:'Servicio evaluado',tipo:'texto'},{etiqueta:'Fecha de autoevaluación',tipo:'fecha_auto'},
+    {etiqueta:'Estándar de infraestructura',tipo:'select',opciones:['Cumple','No cumple','Cumple parcialmente']},
+    {etiqueta:'Estándar de dotación',tipo:'select',opciones:['Cumple','No cumple','Cumple parcialmente']},
+    {etiqueta:'Estándar de procesos prioritarios',tipo:'select',opciones:['Cumple','No cumple','Cumple parcialmente']},
+    {etiqueta:'Estándar de historia clínica',tipo:'select',opciones:['Cumple','No cumple','Cumple parcialmente']},
+    {etiqueta:'Hallazgos',tipo:'textarea'},{etiqueta:'Plan de mejoramiento',tipo:'textarea'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'reporte_evento_adverso',vertical:'salud',nombre:'Reporte de Evento Adverso / Seguridad del Paciente',
+   keywords:['evento adverso','seguridad del paciente','incidente','near miss','analisis causa raiz','centinela'],
+   campos_clave:[
+    {etiqueta:'Fecha del evento',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
+    {etiqueta:'Servicio',tipo:'select',opciones:['Urgencias','Hospitalización','Cirugía','UCI','Consulta externa','Otro']},
+    {etiqueta:'Tipo de evento',tipo:'select',opciones:['Evento adverso','Incidente (near miss)','Evento centinela']},
+    {etiqueta:'Descripción del evento',tipo:'textarea'},{etiqueta:'¿Se notificó a la familia?',tipo:'si_no'},
+    {etiqueta:'Acción inmediata tomada',tipo:'textarea'},{etiqueta:'Responsable del análisis',tipo:'texto'},
+    {etiqueta:'Firma',tipo:'firma'},
+  ]},
 ];

@@ -97,6 +97,7 @@ const VERTICAL_LABELS = {
   sst: 'SST — Seguridad y Salud en el Trabajo',
   construccion: 'Construcción',
   alimentos: 'Alimentos & Restaurantes',
+  salud: 'Salud — Clínicas & Laboratorios',
   general: 'Plantillas generales'
 };
 
@@ -140,6 +141,10 @@ function render() {
     document.getElementById('pgTag').textContent = 'Alimentos & Restaurantes';
     document.getElementById('pgTitle').textContent = 'Alimentos — INVIMA, HACCP y BPM';
     document.getElementById('pgSub').textContent = 'Control de temperatura, limpieza y desinfección, control de plagas y trazabilidad de lote — listas para usar tal cual.';
+  } else if (active === 'salud') {
+    document.getElementById('pgTag').textContent = 'Salud';
+    document.getElementById('pgTitle').textContent = 'Salud — Clínicas y Laboratorios';
+    document.getElementById('pgSub').textContent = 'Triage, consentimiento informado, esterilización, manejo de residuos hospitalarios y seguridad del paciente — listas para usar tal cual.';
   } else {
     document.getElementById('pgTag').textContent = 'Repositorio de plantillas';
     document.getElementById('pgTitle').textContent = 'Formularios disponibles';
