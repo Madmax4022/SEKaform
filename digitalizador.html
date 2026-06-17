@@ -114,6 +114,16 @@
     .chip-photo{color:var(--orange);border-color:var(--orange);background:var(--orange-dim);}
     .chip-sep{color:var(--ok);border-color:var(--ok);background:var(--ok-dim);}
 
+    /* starter fields */
+    .starter-box{background:var(--card);border:1px solid var(--bor);border-radius:9px;padding:14px 16px;margin-top:14px;}
+    .starter-box-h{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+    .starter-box-h strong{font-size:.86rem;}
+    .starter-hint{font-size:.74rem;color:var(--mut);}
+    .starter-grid{display:flex;flex-wrap:wrap;gap:8px;}
+    .starter-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid var(--bor);border-radius:20px;font-size:.8rem;cursor:pointer;user-select:none;transition:border-color .15s,background .15s,color .15s;}
+    .starter-chip input{accent-color:var(--pri);cursor:pointer;margin:0;}
+    .starter-chip:has(input:checked){border-color:var(--pri);background:var(--pri-dim);color:var(--pri);}
+
     .sugg-req{font-size:.68rem;color:var(--err);font-weight:800;flex-shrink:0;}
     .fi-btn{width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--mut);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;}
     .fi-btn:hover{background:var(--bor);color:var(--txt);}
@@ -340,6 +350,14 @@
       </div>
     </div>
 
+    <div class="starter-box">
+      <div class="starter-box-h">
+        <strong>🚀 Campos base</strong>
+        <span class="starter-hint">Ya incluidos para no empezar de cero — desmarca los que no necesites</span>
+      </div>
+      <div class="starter-grid" id="starterGrid"></div>
+    </div>
+
     <div class="row-act">
       <button class="btn btn-pri" id="btnAnalyze" onclick="analyze()">⚡ Analizar y digitalizar →</button>
     </div>
@@ -471,6 +489,37 @@ const TIPOS = [
   {k:'separador',  ico:'—',  lbl:'Separador / Título',  desc:'Encabezado',    chip:'chip-sep'},
 ];
 const TIPO_MAP = Object.fromEntries(TIPOS.filter(t=>t.k).map(t=>[t.k,t]));
+
+// Set base que se ofrece en la página 1 para no empezar cada formulario
+// desde cero — se suma a lo que detecte la fuente elegida (si hay alguna).
+const STARTER_FIELDS = [
+  {etiqueta:'Fecha',             tipo:'fecha_auto', on:true},
+  {etiqueta:'Hora',              tipo:'hora_auto',   on:true},
+  {etiqueta:'Nombre completo',   tipo:'texto',       on:true},
+  {etiqueta:'Cargo / Área',      tipo:'texto',       on:false},
+  {etiqueta:'Observaciones',     tipo:'textarea',    on:true},
+  {etiqueta:'Firma',             tipo:'firma',       on:true},
+  {etiqueta:'Fotografía',        tipo:'foto',        on:false},
+  {etiqueta:'Ubicación',         tipo:'ubicacion',   on:false},
+];
+
+function renderStarterGrid() {
+  const el = document.getElementById('starterGrid');
+  if (!el) return;
+  el.innerHTML = STARTER_FIELDS.map((f,idx) => {
+    const t = TIPO_MAP[f.tipo];
+    return `<label class="starter-chip">
+      <input type="checkbox" data-idx="${idx}" ${f.on?'checked':''}>
+      <span>${t?t.ico+' ':''}${f.etiqueta}</span>
+    </label>`;
+  }).join('');
+}
+
+function getCheckedStarterFields() {
+  return Array.from(document.querySelectorAll('#starterGrid input:checked'))
+    .map(inp => STARTER_FIELDS[+inp.dataset.idx])
+    .map(f => ({etiqueta: f.etiqueta, tipo: f.tipo}));
+}
 
 // ══════════════════════════════════════════════════════════════════
 // SMART TYPE DETECTION
@@ -764,9 +813,16 @@ async function analyze() {
       await sleep(400);
     } else { // manual
       const raw = document.getElementById('bulkMan').value;
-      if (!raw.trim()) { toast('Escribe los campos del formulario','er'); hideProcAndGoBack(); return; }
-      fields = analyzeText(raw);
+      const hayBase = getCheckedStarterFields().length > 0;
+      if (!raw.trim() && !hayBase) { toast('Escribe los campos del formulario','er'); hideProcAndGoBack(); return; }
+      fields = raw.trim() ? analyzeText(raw) : [];
     }
+
+    // Campos base seleccionados en la página 1 (si no vienen ya detectados
+    // de la fuente, por etiqueta) van primero, como punto de partida.
+    const seenLbl = new Set(fields.map(f => f.etiqueta.toLowerCase()));
+    const starterToAdd = getCheckedStarterFields().filter(f => !seenLbl.has(f.etiqueta.toLowerCase()));
+    fields = [...starterToAdd, ...fields];
 
     detectedCount = fields.length;
     tmpl.campos = fields.map(f => ({
@@ -1307,7 +1363,7 @@ function analyzeText(rawText) {
 // PAGE NAVIGATION
 // ══════════════════════════════════════════════════════════════════
 function goPg(n) {
-  const pages = ['p1', null, 'p2', 'p3'];
+  const pages = ['p1', 'p1', 'p2', 'p3'];
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById(pages[n]).classList.add('on');
   document.querySelectorAll('.wz').forEach((el,i) => {
@@ -1677,6 +1733,7 @@ function loadPreset(presetId, editMode) {
 
 // Init
 renderSuggList();
+renderStarterGrid();
 (function initFromQuery() {
   const params = new URLSearchParams(location.search);
   const preset = params.get('preset');
