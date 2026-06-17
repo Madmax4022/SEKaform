@@ -50,13 +50,20 @@
       background: rgba(37,99,235,.12); color: #93c5fd; border: 1px solid rgba(37,99,235,.2);
     }
     .tfld-more { background: transparent; color: var(--mut); border-color: var(--bor); }
+    .tcard-ctas { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
     .tcard-cta {
-      margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
       background: var(--pri); color: #fff; padding: 10px 18px;
       border-radius: 8px; font-weight: 700; font-size: .85rem; text-decoration: none;
       transition: background .2s;
     }
     .tcard-cta:hover { background: var(--pri-h); }
+    .tcard-cta-sec {
+      background: transparent; color: var(--mut); border: 1px solid var(--bor);
+      padding: 9px 14px; border-radius: 8px; font-weight: 700; font-size: .85rem;
+      text-decoration: none; transition: all .2s;
+    }
+    .tcard-cta-sec:hover { color: var(--txt); border-color: var(--mut); }
 
     .empty-state { text-align:center; padding: 60px 20px; color: var(--mut); }
 
@@ -75,7 +82,7 @@
   <header class="pg-hd">
     <div class="pg-tag" id="pgTag">Repositorio de plantillas</div>
     <h1 class="pg-title" id="pgTitle">Formularios disponibles</h1>
-    <p class="pg-sub" id="pgSub">Elige una plantilla precargada para empezar a digitalizar de inmediato, o vuelve atrás y digitaliza tu propio documento desde cero.</p>
+    <p class="pg-sub" id="pgSub">Cada plantilla ya está lista para usar: elige una y empieza a llenarla de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.</p>
   </header>
 
   <div class="filters" id="filters"></div>
@@ -119,11 +126,11 @@ function render() {
   if (active === 'sst') {
     document.getElementById('pgTag').textContent = 'Salud Ocupacional';
     document.getElementById('pgTitle').textContent = 'SST — Seguridad y Salud en el Trabajo';
-    document.getElementById('pgSub').textContent = 'Plantillas preconfiguradas según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007. Elige una para cargarla directamente en el digitalizador.';
+    document.getElementById('pgSub').textContent = 'Plantillas preconfiguradas según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007 — listas para usar tal cual.';
   } else {
     document.getElementById('pgTag').textContent = 'Repositorio de plantillas';
     document.getElementById('pgTitle').textContent = 'Formularios disponibles';
-    document.getElementById('pgSub').textContent = 'Elige una plantilla precargada para empezar a digitalizar de inmediato, o vuelve atrás y digitaliza tu propio documento desde cero.';
+    document.getElementById('pgSub').textContent = 'Cada plantilla ya está lista para usar: elige una y empieza a llenarla de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.';
   }
 
   const grid = document.getElementById('grid');
@@ -142,7 +149,10 @@ function render() {
         ${fieldNames.map(f => `<span class="tfld">${esc(f)}</span>`).join('')}
         ${extra > 0 ? `<span class="tfld tfld-more">+${extra} más</span>` : ''}
       </div>
-      <a class="tcard-cta" href="digitalizador.html?preset=${encodeURIComponent(t.id)}">Usar esta plantilla →</a>
+      <div class="tcard-ctas">
+        <a class="tcard-cta" href="digitalizador.html?preset=${encodeURIComponent(t.id)}">Usar esta plantilla →</a>
+        <a class="tcard-cta-sec" href="digitalizador.html?preset=${encodeURIComponent(t.id)}&edit=1">✎ Personalizar</a>
+      </div>
     </div>`;
   }).join('');
 }
