@@ -364,7 +364,7 @@ function buildTable(envios, plantillas) {
     const d = raw ? new Date(raw).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '—';
     const estado = e.estado||'enviado';
     const nombre = e.plantilla_nombre||e.plantillaNombre||'—';
-    const id = (e.id||'').slice(-8);
+    const id = e.numero ? `#${e.numero}` : (e.id||'').slice(-8);
     const pId = e.plantilla_id||e.plantillaId||'';
     const datos = e.datos||{};
     const campoEntries = Object.entries(datos).filter(([,v])=>v!==null&&v!==undefined&&v!=='');
@@ -390,7 +390,7 @@ function buildTable(envios, plantillas) {
 
   document.getElementById('tableBody').innerHTML = `
     <table>
-      <thead><tr><th>Formulario</th><th>Fecha</th><th>Estado</th><th>ID</th></tr></thead>
+      <thead><tr><th>Formulario</th><th>Fecha</th><th>Estado</th><th>N°</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
@@ -420,7 +420,7 @@ function exportCSV() {
   });
   const unique = [...new Map(colKeys.map(k=>[k,k])).values()];
   const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
-  const header = ['Formulario','Fecha','Estado','ID',...unique.map(k=>colLabels[k])].map(esc).join(',');
+  const header = ['Formulario','Fecha','Estado','N°',...unique.map(k=>colLabels[k])].map(esc).join(',');
   const rows = envios.map(e => {
     const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
     const fecha = raw ? new Date(raw).toLocaleString('es-CO') : '';
@@ -433,7 +433,7 @@ function exportCSV() {
       if (typeof v==='string'&&v.startsWith('data:image')) return '[imagen]';
       return String(v??'');
     });
-    return [e.plantilla_nombre||e.plantillaNombre||'',fecha,e.estado||'enviado',(e.id||'').slice(-12),...vals].map(esc).join(',');
+    return [e.plantilla_nombre||e.plantillaNombre||'',fecha,e.estado||'enviado',e.numero||(e.id||'').slice(-12),...vals].map(esc).join(',');
   });
   const csv = [header,...rows].join('\r\n');
   const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});

@@ -47,11 +47,15 @@
     }
     .tmpl-card:hover { border-color: var(--pri); transform: translateY(-1px); }
     .tmpl-ico { font-size: 2rem; flex-shrink: 0; }
+    .tmpl-logo { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; border-radius: 6px; background: #fff; padding: 3px; }
     .tmpl-info { flex: 1; min-width: 0; }
     .tmpl-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tmpl-meta { color: var(--mut); font-size: 0.78rem; line-height: 1.5; }
     .tmpl-cod { color: var(--pri); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
     .tmpl-acts { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; flex-shrink: 0; align-items: flex-start; justify-content: flex-end; }
+    .btn-fav { background: transparent; border: 1px solid var(--bor); color: var(--mut); border-radius: 7px; padding: 5px 10px; font-size: 1rem; cursor: pointer; font-family: inherit; transition: all .15s; line-height: 1; }
+    .btn-fav:hover { border-color: #f59e0b; color: #f59e0b; }
+    .btn-fav.on { background: rgba(245,158,11,.12); border-color: #f59e0b; color: #f59e0b; }
     .btn-danger { background: transparent; border: 1px solid rgba(239,68,68,.35); color: var(--err); border-radius: 7px; padding: 6px 10px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
     .btn-danger:hover { background: rgba(239,68,68,.12); border-color: var(--err); }
     /* QR modal */
@@ -81,6 +85,8 @@
       border: 1px solid var(--bor); border-radius: 16px; padding: 20px 22px 18px;
       margin-bottom: 18px; border-left: 4px solid var(--pri);
     }
+    .form-logo { max-height: 56px; max-width: 160px; object-fit: contain; display: block; margin-bottom: 12px; border-radius: 6px; background: #fff; padding: 4px; }
+    .form-logo.hidden { display: none; }
     .form-header-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
     .form-cod { font-size: 0.68rem; font-weight: 800; color: var(--pri); text-transform: uppercase; letter-spacing: .8px; background: rgba(37,99,235,.13); padding: 3px 8px; border-radius: 4px; }
     .form-title-h { font-size: 1.35rem; font-weight: 800; margin-bottom: 5px; }
@@ -289,6 +295,7 @@
 <div class="view" id="vForm">
   <div class="form-wrap">
     <div class="form-header-card">
+      <img id="fLogo" class="form-logo hidden" alt="Logo">
       <div class="form-header-meta">
         <span class="form-cod" id="fCod"></span>
       </div>
@@ -385,13 +392,13 @@ function decodeSharedTemplate(encoded) {
 function normalizePlantillaFromCloud(p) {
   return {
     id: p.id, nombre: p.nombre, descripcion: p.descripcion||'', codigo: p.codigo||'',
-    campos: p.campos||[], version: '1.0',
+    campos: p.campos||[], version: '1.0', logo: p.logo||null, favorito: p.favorito||false,
     creadoEn: p.creado_en||p.creadoEn, actualizadoEn: p.actualizado_en||p.actualizadoEn
   };
 }
 function normalizeEnvioFromCloud(e) {
   return {
-    id: e.id, plantillaId: e.plantilla_id||e.plantillaId, plantillaNombre: e.plantilla_nombre||e.plantillaNombre,
+    id: e.id, numero: e.numero, plantillaId: e.plantilla_id||e.plantillaId, plantillaNombre: e.plantilla_nombre||e.plantillaNombre,
     estado: e.estado||'enviado', datos: e.datos||{},
     creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn
   };
@@ -521,18 +528,21 @@ function renderList() {
     </div>`;
     return;
   }
-  el.innerHTML = list.map(t => {
+  const sorted = [...list].sort((a,b) => (b.favorito?1:0) - (a.favorito?1:0));
+  el.innerHTML = sorted.map(t => {
     const subs = getSubsForTemplate(t.id);
     const cod = t.codigo ? `<div class="tmpl-cod">${t.codigo}</div>` : '';
     const d = t.actualizadoEn ? new Date(t.actualizadoEn).toLocaleDateString('es-CO') : '';
+    const ico = t.logo ? `<img src="${t.logo}" class="tmpl-logo" alt="">` : `<span class="tmpl-ico">📋</span>`;
     return `<div class="tmpl-card">
-      <span class="tmpl-ico">📋</span>
+      ${ico}
       <div class="tmpl-info">
         ${cod}
         <div class="tmpl-name">${t.nombre}</div>
         <div class="tmpl-meta">${t.campos.length} campos · ${subs} envío${subs!==1?'s':''} · ${d}</div>
       </div>
       <div class="tmpl-acts">
+        <button class="btn-fav ${t.favorito?'on':''}" onclick="toggleFavorito('${t.id}')" title="Marcar como favorito">${t.favorito?'★':'☆'}</button>
         <button class="btn btn-pri btn-sm" onclick="openTemplate('${t.id}')">▶ Llenar</button>
         <button class="btn btn-sec btn-sm" onclick="showQR('${t.id}')">📱 QR</button>
         <button class="btn btn-sec btn-sm" onclick="showSubs('${t.id}')">Historial</button>
@@ -540,6 +550,17 @@ function renderList() {
       </div>
     </div>`;
   }).join('');
+}
+
+function toggleFavorito(id) {
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const t = list.find(p=>p.id===id);
+  if (!t) return;
+  t.favorito = !t.favorito;
+  t.actualizadoEn = new Date().toISOString();
+  localStorage.setItem('skf_plantillas', JSON.stringify(list));
+  sbSyncPlantilla(t).catch(()=>{});
+  renderList();
 }
 
 function getSubsForTemplate(id) {
@@ -572,6 +593,9 @@ function openTemplate(id) {
   document.getElementById('fTitle').textContent = t.nombre;
   document.getElementById('fDesc').textContent = t.descripcion||'';
   document.getElementById('histBtn').style.display='block';
+  const fLogo = document.getElementById('fLogo');
+  if (t.logo) { fLogo.src = t.logo; fLogo.classList.remove('hidden'); }
+  else { fLogo.classList.add('hidden'); }
 
   renderFields(t.campos);
   show('vForm');
@@ -979,8 +1003,12 @@ function submitForm() {
     return;
   }
 
+  const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
+  const numero = envios.filter(e=>e.plantillaId===activeTmpl.id).reduce((max,e)=>Math.max(max,e.numero||0),0) + 1;
+
   const envio = {
     id: `env_${Date.now()}`,
+    numero,
     plantillaId: activeTmpl.id,
     plantillaNombre: activeTmpl.nombre,
     estado: 'enviado',
@@ -989,7 +1017,6 @@ function submitForm() {
     enviadoEn: new Date().toISOString()
   };
 
-  const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
   envios.push(envio);
   localStorage.setItem('skf_envios',JSON.stringify(envios));
   // Non-blocking cloud sync
@@ -1001,7 +1028,7 @@ function submitForm() {
     localStorage.setItem('skf_borradores',JSON.stringify(drafts));
   }
 
-  document.getElementById('successId').textContent = envio.id;
+  document.getElementById('successId').textContent = `Envío #${numero}`;
   document.getElementById('successModal').classList.remove('hidden');
 }
 

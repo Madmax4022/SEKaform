@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS plantillas (
   campos        JSONB NOT NULL DEFAULT '[]',
   codigo        TEXT,
   descripcion   TEXT,
+  logo          TEXT,
+  favorito      BOOLEAN NOT NULL DEFAULT false,
   creado_en     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -25,6 +27,7 @@ CREATE INDEX IF NOT EXISTS plantillas_user_idx ON plantillas (user_id, actualiza
 -- ── Envíos (form submissions) ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS envios (
   id               TEXT PRIMARY KEY,
+  numero           INTEGER,
   plantilla_id     TEXT REFERENCES plantillas(id) ON DELETE SET NULL,
   plantilla_nombre TEXT NOT NULL DEFAULT '',
   user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -42,3 +45,10 @@ CREATE POLICY "Usuarios ven sus propios envíos"
 
 CREATE INDEX IF NOT EXISTS envios_user_date_idx ON envios (user_id, enviado_en DESC);
 CREATE INDEX IF NOT EXISTS envios_plantilla_idx ON envios (plantilla_id);
+
+-- ── Migración para proyectos existentes ────────────────────────
+-- Si ya tenías estas tablas creadas antes de logo/favorito/numero,
+-- ejecuta también lo siguiente (no afecta instalaciones nuevas):
+ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS logo TEXT;
+ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS favorito BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE envios ADD COLUMN IF NOT EXISTS numero INTEGER;

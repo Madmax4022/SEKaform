@@ -65,6 +65,8 @@ async function sbSyncPlantilla(tmpl) {
       campos: tmpl.campos,
       codigo: tmpl.codigo || null,
       descripcion: tmpl.descripcion || null,
+      logo: tmpl.logo || null,
+      favorito: tmpl.favorito || false,
       creado_en: tmpl.creadoEn || new Date().toISOString(),
       actualizado_en: new Date().toISOString()
     };
@@ -92,6 +94,7 @@ async function sbSyncEnvio(envio) {
     if (!user) return;
     const payload = {
       id: envio.id,
+      numero: envio.numero || null,
       plantilla_id: envio.plantillaId || null,
       plantilla_nombre: envio.plantillaNombre || '',
       user_id: user.id,

@@ -87,6 +87,18 @@ Para formularios digitalizados desde imagen/PDF, el sistema analiza cada etiquet
 - Progreso de llenado en barra superior
 - Borrador automático
 
+### 2.7b Personalización: logo de empresa y formularios favoritos
+
+- En la vista previa del wizard (paso 3) se puede subir el logo de la empresa — se redimensiona automáticamente en el navegador (máx. 240px) y se guarda embebido como base64 junto a la plantilla (sin depender de almacenamiento externo).
+- El logo aparece en el encabezado del formulario al llenarlo y como miniatura en la lista "Mis formularios".
+- Cualquier plantilla puede marcarse como ⭐ favorita desde "Mis formularios"; las favoritas se ordenan siempre al inicio de la lista — es la base del "repositorio propio" de formularios de uso recurrente por usuario.
+
+### 2.7c Numeración correlativa por formulario
+
+- Cada envío recibe un número correlativo (`Envío #1`, `Envío #2`, ...) independiente por plantilla, calculado a partir del máximo número existente para esa plantilla.
+- El número se muestra en el modal de confirmación al enviar y en la columna "N°" de la tabla del dashboard (reemplazando el ID interno truncado).
+- Esto alimenta directamente la inteligencia de negocios: permite identificar de forma legible cuántas veces se ha usado un formulario y en qué secuencia.
+
 ### 2.8 Compartir vía QR
 
 Cada formulario puede compartirse vía código QR sin servidor. El template completo se codifica como JSON compactado en base64 dentro de la URL (`?shared=...`). Quien escanea el QR recibe el formulario completo en su dispositivo y puede llenarlo offline.
