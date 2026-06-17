@@ -510,4 +510,148 @@ const FORM_LIBRARY = [
     {etiqueta:'Acción inmediata tomada',tipo:'textarea'},{etiqueta:'Responsable del análisis',tipo:'texto'},
     {etiqueta:'Firma',tipo:'firma'},
   ]},
+
+  {id:'inspeccion_cuarto_electrico',vertical:'inmuebles',nombre:'Inspección de Cuarto Eléctrico y Tableros (NFPA 70E)',
+   keywords:['cuarto electrico','tablero','breaker','cortocircuito','arc flash','nfpa 70e','subestacion'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Ubicación / Tablero',tipo:'texto'},
+    {etiqueta:'¿Señalización de riesgo eléctrico visible?',tipo:'si_no'},{etiqueta:'¿Acceso libre y despejado?',tipo:'si_no'},
+    {etiqueta:'¿Tablero rotulado correctamente?',tipo:'si_no'},{etiqueta:'¿Sin signos de sobrecalentamiento u olor a quemado?',tipo:'si_no'},
+    {etiqueta:'¿Breakers en buen estado?',tipo:'si_no'},{etiqueta:'¿Conexiones a tierra correctas?',tipo:'si_no'},
+    {etiqueta:'¿Extintor cercano disponible?',tipo:'si_no'},{etiqueta:'Hallazgos',tipo:'textarea'},
+    {etiqueta:'Foto',tipo:'foto'},{etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_extintores',vertical:'inmuebles',nombre:'Inspección de Extintores (NFPA 10)',
+   keywords:['extintor','extintores','nfpa 10','recarga','presion extintor','sello de seguridad'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Ubicación del extintor',tipo:'texto'},
+    {etiqueta:'Tipo de extintor',tipo:'select',opciones:['ABC','CO2','Agente limpio','Agua','Espuma']},
+    {etiqueta:'¿Presión en rango correcto?',tipo:'si_no'},{etiqueta:'¿Sello de seguridad intacto?',tipo:'si_no'},
+    {etiqueta:'¿Señalización y acceso despejado?',tipo:'si_no'},{etiqueta:'¿Sin daños visibles en manguera o cilindro?',tipo:'si_no'},
+    {etiqueta:'Fecha de próxima recarga / vencimiento',tipo:'fecha'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_alarma_incendio',vertical:'inmuebles',nombre:'Inspección de Sistema de Detección y Alarma de Incendio (NFPA 72)',
+   keywords:['alarma de incendio','deteccion','nfpa 72','sensor de humo','panel de alarma','estacion manual'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Zona / Área evaluada',tipo:'texto'},
+    {etiqueta:'¿Panel de alarma sin fallas reportadas?',tipo:'si_no'},{etiqueta:'¿Detectores de humo sin obstrucción?',tipo:'si_no'},
+    {etiqueta:'¿Estaciones manuales accesibles?',tipo:'si_no'},{etiqueta:'¿Sirenas y luces estroboscópicas funcionan?',tipo:'si_no'},
+    {etiqueta:'¿Batería de respaldo en buen estado?',tipo:'si_no'},{etiqueta:'Hallazgos',tipo:'textarea'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_chimeneas_cocina',vertical:'inmuebles',nombre:'Inspección de Chimeneas y Campanas de Cocina Industrial (NFPA 96)',
+   keywords:['chimenea','campana extractora','cocina industrial','nfpa 96','grasa','ductos','extraccion'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Área / Cocina evaluada',tipo:'texto'},
+    {etiqueta:'¿Campana sin acumulación excesiva de grasa?',tipo:'si_no'},{etiqueta:'¿Filtros limpios y en buen estado?',tipo:'si_no'},
+    {etiqueta:'¿Ductos sin obstrucciones?',tipo:'si_no'},{etiqueta:'¿Sistema de extracción funciona correctamente?',tipo:'si_no'},
+    {etiqueta:'¿Sistema de supresión de incendios (si aplica) operativo?',tipo:'si_no'},
+    {etiqueta:'Fecha de última limpieza profunda',tipo:'fecha'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Foto',tipo:'foto'},{etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_bomba_incendio',vertical:'inmuebles',nombre:'Inspección de Bomba Contra Incendio (NFPA 20/25)',
+   keywords:['bomba contra incendio','nfpa 20','nfpa 25','presion de succion','presion de descarga','jockey pump'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Identificación de la bomba',tipo:'texto'},
+    {etiqueta:'Presión de succión (PSI)',tipo:'numero'},{etiqueta:'Presión de descarga (PSI)',tipo:'numero'},
+    {etiqueta:'¿Arranque automático correcto?',tipo:'si_no'},{etiqueta:'¿Bomba jockey opera correctamente?',tipo:'si_no'},
+    {etiqueta:'¿Sin fugas visibles?',tipo:'si_no'},{etiqueta:'¿Nivel de combustible/batería adecuado (si aplica)?',tipo:'si_no'},
+    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_gabinetes_mangueras',vertical:'inmuebles',nombre:'Inspección de Gabinetes y Mangueras Contra Incendio (NFPA 14)',
+   keywords:['gabinete contra incendio','manguera','nfpa 14','valvula de manguera','hidrante','siamesa'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Ubicación del gabinete',tipo:'texto'},
+    {etiqueta:'¿Gabinete accesible y sin obstrucciones?',tipo:'si_no'},{etiqueta:'¿Manguera en buen estado, sin grietas?',tipo:'si_no'},
+    {etiqueta:'¿Válvula opera sin fugas?',tipo:'si_no'},{etiqueta:'Presión en el gabinete (PSI)',tipo:'numero'},
+    {etiqueta:'¿Boquilla / pitón presente y funcional?',tipo:'si_no'},{etiqueta:'¿Señalización visible?',tipo:'si_no'},
+    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_rociadores',vertical:'inmuebles',nombre:'Inspección de Sistema de Rociadores Automáticos (NFPA 13)',
+   keywords:['rociadores','sprinklers','nfpa 13','valvula de control','red humeda','red seca'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Área / Zona evaluada',tipo:'texto'},
+    {etiqueta:'¿Válvulas de control abiertas y selladas?',tipo:'si_no'},{etiqueta:'¿Rociadores sin obstrucción ni daño visible?',tipo:'si_no'},
+    {etiqueta:'Presión del sistema (PSI)',tipo:'numero'},{etiqueta:'¿Manómetros en rango correcto?',tipo:'si_no'},
+    {etiqueta:'¿Sin fugas visibles en tuberías?',tipo:'si_no'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_bomba_agua',vertical:'inmuebles',nombre:'Inspección de Bomba de Agua / Sistema Hidroneumático',
+   keywords:['bomba de agua','hidroneumatico','presion de agua','tanque hidroneumatico','suministro de agua'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Identificación de la bomba',tipo:'texto'},
+    {etiqueta:'Presión del sistema (PSI)',tipo:'numero'},{etiqueta:'¿Arranque y parada automática correctos?',tipo:'si_no'},
+    {etiqueta:'¿Sin ruidos o vibraciones anormales?',tipo:'si_no'},{etiqueta:'¿Sin fugas visibles?',tipo:'si_no'},
+    {etiqueta:'Nivel del tanque de reserva (%)',tipo:'numero'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_planta_emergencia',vertical:'inmuebles',nombre:'Inspección de Planta Eléctrica de Emergencia',
+   keywords:['planta electrica','generador','emergencia','transferencia automatica','combustible','ats'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Identificación de la planta',tipo:'texto'},
+    {etiqueta:'Nivel de combustible (%)',tipo:'numero'},{etiqueta:'¿Arranque en prueba exitoso?',tipo:'si_no'},
+    {etiqueta:'¿Transferencia automática (ATS) funciona?',tipo:'si_no'},{etiqueta:'¿Niveles de aceite y refrigerante correctos?',tipo:'si_no'},
+    {etiqueta:'¿Sin fugas ni ruidos anormales?',tipo:'si_no'},{etiqueta:'Horas de funcionamiento acumuladas',tipo:'numero'},
+    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_ascensores',vertical:'inmuebles',nombre:'Inspección de Ascensores',
+   keywords:['ascensor','elevador','mantenimiento de ascensores','cabina','puertas de ascensor'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Identificación del ascensor',tipo:'texto'},
+    {etiqueta:'¿Puertas abren y cierran correctamente?',tipo:'si_no'},{etiqueta:'¿Botonera e indicadores funcionan?',tipo:'si_no'},
+    {etiqueta:'¿Sistema de comunicación / alarma de emergencia opera?',tipo:'si_no'},{etiqueta:'¿Iluminación de cabina adecuada?',tipo:'si_no'},
+    {etiqueta:'¿Nivelación correcta en cada piso?',tipo:'si_no'},{etiqueta:'¿Certificado de mantenimiento vigente?',tipo:'si_no'},
+    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'ronda_vigilancia',vertical:'inmuebles',nombre:'Ronda de Vigilancia y Seguridad Física',
+   keywords:['ronda','vigilancia','seguridad fisica','guarda','recorrido','novedad de seguridad'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de la ronda',tipo:'hora_auto'},
+    {etiqueta:'Ubicación / Punto de control',tipo:'ubicacion'},
+    {etiqueta:'¿Puertas y accesos asegurados?',tipo:'si_no'},{etiqueta:'¿Cámaras y sistema CCTV operativos?',tipo:'si_no'},
+    {etiqueta:'¿Iluminación exterior adecuada?',tipo:'si_no'},{etiqueta:'¿Novedades de seguridad?',tipo:'si_no'},
+    {etiqueta:'Descripción de novedad',tipo:'textarea'},{etiqueta:'Foto',tipo:'foto'},
+    {etiqueta:'Guarda responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'mantenimiento_hvac',vertical:'inmuebles',nombre:'Mantenimiento Preventivo de Aires Acondicionados (HVAC)',
+   keywords:['hvac','aire acondicionado','mantenimiento preventivo','filtros','refrigerante','unidad condensadora'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Identificación del equipo',tipo:'texto'},
+    {etiqueta:'Ubicación',tipo:'texto'},{etiqueta:'¿Filtros limpios o cambiados?',tipo:'si_no'},
+    {etiqueta:'¿Nivel de refrigerante adecuado?',tipo:'si_no'},{etiqueta:'¿Unidad condensadora sin obstrucciones?',tipo:'si_no'},
+    {etiqueta:'Temperatura de salida (°C)',tipo:'numero'},{etiqueta:'¿Sin ruidos ni vibraciones anormales?',tipo:'si_no'},
+    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Técnico responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'inspeccion_tanques_agua',vertical:'inmuebles',nombre:'Inspección de Tanques de Almacenamiento de Agua',
+   keywords:['tanque de agua','almacenamiento de agua','potable','lavado de tanque','nivel de agua'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Identificación del tanque',tipo:'texto'},
+    {etiqueta:'Nivel de agua (%)',tipo:'numero'},{etiqueta:'¿Tapa y sello en buen estado?',tipo:'si_no'},
+    {etiqueta:'¿Agua sin turbidez ni olor anormal?',tipo:'si_no'},{etiqueta:'¿Estructura sin grietas ni filtraciones?',tipo:'si_no'},
+    {etiqueta:'Fecha de último lavado',tipo:'fecha'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
+
+  {id:'aseo_areas_comunes',vertical:'inmuebles',nombre:'Checklist de Aseo y Limpieza de Áreas Comunes',
+   keywords:['aseo','limpieza','areas comunes','lobby','baños','pasillos','jardines'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
+    {etiqueta:'Área',tipo:'select',opciones:['Lobby / Recepción','Baños','Pasillos','Ascensores','Parqueadero','Zonas verdes','Otro']},
+    {etiqueta:'¿Pisos limpios y secos?',tipo:'si_no'},{etiqueta:'¿Baños abastecidos (jabón, papel)?',tipo:'si_no'},
+    {etiqueta:'¿Canecas vacías y sin desbordamiento?',tipo:'si_no'},{etiqueta:'¿Vidrios y superficies limpias?',tipo:'si_no'},
+    {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Responsable de aseo',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
+  ]},
 ];

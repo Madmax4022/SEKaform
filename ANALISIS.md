@@ -47,14 +47,15 @@ Cuando se detecta un campo de selección, el sistema sugiere opciones predefinid
 - Resultado de inspección → Conforme / No Conforme / Observación / N/A
 - Turno → Mañana / Tarde / Noche / Mixto
 
-### 2.4 Catálogo de 43 plantillas por vertical
+### 2.4 Catálogo de 57 plantillas por vertical
 
-El sistema compara los campos detectados contra un catálogo predefinido (`form-library.js`, compartido entre `digitalizador.html` y el índice navegable `plantillas.html`) y sugiere coincidencias con campos faltantes. Las plantillas están organizadas por vertical, siguiendo el orden de priorización Tier 1 de `ESTRATEGIA.md`:
+El sistema compara los campos detectados contra un catálogo predefinido (`form-library.js`, compartido entre `digitalizador.html` y el índice navegable `plantillas.html`) y sugiere coincidencias con campos faltantes. Las plantillas están organizadas por vertical, siguiendo el orden de priorización de `ESTRATEGIA.md`:
 
 - **SST (10)**: Registro de Asistencia a Capacitación, Lista de Verificación SST, Permiso de Trabajo, Reporte de Incidente/Accidente, Matriz de Peligros (GTC-45), Acta COPASST, Entrega de EPP, Investigación de Accidente de Trabajo (Res. 1401/2007), Inspección de Botiquín y Brigada, Examen Médico Ocupacional
 - **Construcción (8)**: Control de Ingreso a Obra, Permiso de Trabajo en Alturas, Inspección de Andamios, Preoperacional de Maquinaria Pesada, Bitácora Diaria de Obra, Inspección de Seguridad en Obra, Acta de Entrega de Avance, Reporte de No Conformidad
 - **Alimentos (8)**: Inspección Sanitaria/Higiene, Control de Temperatura HACCP, Limpieza y Desinfección, Control de Plagas (MIP), Recepción de Materia Prima, Trazabilidad de Lote, Capacitación en Manipulación de Alimentos, No Conformidad INVIMA
 - **Salud — clínicas y laboratorios (8)**: Triage de Urgencias, Consentimiento Informado, Historia Clínica de Ingreso, Esterilización de Equipos, Manejo de Residuos Hospitalarios (PGIRASA), Control de Medicamentos de Control Especial, Lista de Verificación de Habilitación, Reporte de Evento Adverso
+- **Inmuebles & Facilidades (14)**: Inspección de Cuarto Eléctrico y Tableros (NFPA 70E), Inspección de Extintores (NFPA 10), Sistema de Detección y Alarma de Incendio (NFPA 72), Chimeneas y Campanas de Cocina Industrial (NFPA 96), Bomba Contra Incendio (NFPA 20/25), Gabinetes y Mangueras Contra Incendio (NFPA 14), Sistema de Rociadores Automáticos (NFPA 13), Bomba de Agua / Sistema Hidroneumático, Planta Eléctrica de Emergencia, Inspección de Ascensores, Ronda de Vigilancia y Seguridad Física, Mantenimiento Preventivo de HVAC, Inspección de Tanques de Almacenamiento de Agua, Aseo y Limpieza de Áreas Comunes
 - **General (9)**: Acta de Reunión, Orden de Trabajo/Servicio, Evaluación de Desempeño, Visita Comercial/CRM, Solicitud de Compra, Entrega/Recibo de Bienes, Hoja de Vida, Encuesta de Satisfacción, Registro de Calibración de Equipos
 
 Próximo vertical en el roadmap: Transporte & Logística (Tier 2).

@@ -98,6 +98,7 @@ const VERTICAL_LABELS = {
   construccion: 'Construcción',
   alimentos: 'Alimentos & Restaurantes',
   salud: 'Salud — Clínicas & Laboratorios',
+  inmuebles: 'Inmuebles & Facilidades',
   general: 'Plantillas generales'
 };
 
@@ -145,6 +146,10 @@ function render() {
     document.getElementById('pgTag').textContent = 'Salud';
     document.getElementById('pgTitle').textContent = 'Salud — Clínicas y Laboratorios';
     document.getElementById('pgSub').textContent = 'Triage, consentimiento informado, esterilización, manejo de residuos hospitalarios y seguridad del paciente — listas para usar tal cual.';
+  } else if (active === 'inmuebles') {
+    document.getElementById('pgTag').textContent = 'Inmuebles & Facilidades';
+    document.getElementById('pgTitle').textContent = 'Inmuebles — Mantenimiento y seguridad de edificios';
+    document.getElementById('pgSub').textContent = 'Cuartos eléctricos, extintores, alarmas, bombas contra incendio, ascensores y aseo de áreas comunes — checklists alineados con NFPA, listos para usar tal cual.';
   } else {
     document.getElementById('pgTag').textContent = 'Repositorio de plantillas';
     document.getElementById('pgTitle').textContent = 'Formularios disponibles';
