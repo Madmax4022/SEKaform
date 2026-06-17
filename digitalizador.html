@@ -497,6 +497,22 @@ function capitalizeLabel(s) {
   return l.slice(0, i) + l.charAt(i).toUpperCase() + l.slice(i + 1);
 }
 
+// Evita que dos campos con el mismo nombre (p. ej. "Nombre:" repetido bajo
+// "Vendedor" y luego bajo "Comprador") se pisen entre sí: si ya existe esa
+// etiqueta y hay un contexto reciente (el encabezado corto más cercano sin
+// ":" ni "?") que los distinga, se agrega como sufijo. Sin contexto se
+// descarta el duplicado, igual que antes (devuelve null).
+function dedupeLabel(seen, label, context) {
+  const key = label.toLowerCase();
+  if (!seen.has(key)) { seen.add(key); return label; }
+  if (context && context.toLowerCase() !== key) {
+    const alt = `${label} (${context})`;
+    const altKey = alt.toLowerCase();
+    if (!seen.has(altKey)) { seen.add(altKey); return alt; }
+  }
+  return null;
+}
+
 function sugerirTipo(label) {
   const l = _norm(label);
 
@@ -599,6 +615,9 @@ function sugerirOpciones(label) {
   if (/^area\b|dependencia/.test(l)) {
     return ['Producción','Administración','Recursos Humanos','Calidad','Logística','Mantenimiento','SST','Otro'];
   }
+
+  // Estado civil (antes del genérico "estado" para no chocar con Activo/Inactivo)
+  if (/estado civil/.test(l)) return ['Soltero(a)','Casado(a)','Unión libre','Divorciado(a)','Viudo(a)','Otro'];
 
   // Estado
   if (/^estado\b|estado del/.test(l)) return ['Activo','Inactivo','Suspendido','Pendiente'];
@@ -1143,6 +1162,9 @@ function labelQuality(label) {
 function analyzeText(rawText) {
   const fields = [];
   const seen = new Set();
+  // Encabezado corto sin ":" ni "?" más reciente (p. ej. "Vendedor", "Comprador"),
+  // usado para distinguir campos repetidos como "Nombre" bajo cada uno.
+  let lastContext = '';
 
   const lines = rawText
     .replace(/\r\n/g,'\n').replace(/\r/g,'\n')
@@ -1164,6 +1186,7 @@ function analyzeText(rawText) {
     // recognize checklist rows (a numbered item with no question mark/colon
     // is almost always meant to be ticked off, not typed into).
     const wasNumbered = /^\s*\d+[\.\)]\s+/.test(line);
+    const rawEndsWithFieldMarker = /[:：?？]\s*$/.test(line);
 
     // Clean the line
     let clean = line
@@ -1178,23 +1201,46 @@ function analyzeText(rawText) {
 
     if (clean.length < 3 || clean.length > 100) { i++; continue; }
 
-    // Detect checkbox options in line (e.g. "☐ Sí ☐ No ☐ N/A" or "¿Algo? ☐ Sí ☐ No")
-    if ((line.match(/[☐□▢]/g)||[]).length >= 2 || (line.match(/\[\s*\]/g)||[]).length >= 2) {
-      // Strip the checkbox glyphs and only the Sí/No/N-A *option labels that sit
-      // right next to a glyph* — not every occurrence of those words in the line.
-      // Otherwise a real question like "¿Cumple con el rango permitido?" loses its
-      // verb "Cumple" just because it collides with the option-label word list.
-      const q = line
-        .replace(/[☐□▢]|\[\s*\]/g,' ')
-        .replace(/ \s*(s[ií]|no|n\/?a|yes|nope|aplica|cumple)(?![\p{L}\p{N}])/giu,'')
-        .replace(/ /g,'')
-        .replace(/\s+/g,' ')
-        .trim();
-      if (q.length > 2) clean = stripLeadingNoise(q.replace(/\s*[:：]\s*$/, '').trim());
-      if (clean.length>2 && !seen.has(clean.toLowerCase())) {
-        seen.add(clean.toLowerCase());
-        fields.push({etiqueta:capitalizeLabel(clean), tipo:'si_no', _quality:labelQuality(clean)});
+    // Detect inline radio/checkbox-style options on one line: "☐ Sí ☐ No",
+    // "○Masculino ○Femenino", "( ) Diabetes ( ) Hipertensión", or a question
+    // followed by its options "Vive con: ○Sus padres ○Familiares ○Amigos".
+    const glyphRe = /[☐□▢○]|\(\s*\)|\[\s*\]/g;
+    // Una sola "( )" vacía es una señal inequívoca de checkbox (a diferencia de
+    // "(opcional)", que trae texto dentro), así que con esa basta una sola vez.
+    if ((line.match(glyphRe)||[]).length >= 2 || /\(\s*\)/.test(line)) {
+      const rawChunks = line.split(glyphRe).map(s=>s.trim()).filter(s=>s.length>0);
+      let qLabel = '';
+      let optChunks = rawChunks;
+      if (rawChunks.length) {
+        const first = rawChunks[0];
+        const firstEndsLikeLabel = /[:：?？]\s*$/.test(first);
+        const firstIsKnownField = sugerirTipo(first) !== 'texto';
+        if (firstEndsLikeLabel || firstIsKnownField || (first.length>22 && /\s/.test(first))) {
+          qLabel = stripLeadingNoise(first.replace(/\s*[:：]\s*$/, '').trim());
+          optChunks = rawChunks.slice(1);
+        }
       }
+      optChunks = optChunks.map(o=>stripLeadingNoise(o)).filter(o=>o.length>1);
+      const SI_NO_RE = /^(s[ií]|no|n\/?a|yes|nope|aplica|cumple)\b/;
+      const allSiNo = optChunks.length>0 && optChunks.every(o => SI_NO_RE.test(_norm(o)));
+
+      if (qLabel) {
+        // Una sola pregunta con varias opciones (Sí/No, o una lista propia
+        // como Masculino/Femenino, Soltero/Casado, etc.)
+        const tipo = allSiNo ? 'si_no' : 'radio';
+        const opciones = allSiNo ? undefined : optChunks.map(capitalizeLabel);
+        const etiqueta = dedupeLabel(seen, capitalizeLabel(qLabel), lastContext);
+        if (etiqueta) fields.push({etiqueta, tipo, opciones, _quality:labelQuality(qLabel)});
+      } else if (!allSiNo) {
+        // Sin pregunta visible en la línea: cada opción es un ítem de
+        // checklist independiente para marcar (p. ej. "( ) Diabetes").
+        for (const o of optChunks) {
+          const etiqueta = dedupeLabel(seen, capitalizeLabel(o), lastContext);
+          if (etiqueta) fields.push({etiqueta, tipo:'si_no', _quality:labelQuality(o)});
+        }
+      }
+      // Si no hay pregunta y todas las opciones son Sí/No/N-A sueltas, es el
+      // resto de una pregunta ya capturada en la línea anterior → se ignora.
       i++; continue;
     }
 
@@ -1203,11 +1249,11 @@ function analyzeText(rawText) {
     if (multiMatches.length >= 2) {
       for (const m of multiMatches) {
         const lbl = stripLeadingNoise(m[1].trim().replace(/^\s*[\d]+[\.\)]\s+/,''));
-        if (lbl.length > 2 && !seen.has(lbl.toLowerCase())) {
-          seen.add(lbl.toLowerCase());
+        if (lbl.length > 2) {
           const _t = sugerirTipo(lbl);
           const _o = sugerirOpciones(lbl);
-          fields.push({etiqueta: capitalizeLabel(lbl), tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(lbl)});
+          const etiqueta = dedupeLabel(seen, capitalizeLabel(lbl), lastContext);
+          if (etiqueta) fields.push({etiqueta, tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(lbl)});
         }
       }
       i++; continue;
@@ -1217,7 +1263,6 @@ function analyzeText(rawText) {
     // a heading line that merely happens to sit right above a real fill-in field;
     // or a short Title Case heading like "Información General" that introduces a
     // numbered checklist right below it).
-    const rawEndsWithFieldMarker = /[:：?？]\s*$/.test(line);
     const isTitleKeyword = /^(formato|formulario|acta de|registro de|informe de|reporte de|procedimiento|instructivo|manual de|pol[ií]tica de|gu[ií]a de|lista de chequeo|lista de verificaci[oó]n)\b/.test(_norm(clean));
     const isAllCapsHeading = i===0 && clean.length>=18 && clean.split(/\s+/).length>=3 && /[A-ZÁÉÍÓÚÑ]/.test(clean) && !/[a-záéíóúñ]/.test(clean);
     const isHeadingBeforeList = clean.length<=45 && /^[A-ZÁÉÍÓÚÑ]/.test(clean) && /^\s*\d+[\.\)]\s+/.test(next);
@@ -1235,14 +1280,21 @@ function analyzeText(rawText) {
       line.endsWith('?') ||
       (clean.length < 55 && !/^\d{4}/.test(clean) && !/^[A-Z0-9]{20,}$/.test(clean));
 
-    if (isLabel && !seen.has(clean.toLowerCase())) {
-      seen.add(clean.toLowerCase());
+    if (isLabel) {
       let _t = sugerirTipo(clean);
       // Fila numerada sin ":" ni "?" (p. ej. "1. Cédula de ciudadanía") → es un
       // ítem de checklist para marcar, no una pregunta abierta para escribir.
       if (_t === 'texto' && wasNumbered && !rawEndsWithFieldMarker) _t = 'si_no';
       const _o = sugerirOpciones(clean);
-      fields.push({etiqueta: capitalizeLabel(clean), tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(clean)});
+      const baseLabel = capitalizeLabel(clean);
+      const etiqueta = dedupeLabel(seen, baseLabel, lastContext);
+      if (etiqueta) {
+        fields.push({etiqueta, tipo: _t, opciones: _o.length ? _o : undefined, _quality:labelQuality(clean)});
+        // Recuerda encabezados cortos sin ":" ni "?" (p. ej. "Vendedor") como
+        // contexto para distinguir campos repetidos más adelante (p. ej. dos
+        // veces "Nombre", una bajo "Vendedor" y otra bajo "Comprador").
+        if (!rawEndsWithFieldMarker && clean.length<=25) lastContext = baseLabel;
+      }
     }
 
     i++;
