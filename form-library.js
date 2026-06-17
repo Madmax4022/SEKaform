@@ -237,6 +237,27 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del responsable SST',tipo:'firma'},
   ]},
 
+  {id:'toma_5',vertical:'sst',nombre:'Toma 5 - Análisis Pre-Tarea de Trabajo de Alto Riesgo',
+   keywords:['toma 5','toma cinco','take five','pre tarea','pretarea','analisis de riesgo','altura','espacio confinado','trabajo en caliente','chispa','autorizacion de trabajo','permiso','checklist de seguridad'],
+   campos_clave:[
+    {etiqueta:'Área / lugar de trabajo',tipo:'texto'},{etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
+    {etiqueta:'Trabajador que ejecuta la tarea',tipo:'texto'},
+    {etiqueta:'Tipo de trabajo de alto riesgo',tipo:'select',opciones:['Trabajo en altura','Espacio confinado','Trabajo en caliente (chispa)','Trabajo eléctrico','Excavación','Izaje de cargas','Otro']},
+    {etiqueta:'PASO 1 — PARA: detente y piensa antes de actuar',tipo:'separador'},
+    {etiqueta:'¿Te detuviste a pensar en los riesgos de esta tarea antes de iniciar?',tipo:'si_no'},
+    {etiqueta:'PASO 2 — PIENSA: identifica los peligros',tipo:'separador'},
+    {etiqueta:'Peligros identificados',tipo:'checkbox_multi',opciones:['Caída de altura','Atmósfera peligrosa / espacio confinado','Energía eléctrica','Sustancias químicas','Maquinaria o equipos en movimiento','Chispa / fuente de ignición','Otro']},
+    {etiqueta:'PASO 3 — OBSERVA: verifica las condiciones del entorno',tipo:'separador'},
+    {etiqueta:'¿Se verificaron las condiciones del entorno antes de iniciar?',tipo:'si_no'},
+    {etiqueta:'Observaciones del entorno',tipo:'textarea'},
+    {etiqueta:'PASO 4 — EVALÚA Y DECIDE: define los controles necesarios',tipo:'separador'},
+    {etiqueta:'Controles y EPP requeridos',tipo:'checkbox_multi',opciones:['Arnés y línea de vida','Detector de gases','Permiso de trabajo en caliente','Bloqueo y etiquetado (LOTO)','Ventilación / extracción','Extintor disponible','Vigía / supervisor asignado']},
+    {etiqueta:'¿Cuenta con el permiso de trabajo correspondiente?',tipo:'si_no'},
+    {etiqueta:'PASO 5 — ACTÚA: autorización final',tipo:'separador'},
+    {etiqueta:'¿Autorizado para iniciar el trabajo?',tipo:'si_no'},
+    {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del supervisor que autoriza',tipo:'firma'},
+  ]},
+
   // ── Construcción Verticales (seguridad en obra + control de avance) ──
   {id:'control_acceso_obra',vertical:'construccion',nombre:'Control de Ingreso de Personal y Visitantes a Obra',
    keywords:['ingreso','acceso','obra','visitante','contratista','control de acceso','induccion','epp obligatorio'],
