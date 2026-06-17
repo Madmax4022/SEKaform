@@ -1176,10 +1176,14 @@ function analyzeText(rawText) {
 
     // Detect checkbox options in line (e.g. "☐ Sí ☐ No ☐ N/A" or "¿Algo? ☐ Sí ☐ No")
     if ((line.match(/[☐□▢]/g)||[]).length >= 2 || (line.match(/\[\s*\]/g)||[]).length >= 2) {
-      // Strip the checkbox glyphs and their Sí/No/N-A labels, keep only the question text
+      // Strip the checkbox glyphs and only the Sí/No/N-A *option labels that sit
+      // right next to a glyph* — not every occurrence of those words in the line.
+      // Otherwise a real question like "¿Cumple con el rango permitido?" loses its
+      // verb "Cumple" just because it collides with the option-label word list.
       const q = line
-        .replace(/[☐□▢\[\]]/g,'')
-        .replace(/(?<![\p{L}\p{N}])(s[ií]|no|n\/?a|yes|nope|aplica|cumple)(?![\p{L}\p{N}])/giu,'')
+        .replace(/[☐□▢]|\[\s*\]/g,' ')
+        .replace(/ \s*(s[ií]|no|n\/?a|yes|nope|aplica|cumple)(?![\p{L}\p{N}])/giu,'')
+        .replace(/ /g,'')
         .replace(/\s+/g,' ')
         .trim();
       if (q.length > 2) clean = stripLeadingNoise(q.replace(/\s*[:：]\s*$/, '').trim());
