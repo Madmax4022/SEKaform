@@ -22,14 +22,22 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 .topbar-logo { font-size: 1rem; font-weight: 900; letter-spacing: -.5px; color: var(--txt); text-decoration: none; flex-shrink: 0; }
 .topbar-logo span { color: var(--pri); }
-.topbar-nav { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; }
+.topbar-nav { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; }
 .topbar-link { color: var(--mut); text-decoration: none; font-size: .85rem; font-weight: 600; padding: 7px 12px; border-radius: 6px; transition: background .15s, color .15s; white-space: nowrap; }
 .topbar-link:hover { background: var(--bor); color: var(--txt); }
 .topbar-link.active { color: var(--pri); background: var(--pri-dim); }
-.topbar-title { font-size: .95rem; font-weight: 700; color: var(--txt); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-title { font-size: .95rem; font-weight: 700; color: var(--txt); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .topbar-back { color: var(--mut); text-decoration: none; font-size: .85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; cursor: pointer; background: none; border: none; font-family: inherit; }
 .topbar-back:hover { background: var(--bor); color: var(--txt); }
+
+/* En pantallas angostas (tablet/celular), el correo de la cuenta + "Salir"
+   ya no caben en la misma línea que el logo/menú sin encimarse — bajan a
+   su propia línea en vez de tapar los links de navegación. */
+@media (max-width: 760px) {
+  .topbar { flex-wrap: wrap; height: auto; padding: 10px 16px; row-gap: 6px; }
+  .topbar-right { flex-basis: 100%; justify-content: flex-end; }
+}
 
 .auth-chip { font-size: .75rem; background: var(--ok-dim); border: 1px solid rgba(26,188,156,.3); color: var(--ok); border-radius: 20px; padding: 4px 12px; white-space: nowrap; }
 .auth-link { font-size: .78rem; cursor: pointer; background: none; border: none; color: var(--mut); text-decoration: none; padding: 6px 10px; border-radius: 6px; font-family: inherit; transition: background .15s; }
