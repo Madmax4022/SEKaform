@@ -118,8 +118,13 @@ async function sbLoadPublicPlantilla(token) {
   try {
     const sb = await getSB();
     if (!sb || !token) return null;
+    // Columnas explícitas (no '*'): user_id y correo_notificacion son
+    // privados del dueño y no deben viajar a un visitante anónimo. La base
+    // de datos también revoca esas columnas a nivel de permisos (ver
+    // supabase-schema.sql) como segunda capa de defensa.
     const { data, error } = await sb.from('plantillas')
-      .select('*').eq('share_token', token).eq('publica', true).maybeSingle();
+      .select('id, nombre, campos, codigo, descripcion, logo, publica, share_token')
+      .eq('share_token', token).eq('publica', true).maybeSingle();
     if (error || !data) return null;
     return data;
   } catch { return null; }

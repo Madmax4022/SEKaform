@@ -53,6 +53,19 @@ CREATE POLICY "Anónimos ven plantillas públicas"
   TO anon
   USING (publica = true);
 
+-- Seguridad a nivel de columna: la policy de arriba solo filtra FILAS, no
+-- columnas — sin esto, cualquier visitante anónimo que abra un link/QR
+-- público podía leer también user_id (UUID del dueño) y
+-- correo_notificacion (su email privado) con un simple
+-- `select('*')` desde el cliente. PostgREST respeta automáticamente los
+-- privilegios a nivel de columna aunque el cliente pida "select=*", así que
+-- no hace falta tocar el JS: alcanza con revocar el SELECT de tabla
+-- completa que Supabase otorga por defecto y volver a otorgarlo solo para
+-- las columnas que un visitante anónimo realmente necesita para llenar el
+-- formulario.
+REVOKE SELECT ON plantillas FROM anon;
+GRANT SELECT (id, nombre, campos, codigo, descripcion, logo, publica, share_token) ON plantillas TO anon;
+
 CREATE INDEX IF NOT EXISTS plantillas_user_idx ON plantillas (user_id, actualizado_en DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS plantillas_share_token_idx ON plantillas (share_token) WHERE share_token IS NOT NULL;
 
@@ -121,6 +134,15 @@ BEGIN
     RAISE EXCEPTION 'plantilla_id inválido o sin dueño';
   END IF;
   NEW.user_id := dueno;
+  -- Un visitante anónimo manda creado_en/enviado_en desde su propio reloj
+  -- (sbSubmitPublicEnvio en supabase-config.js) — sin esto, cualquiera
+  -- podía falsificar la fecha/hora de un envío público (relevante para el
+  -- caso de uso de inspecciones/cumplimiento). Se ignora lo que mande el
+  -- cliente y se fuerza la hora real del servidor.
+  IF (select auth.role()) = 'anon' THEN
+    NEW.creado_en := NOW();
+    NEW.enviado_en := NOW();
+  END IF;
   -- Un visitante anónimo no tiene forma de leer los envíos previos (RLS se
   -- lo impide) para calcular el siguiente número, así que lo asignamos acá.
   IF NEW.numero IS NULL THEN
@@ -167,6 +189,17 @@ CREATE TRIGGER trg_envios_asignar_dueno
 CREATE EXTENSION IF NOT EXISTS pg_net;
 CREATE EXTENSION IF NOT EXISTS supabase_vault;
 
+-- Escapa entidades HTML básicas antes de meter texto de un envío (que puede
+-- venir de un visitante anónimo no confiable) dentro del cuerpo HTML del
+-- correo de notificación — sin esto alguien podía inyectar HTML/links de
+-- phishing en el correo que le llega al dueño del formulario.
+CREATE OR REPLACE FUNCTION skf_html_escape(txt TEXT)
+RETURNS TEXT
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT replace(replace(replace(replace(replace(
+    COALESCE(txt, ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;'), '''', '&#39;');
+$$;
+
 CREATE OR REPLACE FUNCTION envios_notificar_completado()
 RETURNS TRIGGER
 SECURITY DEFINER
@@ -207,7 +240,7 @@ BEGIN
       IF length(valor) > 200 OR valor LIKE 'data:%' THEN
         valor := '[contenido adjunto]';
       END IF;
-      resumen := resumen || '<p><strong>' || etiqueta || ':</strong> ' || valor || '</p>';
+      resumen := resumen || '<p><strong>' || skf_html_escape(etiqueta) || ':</strong> ' || skf_html_escape(valor) || '</p>';
     END IF;
   END LOOP;
 
@@ -221,7 +254,7 @@ BEGIN
       'from', 'SEKaform <onboarding@resend.dev>',
       'to', ARRAY[correo],
       'subject', 'Formulario completado: ' || COALESCE(nombre_plantilla, ''),
-      'html', '<h2>Formulario completado</h2><p><strong>' || COALESCE(nombre_plantilla, '') ||
+      'html', '<h2>Formulario completado</h2><p><strong>' || skf_html_escape(nombre_plantilla) ||
               '</strong> fue enviado el ' || to_char(NEW.enviado_en, 'DD/MM/YYYY HH24:MI') ||
               '.</p>' || resumen
     )
