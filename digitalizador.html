@@ -1852,8 +1852,12 @@ const _accountEmailReady = (async () => {
 // de la cuenta) — si no, un formulario tomado del catálogo precargado
 // quedaría sin esas opciones porque nunca pasa por ese paso.
 // Only with &edit=1 (the "Personalizar campos" link) does it open the wizard
-// at step 2 for review/editing.
-async function loadPreset(presetId, editMode) {
+// at step 2 for review/editing. Con &archive=1 (el "Agregar a mi
+// repositorio" de plantillas.html) se guarda igual que el flujo por
+// defecto, pero vuelve a la lista de Mis Formularios en vez de mandar
+// directo a llenarlo — para quien administra formularios pero no es quien
+// los llena, y solo quiere tenerlo listo en su repositorio.
+async function loadPreset(presetId, editMode, archiveOnly) {
   const t = FORM_LIBRARY.find(x => x.id === presetId);
   if (!t) return false;
   tmpl.nombre = t.nombre;
@@ -1875,7 +1879,10 @@ async function loadPreset(presetId, editMode) {
     await _accountEmailReady;
     tmpl.correoNotificacion = _accountEmail || '';
     save();
-    if (tmpl.id) { window.location.href = `llenar.html?tmpl=${tmpl.id}`; return true; }
+    if (tmpl.id) {
+      window.location.href = archiveOnly ? 'llenar.html?archived=1' : `llenar.html?tmpl=${tmpl.id}`;
+      return true;
+    }
   }
 
   renderSuggList();
@@ -1891,7 +1898,7 @@ ensureCodigo();
 (function initFromQuery() {
   const params = new URLSearchParams(location.search);
   const preset = params.get('preset');
-  if (preset) loadPreset(preset, params.get('edit') === '1');
+  if (preset) loadPreset(preset, params.get('edit') === '1', params.get('archive') === '1');
 })();
 (function wireCodEdit() {
   const el = document.getElementById('fCod');

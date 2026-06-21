@@ -19,6 +19,15 @@
     .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
     .pg-sub { color: var(--mut); font-size: 0.88rem; line-height: 1.5; margin-bottom: 24px; }
 
+    .filters { display:flex; gap:8px; margin: 0 0 18px; flex-wrap:wrap; }
+    .filt-btn {
+      background: var(--card); border: 1px solid var(--bor); color: var(--mut);
+      padding: 8px 16px; border-radius: 20px; font-size: .82rem; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .filt-btn:hover { border-color: var(--pri); color: var(--txt); }
+    .filt-btn.active { background: var(--ok); border-color: var(--ok); color: #06281f; }
+
     .tmpl-card {
       background: var(--card); border: 1px solid var(--bor); border-radius: 12px;
       padding: 20px 22px; margin-bottom: 12px;
@@ -259,6 +268,7 @@
   <div class="wrap">
     <h1 class="pg-h">Mis formularios</h1>
     <p class="pg-sub">Selecciona una plantilla para llenar, o crea una nueva digitalizando un documento.</p>
+    <div class="filters" id="tmplFilters"></div>
     <div id="tmplList"></div>
   </div>
 </div>
@@ -428,6 +438,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     openTemplate(urlTmpl);
   } else {
     renderList();
+    if (params.get('archived') === '1') {
+      history.replaceState(null, '', 'llenar.html');
+      toast('Formulario agregado a tu repositorio — listo para llenar o compartir en blanco', 'ok');
+    }
   }
 });
 
@@ -574,9 +588,24 @@ function copyShareUrl() {
 document.getElementById('qrModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeQRModal(); });
 
 // ── Template list ──────────────────────────────────────────────────
+let tmplFilter = 'todos'; // 'todos' | 'favoritos'
+
+function renderTmplFilters(list) {
+  const el = document.getElementById('tmplFilters');
+  if (!list.length) { el.innerHTML = ''; return; }
+  const numFav = list.filter(t=>t.favorito).length;
+  el.innerHTML = `
+    <button class="filt-btn ${tmplFilter==='todos'?'active':''}" onclick="setTmplFilter('todos')">Todos (${list.length})</button>
+    <button class="filt-btn ${tmplFilter==='favoritos'?'active':''}" onclick="setTmplFilter('favoritos')">★ Favoritos (${numFav})</button>
+  `;
+}
+
+function setTmplFilter(f) { tmplFilter = f; renderList(); }
+
 function renderList() {
   const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
   const el = document.getElementById('tmplList');
+  renderTmplFilters(list);
   if (!list.length) {
     el.innerHTML = `<div class="empty-state">
       <span class="es-ico">📭</span>
@@ -588,7 +617,16 @@ function renderList() {
     </div>`;
     return;
   }
-  const sorted = [...list].sort((a,b) => (b.favorito?1:0) - (a.favorito?1:0));
+  const filtered = tmplFilter === 'favoritos' ? list.filter(t=>t.favorito) : list;
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state">
+      <span class="es-ico">★</span>
+      <h2>Sin favoritos todavía</h2>
+      <p>Marca la estrella ☆ de un formulario para encontrarlo más rápido aquí.</p>
+    </div>`;
+    return;
+  }
+  const sorted = [...filtered].sort((a,b) => (b.favorito?1:0) - (a.favorito?1:0));
   el.innerHTML = sorted.map(t => {
     const subs = getSubsForTemplate(t.id);
     const cod = t.codigo ? `<div class="tmpl-cod">${t.codigo}</div>` : '';
