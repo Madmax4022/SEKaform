@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ingresar — SEKaform</title>
+  <title>Iniciar sesión — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <style>
     body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
@@ -53,7 +53,7 @@
 <p class="logo-sub">Digitalización inteligente de documentos</p>
 
 <div class="card">
-  <h1 class="card-title" id="cardTitle">Ingresar</h1>
+  <h1 class="card-title" id="cardTitle">Iniciar sesión</h1>
   <p class="card-sub" id="cardSub">Accede a tu base de datos y panel de inteligencia de negocios.</p>
 
   <div class="msg" id="msgBox"></div>
@@ -68,7 +68,7 @@
   </div>
 
   <button class="btn btn-pri" id="submitBtn" onclick="handleSubmit()">
-    <span id="submitLabel">Ingresar →</span>
+    <span id="submitLabel">Iniciar sesión →</span>
   </button>
 
   <div class="divider">o</div>
@@ -95,13 +95,13 @@ let mode = 'login'; // 'login' | 'signup'
 function toggleMode() {
   mode = mode === 'login' ? 'signup' : 'login';
   const isSignup = mode === 'signup';
-  document.getElementById('cardTitle').textContent = isSignup ? 'Crear cuenta' : 'Ingresar';
+  document.getElementById('cardTitle').textContent = isSignup ? 'Crear cuenta' : 'Iniciar sesión';
   document.getElementById('cardSub').textContent = isSignup
     ? 'Crea tu cuenta para sincronizar datos y acceder al panel BI.'
     : 'Accede a tu base de datos y panel de inteligencia de negocios.';
-  document.getElementById('submitLabel').textContent = isSignup ? 'Crear cuenta →' : 'Ingresar →';
+  document.getElementById('submitLabel').textContent = isSignup ? 'Crear cuenta →' : 'Iniciar sesión →';
   document.getElementById('toggleText').textContent = isSignup ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
-  document.getElementById('toggleLink').textContent = isSignup ? 'Ingresar' : 'Crear cuenta';
+  document.getElementById('toggleLink').textContent = isSignup ? 'Iniciar sesión' : 'Crear cuenta';
   showMsg('','');
 }
 
@@ -139,7 +139,7 @@ async function handleSubmit() {
     showMsg(e.message || 'Error al ingresar. Intenta de nuevo.', 'er');
   } finally {
     btn.disabled = false;
-    document.getElementById('submitLabel').textContent = mode === 'signup' ? 'Crear cuenta →' : 'Ingresar →';
+    document.getElementById('submitLabel').textContent = mode === 'signup' ? 'Crear cuenta →' : 'Iniciar sesión →';
   }
 }
 
