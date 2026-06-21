@@ -104,6 +104,8 @@ async function sbSyncEnvio(envio) {
       user_id: user.id,
       datos: envio.datos || {},
       estado: envio.estado || 'enviado',
+      llenado_por: envio.llenadoPor || null,
+      llenado_correo: envio.llenadoCorreo || null,
       creado_en: envio.creadoEn || new Date().toISOString(),
       enviado_en: envio.enviadoEn || new Date().toISOString()
     };
@@ -147,6 +149,8 @@ async function sbSubmitPublicEnvio(envio) {
       user_id: '00000000-0000-0000-0000-000000000000',
       datos: envio.datos || {},
       estado: envio.estado || 'enviado',
+      llenado_por: envio.llenadoPor || null,
+      llenado_correo: envio.llenadoCorreo || null,
       creado_en: envio.creadoEn || new Date().toISOString(),
       enviado_en: envio.enviadoEn || new Date().toISOString()
     };
@@ -178,6 +182,52 @@ async function sbLoadEnvios(limit = 500) {
     const { data, error } = await sb.from('envios')
       .select('*').eq('user_id', user.id)
       .order('enviado_en', { ascending: false }).limit(limit);
+    if (error) return null;
+    return data;
+  } catch { return null; }
+}
+
+// ── Asignaciones (panel de administración: a quién se le pidió llenar
+// cada plantilla, para calcular cumplimiento) ──────────────────────────
+async function sbSyncAsignacion(a) {
+  try {
+    const sb = await getSB();
+    if (!sb) return;
+    const user = await sbGetUser();
+    if (!user) return;
+    const payload = {
+      id: a.id,
+      user_id: user.id,
+      plantilla_id: a.plantillaId || null,
+      plantilla_nombre: a.plantillaNombre || '',
+      nombre: a.nombre,
+      correo: a.correo || null,
+      creado_en: a.creadoEn || new Date().toISOString()
+    };
+    const { error } = await sb.from('asignaciones').upsert(payload);
+    if (error) console.warn('[SEKaform] Sync asignación:', error.message);
+  } catch (e) { console.warn('[SEKaform] Sync asignación error:', e.message); }
+}
+
+async function sbDeleteAsignacion(id) {
+  try {
+    const sb = await getSB();
+    if (!sb) return;
+    const user = await sbGetUser();
+    if (!user) return;
+    const { error } = await sb.from('asignaciones').delete().eq('id', id).eq('user_id', user.id);
+    if (error) console.warn('[SEKaform] Delete asignación:', error.message);
+  } catch (e) { console.warn('[SEKaform] Delete asignación error:', e.message); }
+}
+
+async function sbLoadAsignaciones() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const user = await sbGetUser();
+    if (!user) return null;
+    const { data, error } = await sb.from('asignaciones')
+      .select('*').eq('user_id', user.id).order('creado_en', { ascending: false });
     if (error) return null;
     return data;
   } catch { return null; }

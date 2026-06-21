@@ -108,6 +108,7 @@
     .fg.fc-media { border-left-color: #ec4899; }
     .fg.fc-smart { border-left-color: var(--warn); }
     .fg.has-error { border-left-color: var(--err) !important; }
+    .fg.hidden { display: none; }
     .fg > label {
       display: flex; align-items: center; gap: 8px;
       font-size: 0.72rem; font-weight: 700; color: var(--mut);
@@ -284,6 +285,11 @@
       <h1 class="form-title-h" id="fTitle"></h1>
       <p class="form-desc-p" id="fDesc"></p>
     </div>
+    <div class="fg hidden" id="fg_fillerName">
+      <label><span class="fg-ico">👤</span>¿Quién llena este formulario?<span class="req">*</span></label>
+      <input type="text" id="fillerName" placeholder="Tu nombre completo">
+      <div class="err-msg">Este campo es requerido</div>
+    </div>
     <div id="fFields"></div>
   </div>
   <div class="form-footer">
@@ -393,6 +399,7 @@ function normalizeEnvioFromCloud(e) {
     id: e.id, numero: e.numero, plantillaId: e.plantilla_id||e.plantillaId, plantillaNombre: e.plantilla_nombre||e.plantillaNombre,
     plantillaCodigo: e.plantilla_codigo||e.plantillaCodigo||'',
     estado: e.estado||'enviado', datos: e.datos||{},
+    llenadoPor: e.llenado_por||e.llenadoPor||null, llenadoCorreo: e.llenado_correo||e.llenadoCorreo||null,
     creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn
   };
 }
@@ -466,6 +473,9 @@ async function openPublicTemplate(token) {
   const fLogo = document.getElementById('fLogo');
   if (activeTmpl.logo) { fLogo.src = activeTmpl.logo; fLogo.classList.remove('hidden'); }
   else { fLogo.classList.add('hidden'); }
+
+  document.getElementById('fg_fillerName').classList.remove('hidden');
+  document.getElementById('fillerName').value = '';
 
   renderFields(activeTmpl.campos);
   show('vForm');
@@ -694,6 +704,7 @@ function openTemplate(id) {
   const fLogo = document.getElementById('fLogo');
   if (t.logo) { fLogo.src = t.logo; fLogo.classList.remove('hidden'); }
   else { fLogo.classList.add('hidden'); }
+  document.getElementById('fg_fillerName').classList.add('hidden');
 
   renderFields(t.campos);
   show('vForm');
@@ -1052,6 +1063,11 @@ function updateProgress() {
 function validate() {
   let ok=true;
   if (!activeTmpl) return false;
+  if (isPublicFill) {
+    const name = document.getElementById('fillerName').value.trim();
+    if (!name) { markErr('fillerName'); ok=false; }
+    else clearErr('fillerName');
+  }
   activeTmpl.campos.forEach(c => {
     if (!c.requerido || c.tipo==='separador') return;
     const v=submission[c.id];
@@ -1110,6 +1126,7 @@ function submitForm() {
       plantillaCodigo: activeTmpl.codigo || '',
       estado: 'enviado',
       datos: {...submission},
+      llenadoPor: isPublicFill ? document.getElementById('fillerName').value.trim() : '',
       creadoEn: new Date().toISOString(),
       enviadoEn: new Date().toISOString()
     };

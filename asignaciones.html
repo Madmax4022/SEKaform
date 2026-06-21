@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asignaciones — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 28px; line-height: 1.6; max-width: 640px; }
+
+    .card { background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 22px 22px 20px; }
+
+    /* new assignment form */
+    .asg-new { margin-bottom: 28px; }
+    .asg-new h2 { font-size: 1rem; font-weight: 800; margin-bottom: 16px; }
+    .fg { margin-bottom: 16px; }
+    .fg label { display: block; font-size: .82rem; font-weight: 700; color: var(--mut); margin-bottom: 7px; }
+    .fg select, .fg textarea {
+      width: 100%; background: var(--inp); border: 1px solid var(--bor); color: var(--txt);
+      border-radius: 8px; padding: 10px 12px; font-size: .9rem; font-family: inherit; outline: none;
+      transition: border-color .15s;
+    }
+    .fg select:focus, .fg textarea:focus { border-color: var(--pri); }
+    .fg textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+    .fg-hint { font-size: .76rem; color: var(--mut); margin-top: 6px; line-height: 1.5; }
+
+    /* assignment list */
+    .asg-list-h { font-size: 1rem; font-weight: 800; margin: 6px 0 14px; }
+    .asg-group { margin-bottom: 14px; }
+    .asg-group-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; cursor: pointer; }
+    .asg-group-info { min-width: 0; flex: 1; }
+    .asg-group-name { font-weight: 800; font-size: .95rem; }
+    .asg-group-meta { font-size: .76rem; color: var(--mut); margin-top: 3px; }
+    .asg-group-acts { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .asg-progress { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    .asg-progress-track { flex: 1; height: 8px; border-radius: 5px; background: var(--card2); overflow: hidden; }
+    .asg-progress-fill { height: 100%; background: var(--ok); border-radius: 5px; transition: width .3s; }
+    .asg-progress-txt { font-size: .78rem; font-weight: 700; color: var(--ok); white-space: nowrap; }
+
+    .asg-people { margin-top: 14px; border-top: 1px solid var(--bor); padding-top: 12px; display: none; }
+    .asg-people.on { display: block; }
+    .asg-person { display: flex; align-items: center; gap: 9px; padding: 6px 0; font-size: .85rem; }
+    .asg-person-ico { width: 18px; text-align: center; flex-shrink: 0; }
+    .asg-person.done .asg-person-ico { color: var(--ok); }
+    .asg-person.pend .asg-person-ico { color: var(--warn); }
+    .asg-person-name { flex: 1; min-width: 0; }
+    .asg-person-date { font-size: .74rem; color: var(--mut); flex-shrink: 0; }
+
+    .btn-sm { padding: 7px 13px; font-size: .8rem; border-radius: 7px; }
+    .btn-danger { background: transparent; border: 1px solid rgba(239,68,68,.35); color: var(--err); border-radius: 7px; padding: 7px 10px; font-size: .8rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
+    .btn-danger:hover { background: rgba(239,68,68,.12); border-color: var(--err); }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--mut); }
+    .es-ico { font-size: 3.5rem; display: block; margin-bottom: 14px; }
+    .empty-state h2 { font-size: 1.05rem; margin-bottom: 8px; color: var(--txt); }
+    .empty-state p { font-size: .85rem; line-height: 1.55; max-width: 320px; margin: 0 auto; }
+
+    .setup-banner { background: rgba(37,99,235,.1); border: 1px solid rgba(37,99,235,.3); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: none; }
+    .setup-banner.on { display: flex; align-items: flex-start; gap: 14px; }
+    .setup-banner-ico { font-size: 1.5rem; flex-shrink: 0; }
+    .setup-banner h3 { font-size: .9rem; font-weight: 700; margin-bottom: 4px; }
+    .setup-banner p { font-size: .82rem; color: var(--mut); line-height: 1.55; }
+    .setup-banner a { color: var(--pri); }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 16px; background: var(--card);
+      border: 1px solid var(--bor); border-radius: 10px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 9px; font-size: 0.85rem; font-weight: 600;
+      z-index: 2000; animation: toastIn .2s ease; box-shadow: 0 8px 28px rgba(0,0,0,.5); max-width: 280px;
+    }
+    .toast.ok { border-color: var(--ok); }
+    .toast.er { border-color: var(--err); }
+    @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="topbar-logo">SEK<span>a</span>form</a>
+  <div class="topbar-nav">
+    <a href="plantillas.html" class="topbar-link">Plantillas</a>
+    <a href="digitalizador.html" class="topbar-link">Digitalizar</a>
+    <a href="llenar.html" class="topbar-link">Mis formularios</a>
+    <a href="asignaciones.html" class="topbar-link active">Asignaciones</a>
+    <a href="dashboard.html" class="topbar-link">Dashboard</a>
+  </div>
+  <div class="topbar-right">
+    <span id="userBadge" class="auth-chip" style="display:none"></span>
+    <button id="logoutBtn" class="auth-link" style="display:none" onclick="logout()">Salir</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <h1 class="pg-h">Asignaciones</h1>
+  <p class="pg-sub">Define quién debe llenar cada formulario y haz seguimiento de cumplimiento: quién ya respondió y quién falta. Los asignados no necesitan cuenta — llenan el formulario con un link, identificándose solo por su nombre.</p>
+
+  <div class="setup-banner" id="setupBanner">
+    <div class="setup-banner-ico">☁</div>
+    <div>
+      <h3>Conecta Supabase para asignar equipos</h3>
+      <p>Actualmente ves solo los datos de <strong>este dispositivo</strong>. Para asignar formularios a tu equipo y ver su cumplimiento desde cualquier lugar, configura Supabase en <code>supabase-config.js</code> y ejecuta <code>supabase-schema.sql</code>. <a href="login.html">Ingresar con cuenta →</a></p>
+    </div>
+  </div>
+
+  <div class="card asg-new">
+    <h2>+ Nueva asignación</h2>
+    <div class="fg">
+      <label>Plantilla a asignar</label>
+      <select id="asgPlantilla"></select>
+    </div>
+    <div class="fg">
+      <label>Personas asignadas</label>
+      <textarea id="asgNames" placeholder="Juan Pérez&#10;María Gómez, maria@empresa.com&#10;Carlos Ruiz"></textarea>
+      <div class="fg-hint">Una persona por línea. Opcional: agrega su correo separado por coma — "Nombre, correo@ejemplo.com".</div>
+    </div>
+    <button class="btn btn-pri" onclick="createAsignacion()">Crear asignación y generar link →</button>
+  </div>
+
+  <h2 class="asg-list-h">Cumplimiento por asignación</h2>
+  <div id="asgGroups"></div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function norm(s){return String(s||'').trim().toLowerCase();}
+
+// ── Auth ─────────────────────────────────────────────────────────
+async function logout() {
+  await sbSignOut();
+  window.location.href = 'login.html';
+}
+
+// ── Storage helpers ──────────────────────────────────────────────
+function getPlantillas() { return JSON.parse(localStorage.getItem('skf_plantillas')||'[]'); }
+function getEnvios() { return JSON.parse(localStorage.getItem('skf_envios')||'[]'); }
+function getAsignaciones() { return JSON.parse(localStorage.getItem('skf_asignaciones')||'[]'); }
+function setAsignaciones(list) { localStorage.setItem('skf_asignaciones', JSON.stringify(list)); }
+
+function normalizePlantillaFromCloud(p) {
+  return {
+    id: p.id, nombre: p.nombre, codigo: p.codigo||'', descripcion: p.descripcion||'',
+    campos: p.campos||[], version: '1.0', logo: p.logo||null, favorito: p.favorito||false,
+    publica: p.publica||false, shareToken: p.share_token||p.shareToken||null,
+    correoNotificacion: p.correo_notificacion||p.correoNotificacion||'',
+    creadoEn: p.creado_en||p.creadoEn, actualizadoEn: p.actualizado_en||p.actualizadoEn
+  };
+}
+function normalizeEnvioFromCloud(e) {
+  return {
+    id: e.id, numero: e.numero, plantillaId: e.plantilla_id||e.plantillaId, plantillaNombre: e.plantilla_nombre||e.plantillaNombre,
+    estado: e.estado||'enviado', datos: e.datos||{},
+    llenadoPor: e.llenado_por||e.llenadoPor||null, llenadoCorreo: e.llenado_correo||e.llenadoCorreo||null,
+    creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn
+  };
+}
+function normalizeAsignacionFromCloud(a) {
+  return {
+    id: a.id, plantillaId: a.plantilla_id||a.plantillaId, plantillaNombre: a.plantilla_nombre||a.plantillaNombre,
+    nombre: a.nombre, correo: a.correo||null, creadoEn: a.creado_en||a.creadoEn
+  };
+}
+
+async function syncFromCloud() {
+  let fromCloud = false;
+  try {
+    const [cloudP, cloudE, cloudA] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios(), sbLoadAsignaciones()]);
+    if (cloudP !== null) {
+      fromCloud = true;
+      const localP = getPlantillas();
+      const normP = cloudP.map(normalizePlantillaFromCloud);
+      const cloudIds = new Set(normP.map(p=>p.id));
+      localStorage.setItem('skf_plantillas', JSON.stringify([...normP, ...localP.filter(p=>!cloudIds.has(p.id))]));
+    }
+    if (cloudE !== null) {
+      const localE = getEnvios();
+      const normE = cloudE.map(normalizeEnvioFromCloud);
+      const cloudIds = new Set(normE.map(e=>e.id));
+      localStorage.setItem('skf_envios', JSON.stringify([...normE, ...localE.filter(e=>!cloudIds.has(e.id))]));
+    }
+    if (cloudA !== null) {
+      const localA = getAsignaciones();
+      const normA = cloudA.map(normalizeAsignacionFromCloud);
+      const cloudIds = new Set(normA.map(a=>a.id));
+      setAsignaciones([...normA, ...localA.filter(a=>!cloudIds.has(a.id))]);
+    }
+  } catch(e) { /* offline-first: keep local data as-is */ }
+  return fromCloud;
+}
+
+// ── New assignment ───────────────────────────────────────────────
+function populatePlantillaSelect() {
+  const sel = document.getElementById('asgPlantilla');
+  const list = getPlantillas();
+  if (!list.length) {
+    sel.innerHTML = `<option value="">No tienes formularios todavía</option>`;
+    return;
+  }
+  sel.innerHTML = list.map(t => `<option value="${esc(t.id)}">${esc(t.nombre)}${t.codigo ? ' — '+esc(t.codigo) : ''}</option>`).join('');
+}
+
+async function ensurePublicShare(t) {
+  if (t.publica && t.shareToken) return t;
+  t.publica = true;
+  if (!t.shareToken) {
+    t.shareToken = (crypto.randomUUID ? crypto.randomUUID() : 'tok_'+Date.now()+'_'+Math.random().toString(36).slice(2,10));
+  }
+  t.actualizadoEn = new Date().toISOString();
+  const list = getPlantillas();
+  const idx = list.findIndex(x=>x.id===t.id);
+  if (idx>=0) { list[idx]=t; localStorage.setItem('skf_plantillas', JSON.stringify(list)); }
+  await sbSyncPlantilla(t).catch(()=>{});
+  return t;
+}
+
+async function createAsignacion() {
+  const plantillaId = document.getElementById('asgPlantilla').value;
+  const list = getPlantillas();
+  const t = list.find(p=>p.id===plantillaId);
+  if (!t) { toast('Elige un formulario primero','er'); return; }
+
+  const raw = document.getElementById('asgNames').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  if (!lines.length) { toast('Agrega al menos una persona','er'); return; }
+
+  await ensurePublicShare(t);
+
+  const creadoEn = new Date().toISOString();
+  const asignaciones = getAsignaciones();
+  const nuevas = lines.map(line => {
+    const [nombre, correo] = line.split(',').map(s=>s && s.trim());
+    const a = {
+      id: `asg_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+      plantillaId: t.id, plantillaNombre: t.nombre,
+      nombre, correo: correo || null, creadoEn
+    };
+    sbSyncAsignacion(a).catch(()=>{});
+    return a;
+  });
+  setAsignaciones([...asignaciones, ...nuevas]);
+
+  document.getElementById('asgNames').value = '';
+  toast(`Asignación creada — ${nuevas.length} persona${nuevas.length!==1?'s':''}`, 'ok');
+  renderGroups();
+  copyShareLink(t, true);
+}
+
+function shareUrlFor(t) {
+  const base = location.origin + location.pathname.replace('asignaciones.html','llenar.html');
+  return `${base}?pub=${t.shareToken}`;
+}
+
+function copyShareLinkById(plantillaId) {
+  const t = getPlantillas().find(p=>p.id===plantillaId);
+  if (!t) { toast('Formulario no encontrado','er'); return; }
+  copyShareLink(t);
+}
+
+function copyShareLink(t, silent) {
+  if (!t.shareToken) { toast('Este formulario aún no tiene link público','er'); return; }
+  const url = shareUrlFor(t);
+  navigator.clipboard.writeText(url).then(()=>{
+    toast(silent ? 'Link copiado — compártelo con los asignados' : 'Link copiado','ok');
+  }).catch(()=>{
+    const inp = document.createElement('input');
+    inp.value = url; document.body.appendChild(inp); inp.select();
+    document.execCommand('copy'); inp.remove();
+    toast('Link copiado','ok');
+  });
+}
+
+// ── Render compliance groups ─────────────────────────────────────
+let openGroups = new Set();
+
+function groupKey(a) { return `${a.plantillaId}::${a.creadoEn}`; }
+
+function renderGroups() {
+  const el = document.getElementById('asgGroups');
+  const asignaciones = getAsignaciones();
+  const envios = getEnvios();
+  const plantillas = getPlantillas();
+
+  if (!asignaciones.length) {
+    el.innerHTML = `<div class="empty-state">
+      <span class="es-ico">👥</span>
+      <h2>Sin asignaciones todavía</h2>
+      <p>Crea una asignación arriba para repartir un formulario entre tu equipo y ver quién ya lo llenó.</p>
+    </div>`;
+    return;
+  }
+
+  const groups = {};
+  asignaciones.forEach(a => {
+    const k = groupKey(a);
+    if (!groups[k]) groups[k] = { plantillaId: a.plantillaId, plantillaNombre: a.plantillaNombre, creadoEn: a.creadoEn, personas: [] };
+    groups[k].personas.push(a);
+  });
+
+  const sorted = Object.entries(groups).sort((a,b) => new Date(b[1].creadoEn) - new Date(a[1].creadoEn));
+
+  el.innerHTML = sorted.map(([k, g]) => {
+    const t = plantillas.find(p=>p.id===g.plantillaId);
+    const statuses = g.personas.map(p => {
+      const match = envios.find(e =>
+        e.plantillaId === g.plantillaId &&
+        new Date(e.creadoEn) >= new Date(g.creadoEn) &&
+        norm(e.llenadoPor) === norm(p.nombre)
+      );
+      return { persona: p, done: !!match, envio: match };
+    });
+    const done = statuses.filter(s=>s.done).length;
+    const total = statuses.length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    const fecha = g.creadoEn ? new Date(g.creadoEn).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : '';
+    const isOpen = openGroups.has(k);
+
+    return `<div class="card asg-group">
+      <div class="asg-group-top" onclick="toggleGroup('${esc(k)}')">
+        <div class="asg-group-info">
+          <div class="asg-group-name">${esc(g.plantillaNombre)}</div>
+          <div class="asg-group-meta">Asignado el ${fecha} · ${total} persona${total!==1?'s':''}</div>
+        </div>
+        <div class="asg-group-acts">
+          ${t ? `<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();copyShareLinkById('${esc(t.id)}')">🔗 Copiar link</button>` : ''}
+          <button class="btn-danger" onclick="event.stopPropagation();deleteGroup('${esc(k)}')" title="Eliminar asignación">✕</button>
+        </div>
+      </div>
+      <div class="asg-progress">
+        <div class="asg-progress-track"><div class="asg-progress-fill" style="width:${pct}%"></div></div>
+        <div class="asg-progress-txt">${done}/${total} completado</div>
+      </div>
+      <div class="asg-people ${isOpen?'on':''}" id="people_${esc(k)}">
+        ${statuses.map(s => `<div class="asg-person ${s.done?'done':'pend'}">
+          <span class="asg-person-ico">${s.done?'✅':'⏳'}</span>
+          <span class="asg-person-name">${esc(s.persona.nombre)}${s.persona.correo?` <span style="color:var(--mut)">(${esc(s.persona.correo)})</span>`:''}</span>
+          <span class="asg-person-date">${s.done ? 'Completado ' + new Date(s.envio.enviadoEn).toLocaleString('es-CO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Pendiente'}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleGroup(k) {
+  if (openGroups.has(k)) openGroups.delete(k); else openGroups.add(k);
+  document.getElementById(`people_${k}`).classList.toggle('on');
+}
+
+function deleteGroup(k) {
+  if (!confirm('¿Eliminar esta asignación? Se quitará la lista de personas asignadas (los envíos ya recibidos no se borran).')) return;
+  const asignaciones = getAsignaciones();
+  const toDelete = asignaciones.filter(a => groupKey(a) === k);
+  toDelete.forEach(a => sbDeleteAsignacion(a.id).catch(()=>{}));
+  setAsignaciones(asignaciones.filter(a => groupKey(a) !== k));
+  toast('Asignación eliminada','ok');
+  renderGroups();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+let _tt;
+function toast(msg,type='ok') {
+  document.querySelectorAll('.toast').forEach(e=>e.remove());
+  clearTimeout(_tt);
+  const d=document.createElement('div');
+  d.className=`toast ${type}`;
+  d.innerHTML=`<span>${type==='ok'?'✓':'✕'}</span> ${msg}`;
+  document.body.appendChild(d);
+  _tt=setTimeout(()=>d.remove(),3200);
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+async function init() {
+  const user = await sbGetUser();
+  if (user) {
+    document.getElementById('userBadge').textContent = '● ' + user.email;
+    document.getElementById('userBadge').style.display = 'inline-flex';
+    document.getElementById('logoutBtn').style.display = 'inline-block';
+  }
+
+  const fromCloud = await syncFromCloud();
+  if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
+
+  populatePlantillaSelect();
+  renderGroups();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -90,6 +90,12 @@ ALTER TABLE envios ADD COLUMN IF NOT EXISTS numero INTEGER;
 -- mismo tipo de formulario en vez del id interno de una plantilla
 -- concreta — ver "CÓDIGO DE FORMULARIO" en digitalizador.html.
 ALTER TABLE envios ADD COLUMN IF NOT EXISTS plantilla_codigo TEXT NOT NULL DEFAULT '';
+-- llenado_por / llenado_correo: quién llenó el formulario, capturado en el
+-- flujo de link público (un visitante sin cuenta escribe su nombre antes de
+-- enviar). Sirve para cruzar contra "asignaciones" y calcular cumplimiento
+-- (quién de la lista de asignados ya completó vs quién falta).
+ALTER TABLE envios ADD COLUMN IF NOT EXISTS llenado_por TEXT;
+ALTER TABLE envios ADD COLUMN IF NOT EXISTS llenado_correo TEXT;
 
 ALTER TABLE envios ENABLE ROW LEVEL SECURITY;
 
@@ -157,6 +163,37 @@ CREATE TRIGGER trg_envios_asignar_dueno
   BEFORE INSERT ON envios
   FOR EACH ROW
   EXECUTE FUNCTION envios_asignar_dueno();
+
+-- ── Asignaciones (panel de administración) ─────────────────────
+-- Lista de personas que un administrador espera que llenen una plantilla
+-- determinada — habilita el "feedback de cumplimiento": cuántos de los
+-- asignados ya enviaron el formulario vs cuántos faltan. Los asignados NO
+-- necesitan cuenta propia: se identifican solo por nombre (y opcionalmente
+-- correo) al momento de llenar el link público (ver llenado_por/
+-- llenado_correo en envios arriba). El cruce "completado vs pendiente" se
+-- calcula en el cliente comparando asignaciones.nombre/correo contra
+-- envios.llenado_por/llenado_correo de envíos posteriores a creado_en —
+-- así, reasignar la misma plantilla (ej. ronda semanal) reinicia el
+-- pendiente sin perder el historial de rondas anteriores.
+CREATE TABLE IF NOT EXISTS asignaciones (
+  id               TEXT PRIMARY KEY,
+  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  plantilla_id     TEXT NOT NULL REFERENCES plantillas(id) ON DELETE CASCADE,
+  plantilla_nombre TEXT NOT NULL DEFAULT '',
+  nombre           TEXT NOT NULL,
+  correo           TEXT,
+  creado_en        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE asignaciones ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuarios ven sus propias asignaciones" ON asignaciones;
+CREATE POLICY "Usuarios ven sus propias asignaciones"
+  ON asignaciones FOR ALL
+  USING ((select auth.uid()) = user_id);
+
+CREATE INDEX IF NOT EXISTS asignaciones_user_idx ON asignaciones (user_id, creado_en DESC);
+CREATE INDEX IF NOT EXISTS asignaciones_plantilla_idx ON asignaciones (plantilla_id);
 
 -- ── Notificación automática por correo al completar un formulario ──────
 -- Cada vez que se inserta un envío, si su plantilla tiene un
