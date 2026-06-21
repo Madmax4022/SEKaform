@@ -1,6 +1,10 @@
 -- SEKaform — Supabase Schema
 -- Run this in your Supabase project's SQL editor:
 -- https://supabase.com/dashboard/project/_/sql/new
+--
+-- Es seguro volver a correr este archivo completo las veces que haga
+-- falta: todas las sentencias son idempotentes (IF NOT EXISTS / DROP ...
+-- IF EXISTS / CREATE OR REPLACE), no borra datos existentes.
 
 -- ── Plantillas (form templates) ──────────────────────────────
 CREATE TABLE IF NOT EXISTS plantillas (
@@ -10,17 +14,24 @@ CREATE TABLE IF NOT EXISTS plantillas (
   campos        JSONB NOT NULL DEFAULT '[]',
   codigo        TEXT,
   descripcion   TEXT,
-  logo          TEXT,
-  favorito      BOOLEAN NOT NULL DEFAULT false,
-  publica       BOOLEAN NOT NULL DEFAULT false,
-  share_token   TEXT UNIQUE,
-  correo_notificacion TEXT,
   creado_en     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Columnas agregadas en versiones posteriores — van ANTES de las policies
+-- de abajo porque varias las referencian (publica, share_token). Si la
+-- tabla ya existía de antes, CREATE TABLE IF NOT EXISTS no las agrega por
+-- sí solo, por eso estos ALTER TABLE son necesarios incluso en proyectos
+-- que ya tenían la tabla creada.
+ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS logo TEXT;
+ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS favorito BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS publica BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS share_token TEXT;
+ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS correo_notificacion TEXT;
+
 ALTER TABLE plantillas ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Usuarios ven sus propias plantillas" ON plantillas;
 CREATE POLICY "Usuarios ven sus propias plantillas"
   ON plantillas FOR ALL
   USING (auth.uid() = user_id);
@@ -28,6 +39,7 @@ CREATE POLICY "Usuarios ven sus propias plantillas"
 -- Permite que cualquier visitante anónimo (sin cuenta) cargue una plantilla
 -- marcada como pública por su share_token, para poder llenarla y enviarla
 -- vía link/QR/correo/WhatsApp sin necesitar login.
+DROP POLICY IF EXISTS "Anónimos ven plantillas públicas" ON plantillas;
 CREATE POLICY "Anónimos ven plantillas públicas"
   ON plantillas FOR SELECT
   TO anon
@@ -39,10 +51,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS plantillas_share_token_idx ON plantillas (shar
 -- ── Envíos (form submissions) ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS envios (
   id               TEXT PRIMARY KEY,
-  numero           INTEGER,
   plantilla_id     TEXT REFERENCES plantillas(id) ON DELETE SET NULL,
   plantilla_nombre TEXT NOT NULL DEFAULT '',
-  plantilla_codigo TEXT NOT NULL DEFAULT '',
   user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   datos            JSONB NOT NULL DEFAULT '{}',
   estado           TEXT NOT NULL DEFAULT 'enviado' CHECK (estado IN ('borrador','enviado')),
@@ -50,8 +60,19 @@ CREATE TABLE IF NOT EXISTS envios (
   enviado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Mismo caso que arriba: estas columnas deben existir antes de las
+-- policies/funciones que las usan más abajo.
+ALTER TABLE envios ADD COLUMN IF NOT EXISTS numero INTEGER;
+-- plantilla_codigo: copia del código de la plantilla al momento del envío
+-- (igual que plantilla_nombre, así el dato sobrevive aunque se borre la
+-- plantilla). Es la llave que usa el dashboard para agrupar envíos del
+-- mismo tipo de formulario en vez del id interno de una plantilla
+-- concreta — ver "CÓDIGO DE FORMULARIO" en digitalizador.html.
+ALTER TABLE envios ADD COLUMN IF NOT EXISTS plantilla_codigo TEXT NOT NULL DEFAULT '';
+
 ALTER TABLE envios ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Usuarios ven sus propios envíos" ON envios;
 CREATE POLICY "Usuarios ven sus propios envíos"
   ON envios FOR ALL
   USING (auth.uid() = user_id);
@@ -61,6 +82,7 @@ CREATE POLICY "Usuarios ven sus propios envíos"
 -- cliente NO se usa: el trigger envios_asignar_dueno (más abajo) lo
 -- sobrescribe siempre con el dueño real de la plantilla, así que un
 -- anónimo no puede inyectar datos en la cuenta de otra persona.
+DROP POLICY IF EXISTS "Anónimos envían a plantillas públicas" ON envios;
 CREATE POLICY "Anónimos envían a plantillas públicas"
   ON envios FOR INSERT
   TO anon
@@ -103,28 +125,6 @@ CREATE TRIGGER trg_envios_asignar_dueno
   BEFORE INSERT ON envios
   FOR EACH ROW
   EXECUTE FUNCTION envios_asignar_dueno();
-
--- ── Migración para proyectos existentes ────────────────────────
--- Si ya tenías estas tablas creadas antes de logo/favorito/numero,
--- ejecuta también lo siguiente (no afecta instalaciones nuevas):
-ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS logo TEXT;
-ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS favorito BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE envios ADD COLUMN IF NOT EXISTS numero INTEGER;
-
--- plantilla_codigo: copia del código de la plantilla al momento del envío
--- (igual que plantilla_nombre, así el dato sobrevive aunque se borre la
--- plantilla). Es la llave que usa el dashboard para agrupar envíos del
--- mismo tipo de formulario en vez del id interno de una plantilla
--- concreta — ver "CÓDIGO DE FORMULARIO" en digitalizador.html.
-ALTER TABLE envios ADD COLUMN IF NOT EXISTS plantilla_codigo TEXT NOT NULL DEFAULT '';
-
--- publica / share_token / correo_notificacion: soporte para enviar un
--- formulario a alguien sin cuenta (vía link, QR, correo o WhatsApp) y que
--- su envío caiga en el mismo dataset del dueño — ver "ENVÍO PÚBLICO" más
--- abajo. No afecta instalaciones nuevas (ya están en el CREATE TABLE).
-ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS publica BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS share_token TEXT;
-ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS correo_notificacion TEXT;
 
 -- ── Notificación automática por correo al completar un formulario ──────
 -- Cada vez que se inserta un envío, si su plantilla tiene un
