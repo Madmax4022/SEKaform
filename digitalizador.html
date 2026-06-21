@@ -211,6 +211,11 @@
     .missing-chip{background:var(--card);border:1px solid var(--bor);border-radius:20px;padding:4px 6px 4px 11px;font-size:.78rem;display:inline-flex;align-items:center;gap:5px;}
     .missing-chip button{background:var(--pri);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;padding:0;font-weight:700;transition:background .15s;}
     .missing-chip button:hover{background:var(--pri-h);}
+    .dup-warn{background:var(--warn-dim);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:13px 15px;margin-bottom:14px;font-size:.85rem;}
+    .dup-warn-title{font-weight:700;margin-bottom:4px;}
+    .dup-warn-sub{color:var(--mut);font-size:.78rem;margin-bottom:10px;line-height:1.5;}
+    .dup-warn-btns{display:flex;gap:8px;flex-wrap:wrap;}
+    .dup-warn-btns .btn{flex:1;justify-content:center;text-decoration:none;min-width:140px;}
   </style>
   <script src="supabase-config.js"></script>
   <script src="form-library.js"></script>
@@ -423,6 +428,7 @@
         <div id="detectSummary" style="display:none" class="detect-summary">
           <span id="detectMsg"></span>
         </div>
+        <div id="dupWarn" style="display:none" class="dup-warn"></div>
         <div id="templateSuggest" style="display:none" class="template-suggest"></div>
 
         <div id="suggList" class="sugg-list"></div>
@@ -780,6 +786,32 @@ function matchTemplate(fields) {
   return {template: bestTmpl, score: bestScore, missing};
 }
 
+// Detecta si lo que se está digitalizando ya existe como una plantilla
+// propia guardada (distinta de FORM_LIBRARY, que son ejemplos genéricos
+// del catálogo). Compara etiquetas normalizadas en común para no hacer
+// que alguien recree por accidente un formulario que ya tiene.
+function matchExistingPlantillas(fields) {
+  if (!fields.length) return null;
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); }
+  catch(e) { return null; }
+
+  const detNorm = fields.map(f => _norm(f.etiqueta)).filter(Boolean);
+  let best = null, bestRatio = 0;
+  for (const t of saved) {
+    if (t.id === tmpl.id) continue; // no compararse contra sí misma al re-editar
+    if (!t.campos || !t.campos.length) continue;
+    const existNorm = t.campos.map(c => _norm(c.etiqueta)).filter(Boolean);
+    let shared = 0;
+    for (const dn of detNorm) {
+      if (existNorm.some(en => en === dn || (dn.length > 3 && (en.includes(dn) || dn.includes(en))))) shared++;
+    }
+    const ratio = shared / Math.max(detNorm.length, existNorm.length);
+    if (shared >= 3 && ratio > bestRatio) { bestRatio = ratio; best = {template: t, shared, ratio}; }
+  }
+  return (bestRatio >= 0.45) ? best : null;
+}
+
 // ══════════════════════════════════════════════════════════════════
 // ANALYZE (main entry point)
 // ══════════════════════════════════════════════════════════════════
@@ -875,6 +907,21 @@ async function analyze() {
       sumEl.style.display='flex';
     } else {
       sumEl.style.display='none';
+    }
+
+    const dupWarnEl = document.getElementById('dupWarn');
+    const dupMatch = matchExistingPlantillas(tmpl.campos);
+    if (dupMatch) {
+      const t2 = dupMatch.template;
+      dupWarnEl.innerHTML = `<div class="dup-warn-title">⚠️ Ya existe un formulario parecido: <strong>${t2.nombre}</strong></div>
+        <div class="dup-warn-sub">Tiene ${dupMatch.shared} campo${dupMatch.shared!==1?'s':''} en común con lo que acabas de digitalizar. Antes de seguir, revisa si no es el mismo formulario duplicado.</div>
+        <div class="dup-warn-btns">
+          <a class="btn btn-sec" href="llenar.html?tmpl=${encodeURIComponent(t2.id)}" target="_blank" rel="noopener">👁️ Ver formulario existente</a>
+          <button type="button" class="btn btn-sec" onclick="document.getElementById('dupWarn').style.display='none'">Seguir con este nuevo</button>
+        </div>`;
+      dupWarnEl.style.display = 'block';
+    } else {
+      dupWarnEl.style.display = 'none';
     }
 
     const suggestEl = document.getElementById('templateSuggest');
