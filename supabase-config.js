@@ -97,6 +97,7 @@ async function sbSyncEnvio(envio) {
       numero: envio.numero || null,
       plantilla_id: envio.plantillaId || null,
       plantilla_nombre: envio.plantillaNombre || '',
+      plantilla_codigo: envio.plantillaCodigo || '',
       user_id: user.id,
       datos: envio.datos || {},
       estado: envio.estado || 'enviado',

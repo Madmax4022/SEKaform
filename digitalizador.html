@@ -31,6 +31,13 @@
     .fg input,.fg textarea,.fg select{width:100%;background:var(--card);border:1px solid var(--bor);border-radius:8px;color:var(--txt);font-size:.95rem;font-family:inherit;padding:11px 14px;outline:none;transition:border-color .2s;}
     .fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--pri);}
     .fg textarea{resize:vertical;min-height:68px;}
+    .cod-row{display:flex;gap:8px;}
+    .cod-row input{font-family:'SF Mono',Consolas,monospace;letter-spacing:.5px;}
+    .cod-row input[readonly]{color:var(--mut);background:var(--bg);cursor:default;}
+    .cod-edit-btn{flex-shrink:0;width:42px;border:1px solid var(--bor);border-radius:8px;background:var(--card);cursor:pointer;font-size:.95rem;transition:border-color .2s,background .2s;}
+    .cod-edit-btn:hover{border-color:var(--pri);}
+    .cod-edit-btn.on{background:var(--pri);border-color:var(--pri);}
+    .cod-hint{font-size:.72rem;color:var(--mut);margin-top:6px;line-height:1.4;}
 
     /* ─ PAGE 1: source tabs + upload ─ */
     .src-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:24px;}
@@ -345,8 +352,12 @@
           <input type="text" id="fDesc" placeholder="Para qué se usa">
         </div>
         <div class="fg">
-          <label>Código</label>
-          <input type="text" id="fCod" placeholder="FORM-001-v1">
+          <label>Código *</label>
+          <div class="cod-row">
+            <input type="text" id="fCod" readonly>
+            <button type="button" class="cod-edit-btn" id="fCodBtn" onmousedown="event.preventDefault()" onclick="toggleCodEdit()" title="Editar código">✏️</button>
+          </div>
+          <div class="cod-hint">Identifica este tipo de formulario en el panel de inteligencia de negocio. Se genera solo — solo edítalo si quieres que se agrupe con otra plantilla existente.</div>
         </div>
       </div>
     </div>
@@ -758,7 +769,7 @@ async function analyze() {
   if (!nom) { toast('Escribe el nombre del formulario','er'); document.getElementById('fNom').focus(); return; }
   tmpl.nombre = nom;
   tmpl.descripcion = document.getElementById('fDesc').value.trim();
-  tmpl.codigo = document.getElementById('fCod').value.trim();
+  commitCodigo(); // normaliza y valida duplicados si quedó en modo edición
 
   showProcessing();
 
@@ -1609,6 +1620,77 @@ function removeLogo(){
 // ══════════════════════════════════════════════════════════════════
 // SAVE
 // ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
+// CÓDIGO DE FORMULARIO (llave de agrupación para BI)
+// ══════════════════════════════════════════════════════════════════
+// Cada plantilla necesita un código estable: es la llave que usa el
+// dashboard para agrupar envíos del mismo "tipo de formulario" aunque se
+// vuelva a digitalizar o se guarde con un nombre ligeramente distinto.
+// Se autogenera (FORM-0001, FORM-0002…) para que nadie tenga que
+// escribirlo bien; el lápiz solo deja editarlo a mano cuando se quiere
+// unir esta plantilla al mismo grupo que otra ya existente.
+
+function normalizeCodigo(raw){
+  return (raw||'')
+    .normalize('NFD').replace(/[̀-ͯ]/g,'') // quitar tildes
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'')
+    .slice(0,32);
+}
+
+function knownCodigos(){
+  let local=[];
+  try{local=JSON.parse(localStorage.getItem('skf_plantillas')||'[]');}catch{}
+  return local.filter(p=>p.id!==tmpl.id && p.codigo).map(p=>({id:p.id,nombre:p.nombre,codigo:p.codigo}));
+}
+
+function genNextCodigo(){
+  let max=0;
+  knownCodigos().forEach(c=>{
+    const m=/^FORM-(\d+)$/.exec(c.codigo);
+    if(m)max=Math.max(max,parseInt(m[1],10));
+  });
+  return `FORM-${String(max+1).padStart(4,'0')}`;
+}
+
+function ensureCodigo(){
+  if(!tmpl.codigo)tmpl.codigo=genNextCodigo();
+  const el=document.getElementById('fCod');
+  if(el)el.value=tmpl.codigo;
+}
+
+function toggleCodEdit(){
+  const el=document.getElementById('fCod'), btn=document.getElementById('fCodBtn');
+  if(!el||!btn)return;
+  if(el.readOnly){
+    el.readOnly=false;
+    btn.textContent='✓';btn.classList.add('on');btn.title='Confirmar código';
+    el.focus();el.select();
+  } else {
+    commitCodigo();
+  }
+}
+
+function commitCodigo(){
+  const el=document.getElementById('fCod'), btn=document.getElementById('fCodBtn');
+  if(!el||!btn)return;
+  if(el.readOnly)return; // ya estaba confirmado, nada que hacer
+  let code=normalizeCodigo(el.value);
+  if(!code){
+    code=genNextCodigo();
+    toast('Código vacío o con caracteres inválidos — se generó uno nuevo','wa');
+  } else {
+    const dup=knownCodigos().find(c=>c.codigo===code);
+    if(dup){
+      const usarMismo=confirm(`Ya existe un formulario con el código "${code}" ("${dup.nombre}"). Aceptar = usar el mismo código y agrupar los envíos de ambos en el panel de inteligencia de negocio. Cancelar = elegir otro código.`);
+      if(!usarMismo){el.focus();el.select();return;} // se queda en modo edición
+    }
+  }
+  tmpl.codigo=code;el.value=code;
+  el.readOnly=true;btn.textContent='✏️';btn.classList.remove('on');btn.title='Editar código';
+}
+
 function save(){
   // Sync options from DOM
   tmpl.campos.forEach(c=>{
@@ -1619,6 +1701,7 @@ function save(){
   });
   if(!tmpl.nombre){toast('Sin nombre','er');return;}
   if(!tmpl.campos.length){toast('Agrega campos primero','er');return;}
+  if(!tmpl.codigo)tmpl.codigo=genNextCodigo(); // red de seguridad: nunca debería quedar vacío
   if(!tmpl.id){tmpl.id=`tmpl_${Date.now()}`;tmpl.creadoEn=new Date().toISOString();}
   tmpl.actualizadoEn=new Date().toISOString();
   const list=JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
@@ -1714,10 +1797,17 @@ function loadPreset(presetId, editMode) {
 // Init
 renderSuggList();
 renderStarterGrid();
+ensureCodigo();
 (function initFromQuery() {
   const params = new URLSearchParams(location.search);
   const preset = params.get('preset');
   if (preset) loadPreset(preset, params.get('edit') === '1');
+})();
+(function wireCodEdit() {
+  const el = document.getElementById('fCod');
+  if (!el) return;
+  el.addEventListener('blur', commitCodigo);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
 })();
 </script>
 </body>

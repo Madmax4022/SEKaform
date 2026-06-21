@@ -21,3 +21,6 @@ jobs:
 
       - name: Ejecutar pruebas de field-types.js
         run: node tests/fieldTypes.test.cjs
+
+      - name: Ejecutar pruebas del código de plantilla
+        run: node tests/codigoPlantilla.test.cjs

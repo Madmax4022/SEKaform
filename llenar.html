@@ -367,6 +367,7 @@ function normalizePlantillaFromCloud(p) {
 function normalizeEnvioFromCloud(e) {
   return {
     id: e.id, numero: e.numero, plantillaId: e.plantilla_id||e.plantillaId, plantillaNombre: e.plantilla_nombre||e.plantillaNombre,
+    plantillaCodigo: e.plantilla_codigo||e.plantillaCodigo||'',
     estado: e.estado||'enviado', datos: e.datos||{},
     creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn
   };
@@ -943,6 +944,7 @@ function saveDraft() {
     id: draftId || `bor_${Date.now()}`,
     plantillaId: activeTmpl.id,
     plantillaNombre: activeTmpl.nombre,
+    plantillaCodigo: activeTmpl.codigo || '',
     datos: {...submission},
     guardadoEn: new Date().toISOString()
   };
@@ -977,6 +979,7 @@ function submitForm() {
       numero,
       plantillaId: activeTmpl.id,
       plantillaNombre: activeTmpl.nombre,
+      plantillaCodigo: activeTmpl.codigo || '',
       estado: 'enviado',
       datos: {...submission},
       creadoEn: new Date().toISOString(),

@@ -273,12 +273,25 @@ function buildDailyChart(envios) {
   });
 }
 
+// ── Agrupación BI ───────────────────────────────────────────────────
+// El código (no el nombre escrito a mano) es la llave que identifica el
+// "tipo de formulario": dos plantillas con nombres distintos pero el
+// mismo código cuentan como un solo dataset aquí — así una nueva
+// digitalización del mismo papel, o un nombre con una letra distinta,
+// no fragmenta las estadísticas. Si un envío es de antes de esta
+// función (sin código), se cae a agrupar por plantilla_id y, en
+// último caso, por nombre.
+function envioGroupKey(e) {
+  return e.plantilla_codigo || e.plantillaCodigo || e.plantilla_id || e.plantillaId || `n:${e.plantilla_nombre || e.plantillaNombre || ''}`;
+}
+
 // ── By-form chart ────────────────────────────────────────────────
 function buildFormChart(envios, plantillas) {
-  const countMap = {};
+  const countMap = {}, labelMap = {};
   envios.forEach(e => {
-    const key = e.plantilla_nombre || e.plantillaNombre || 'Sin nombre';
+    const key = envioGroupKey(e);
     countMap[key] = (countMap[key]||0) + 1;
+    if (!labelMap[key]) labelMap[key] = e.plantilla_nombre || e.plantillaNombre || 'Sin nombre';
   });
 
   const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
@@ -292,7 +305,7 @@ function buildFormChart(envios, plantillas) {
   new Chart(document.getElementById('chartForms'), {
     type: 'bar',
     data: {
-      labels: sorted.map(([k]) => k.length>22 ? k.slice(0,20)+'…' : k),
+      labels: sorted.map(([k]) => { const l=labelMap[k]; return l.length>22 ? l.slice(0,20)+'…' : l; }),
       datasets: [{
         data: sorted.map(([,v]) => v),
         backgroundColor: sorted.map((_,i) => COLORS[i % COLORS.length] + 'cc'),
@@ -327,7 +340,7 @@ function buildCampoMap(plantillas) {
 
 function buildTable(envios, plantillas) {
   _allEnvios = envios; _allPlantillas = plantillas;
-  const filtered = _activeFilter ? envios.filter(e=>(e.plantilla_nombre||e.plantillaNombre||'')===_activeFilter) : envios;
+  const filtered = _activeFilter ? envios.filter(e=>envioGroupKey(e)===_activeFilter) : envios;
   const count = filtered.length;
   document.getElementById('tableCount').textContent = `${count} registro${count!==1?'s':''}`;
 
@@ -387,7 +400,7 @@ function applyFilter() {
 }
 
 function exportCSV() {
-  const envios = _activeFilter ? _allEnvios.filter(e=>(e.plantilla_nombre||e.plantillaNombre||'')===_activeFilter) : _allEnvios;
+  const envios = _activeFilter ? _allEnvios.filter(e=>envioGroupKey(e)===_activeFilter) : _allEnvios;
   if (!envios.length) { alert('No hay registros para exportar.'); return; }
   const campoMap = buildCampoMap(_allPlantillas);
   const colKeys = []; const colLabels = {};
@@ -461,10 +474,16 @@ async function init() {
     document.getElementById('chartDaily').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:60px 0">Gráficas no disponibles sin conexión</p>';
     document.getElementById('chartForms').parentNode.innerHTML = '';
   }
-  // Populate form filter dropdown
-  const formNames = [...new Set(envios.map(e=>e.plantilla_nombre||e.plantillaNombre||'').filter(Boolean))].sort();
+  // Populate form filter dropdown (una opción por código de formulario, no por nombre)
+  const groups = new Map(); // key -> label
+  envios.forEach(e => {
+    const key = envioGroupKey(e);
+    if (!groups.has(key)) groups.set(key, e.plantilla_nombre || e.plantillaNombre || '(sin nombre)');
+  });
   const sel = document.getElementById('formFilter');
-  formNames.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+  [...groups.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([key,label]) => {
+    const o=document.createElement('option'); o.value=key; o.textContent=label; sel.appendChild(o);
+  });
 
   buildTable(envios, plantillas);
 
