@@ -135,15 +135,27 @@ CREATE TRIGGER trg_envios_asignar_dueno
 -- Paso manual requerido (NO incluido aquí por seguridad — no se debe
 -- subir una API key real al repositorio): crea una cuenta en
 -- https://resend.com, genera una API key, y en el SQL editor de Supabase
--- ejecuta una sola vez (reemplazando el valor):
+-- ejecuta una sola vez (reemplazando el valor), guardándola en Supabase
+-- Vault. NO uses ALTER DATABASE ... SET: el rol "postgres" del dashboard
+-- de Supabase no es superusuario real y no tiene permiso para eso
+-- (ERROR 42501); Vault sí está pensado para que este rol guarde y lea
+-- secretos:
 --
---   ALTER DATABASE postgres SET app.resend_api_key = 'tu_api_key_aquí';
+--   SELECT vault.create_secret('tu_api_key_aquí', 'resend_api_key');
+--
+-- Si ya la habías guardado antes y necesitas reemplazarla, usa en su lugar:
+--
+--   SELECT vault.update_secret(
+--     (SELECT id FROM vault.decrypted_secrets WHERE name = 'resend_api_key' LIMIT 1),
+--     'tu_nueva_api_key_aquí'
+--   );
 --
 -- Mientras no verifiques un dominio propio en Resend, los correos se
 -- envían desde el remitente de pruebas "onboarding@resend.dev" (no
 -- requiere verificación, pero Resend puede limitar a quién le puede
 -- llegar — revisa su documentación si los correos no llegan).
 CREATE EXTENSION IF NOT EXISTS pg_net;
+CREATE EXTENSION IF NOT EXISTS supabase_vault;
 
 CREATE OR REPLACE FUNCTION envios_notificar_completado()
 RETURNS TRIGGER
@@ -169,7 +181,10 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  api_key := current_setting('app.resend_api_key', true);
+  SELECT decrypted_secret INTO api_key
+    FROM vault.decrypted_secrets
+    WHERE name = 'resend_api_key'
+    LIMIT 1;
   IF api_key IS NULL OR api_key = '' THEN
     RETURN NEW;
   END IF;
