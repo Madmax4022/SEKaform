@@ -55,6 +55,7 @@
     .qr-note.hidden { display: none; }
     .qr-share-btns { display: flex; gap: 8px; margin: 0 0 16px; }
     .qr-share-btns.hidden { display: none; }
+    .qr-activate-btn.hidden { display: none; }
 
     .empty-state { text-align: center; padding: 64px 20px; }
     .es-ico { font-size: 3.5rem; display: block; margin-bottom: 14px; }
@@ -302,16 +303,17 @@
       <input class="qr-url-inp" id="qrUrlInp" readonly>
       <button class="qr-copy" onclick="copyShareUrl()">Copiar</button>
     </div>
-    <div id="qrShareBtns" class="qr-share-btns hidden">
+    <div id="qrShareBtns" class="qr-share-btns">
       <a id="qrEmailBtn" class="btn btn-sec" style="flex:1;justify-content:center;text-decoration:none" href="#" target="_blank">✉️ Correo</a>
       <a id="qrWhatsappBtn" class="btn btn-sec" style="flex:1;justify-content:center;text-decoration:none" href="#" target="_blank">💬 WhatsApp</a>
     </div>
     <div class="qr-note" id="qrNote">
-      <strong>✓ Cómo funciona:</strong> quien escanee el QR verá el formulario completo y podrá llenarlo. Los envíos se guardan en su dispositivo. Para recibir los datos en tu base de datos, asegúrate de que todos los usuarios usen la misma cuenta de Supabase.
+      <strong>⚠ Link largo:</strong> este formulario aún no es público, así que el link/QR lleva todos sus datos incrustados y puede verse muy denso o difícil de escanear. Actívalo como público para tener un link corto y fácil de compartir.
     </div>
     <div class="qr-note hidden" id="qrNotePublic">
       <strong>✓ Cómo funciona:</strong> quien abra este link o escanee el QR podrá llenarlo sin necesitar cuenta — su envío caerá directo en tu mismo panel de inteligencia de negocio.
     </div>
+    <button class="btn btn-pri qr-activate-btn hidden" id="qrActivatePublic" style="width:100%;justify-content:center;margin-bottom:10px">🌐 Activar link público (recomendado)</button>
     <button class="btn btn-sec" style="width:100%;justify-content:center" onclick="closeQRModal()">Cerrar</button>
   </div>
 </div>
@@ -510,6 +512,7 @@ function showQR(id) {
   let shareUrl;
   const base = location.origin + location.pathname;
   const isPublic = t.publica && t.shareToken;
+  const canGoPublic = typeof SKF_CONFIGURED !== 'undefined' && SKF_CONFIGURED && !isPublic;
   if (isPublic) {
     shareUrl = `${base}?pub=${t.shareToken}`;
   } else {
@@ -525,15 +528,37 @@ function showQR(id) {
 
   document.getElementById('qrNote').classList.toggle('hidden', isPublic);
   document.getElementById('qrNotePublic').classList.toggle('hidden', !isPublic);
-  document.getElementById('qrShareBtns').classList.toggle('hidden', !isPublic);
-  if (isPublic) {
-    const subject = encodeURIComponent(`Formulario: ${t.nombre}`);
-    const body = encodeURIComponent(`Te comparto el formulario "${t.nombre}" para que lo completes:\n\n${shareUrl}`);
-    document.getElementById('qrEmailBtn').href = `mailto:?subject=${subject}&body=${body}`;
-    document.getElementById('qrWhatsappBtn').href = `https://wa.me/?text=${body}`;
-  }
+
+  const subject = encodeURIComponent(`Formulario: ${t.nombre}`);
+  const body = encodeURIComponent(`Te comparto el formulario "${t.nombre}" para que lo completes:\n\n${shareUrl}`);
+  document.getElementById('qrEmailBtn').href = `mailto:?subject=${subject}&body=${body}`;
+  document.getElementById('qrWhatsappBtn').href = `https://wa.me/?text=${body}`;
+
+  const activateBtn = document.getElementById('qrActivatePublic');
+  activateBtn.classList.toggle('hidden', !canGoPublic);
+  activateBtn.onclick = () => activatePublicShare(id);
 
   document.getElementById('qrModal').classList.remove('hidden');
+}
+
+// Convierte una plantilla privada en pública desde el mismo modal de
+// compartir, así el usuario no tiene que volver a digitalizador.html
+// solo para activar el link corto.
+async function activatePublicShare(id) {
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const idx = list.findIndex(x=>x.id===id);
+  if (idx === -1) return;
+  const t = list[idx];
+  t.publica = true;
+  if (!t.shareToken) {
+    t.shareToken = (crypto.randomUUID ? crypto.randomUUID() : 'tok_'+Date.now()+'_'+Math.random().toString(36).slice(2,10));
+  }
+  t.actualizadoEn = new Date().toISOString();
+  list[idx] = t;
+  localStorage.setItem('skf_plantillas', JSON.stringify(list));
+  await sbSyncPlantilla(t);
+  toast('Link público activado','ok');
+  showQR(id);
 }
 
 function closeQRModal() {
