@@ -31,10 +31,18 @@ ALTER TABLE plantillas ADD COLUMN IF NOT EXISTS correo_notificacion TEXT;
 
 ALTER TABLE plantillas ENABLE ROW LEVEL SECURITY;
 
+-- own_plantillas: nombre de una policy de una versión anterior de este
+-- mismo esquema — se elimina para no dejar dos policies permisivas
+-- duplicadas evaluando la misma condición en cada fila (warning "Multiple
+-- Permissive Policies" del Performance Advisor de Supabase).
+DROP POLICY IF EXISTS "own_plantillas" ON plantillas;
 DROP POLICY IF EXISTS "Usuarios ven sus propias plantillas" ON plantillas;
 CREATE POLICY "Usuarios ven sus propias plantillas"
   ON plantillas FOR ALL
-  USING (auth.uid() = user_id);
+  -- (select auth.uid()) en vez de auth.uid() a secas: el planner cachea el
+  -- resultado del subquery una sola vez por consulta en lugar de
+  -- reevaluarlo por cada fila (warning "Auth RLS Initialization Plan").
+  USING ((select auth.uid()) = user_id);
 
 -- Permite que cualquier visitante anónimo (sin cuenta) cargue una plantilla
 -- marcada como pública por su share_token, para poder llenarla y enviarla
@@ -72,10 +80,12 @@ ALTER TABLE envios ADD COLUMN IF NOT EXISTS plantilla_codigo TEXT NOT NULL DEFAU
 
 ALTER TABLE envios ENABLE ROW LEVEL SECURITY;
 
+-- own_envios: mismo caso que own_plantillas arriba.
+DROP POLICY IF EXISTS "own_envios" ON envios;
 DROP POLICY IF EXISTS "Usuarios ven sus propios envíos" ON envios;
 CREATE POLICY "Usuarios ven sus propios envíos"
   ON envios FOR ALL
-  USING (auth.uid() = user_id);
+  USING ((select auth.uid()) = user_id);
 
 -- Permite que un visitante anónimo envíe un formulario, pero solo si
 -- apunta a una plantilla marcada como pública. El user_id que llega del
