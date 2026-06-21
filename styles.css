@@ -13,33 +13,78 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
 
-/* ── Topbar / navegación ─────────────────────────────────────────── */
-.topbar {
+/* ── Sidebar lateral colapsable (navegación + sesión) ──────────────
+   Reemplaza el antiguo topbar horizontal. Vive fuera del flujo normal
+   (position:fixed) e inyectada por sidebar.js; el resto de la página se
+   desplaza con el padding-left de <body>. El estado colapsado se marca
+   con la clase "sb-collapsed" en <html> (ver snippet inline en <head>
+   de cada página, que la aplica antes del primer pintado para evitar
+   parpadeo). */
+.sidebar-toggle {
+  position: fixed; top: 14px; left: 14px; z-index: 401;
+  width: 38px; height: 38px; border-radius: 9px;
+  background: var(--card); border: 1px solid var(--bor); color: var(--txt);
+  font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s;
+  box-shadow: 0 2px 10px rgba(0,0,0,.3);
+}
+.sidebar-toggle:hover { background: var(--bor); }
+
+.sidebar {
+  position: fixed; top: 0; left: 0; height: 100vh; width: 232px;
+  background: var(--card); border-right: 1px solid var(--bor);
+  display: flex; flex-direction: column; z-index: 400;
+  padding: 64px 14px 14px; overflow-y: auto;
+  transform: translateX(0); transition: transform .25s ease;
+}
+html.sb-collapsed .sidebar { transform: translateX(-100%); }
+
+.sidebar-logo { font-size: 1.05rem; font-weight: 900; letter-spacing: -.5px; color: var(--txt); text-decoration: none; margin: 0 8px 18px; }
+.sidebar-logo span { color: var(--pri); }
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.sidebar-link { display: flex; align-items: center; gap: 10px; color: var(--mut); text-decoration: none; font-size: .86rem; font-weight: 600; padding: 10px 12px; border-radius: 8px; transition: background .15s, color .15s; }
+.sidebar-link:hover { background: var(--bor); color: var(--txt); }
+.sidebar-link.active { color: var(--pri); background: var(--pri-dim); }
+.sidebar-ico { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+
+.sidebar-bottom { border-top: 1px solid var(--bor); padding-top: 12px; margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.sidebar-bottom .auth-chip { align-self: flex-start; }
+.sidebar-bottom .auth-link { text-align: left; }
+
+.sidebar-backdrop { display: none; }
+
+body { padding-left: 232px; transition: padding-left .25s ease; }
+html.sb-collapsed body { padding-left: 0; }
+
+/* En celular/tablet angosto la barra nunca empuja el contenido — flota
+   encima con un fondo oscuro detrás (backdrop) que la cierra al tocarlo. */
+@media (max-width: 860px) {
+  body { padding-left: 0 !important; }
+  .sidebar { transform: translateX(-100%); box-shadow: 4px 0 28px rgba(0,0,0,.45); }
+  html:not(.sb-collapsed) .sidebar { transform: translateX(0); }
+  html:not(.sb-collapsed) .sidebar-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 399; }
+}
+
+/* ── Barra de herramientas de página (vistas tipo wizard: digitalizador,
+   llenar) — ya no es la navegación principal (eso lo hace el sidebar),
+   solo contexto de la vista actual (título, volver, acciones rápidas). */
+.page-toolbar {
   background: var(--card); border-bottom: 1px solid var(--bor);
   padding: 0 20px; height: 52px;
   display: flex; align-items: center; gap: 14px;
-  position: sticky; top: 0; z-index: 200;
+  position: sticky; top: 0; z-index: 150;
 }
-.topbar-logo { font-size: 1rem; font-weight: 900; letter-spacing: -.5px; color: var(--txt); text-decoration: none; flex-shrink: 0; }
-.topbar-logo span { color: var(--pri); }
-.topbar-nav { display: flex; align-items: center; gap: 2px; flex: 1 1 auto; min-width: 0; overflow-x: auto; }
-.topbar-link { color: var(--mut); text-decoration: none; font-size: .85rem; font-weight: 600; padding: 7px 12px; border-radius: 6px; transition: background .15s, color .15s; white-space: nowrap; }
-.topbar-link:hover { background: var(--bor); color: var(--txt); }
-.topbar-link.active { color: var(--pri); background: var(--pri-dim); }
 .topbar-title { font-size: .95rem; font-weight: 700; color: var(--txt); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* el botón de la barra lateral es fixed y siempre flota encima — se le
+   da espacio al inicio de la toolbar de página para que no la tape */
+@media (max-width: 860px) {
+  .page-toolbar { padding-left: 62px; }
+}
 .topbar-back { color: var(--mut); text-decoration: none; font-size: .85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; cursor: pointer; background: none; border: none; font-family: inherit; }
 .topbar-back:hover { background: var(--bor); color: var(--txt); }
-
-/* En pantallas angostas (tablet/celular), el correo de la cuenta + "Salir"
-   ya no caben en la misma línea que el logo/menú sin encimarse — bajan a
-   su propia línea en vez de tapar los links de navegación. El corte se
-   pone arriba del ancho real que necesitan logo+menú+cuenta (~990px) para
-   que cubra también tablets en vez de solo celulares. */
-@media (max-width: 1040px) {
-  .topbar { flex-wrap: wrap; height: auto; padding: 10px 16px; row-gap: 6px; }
-  .topbar-right { flex-basis: 100%; justify-content: flex-end; }
-}
 
 .auth-chip { font-size: .75rem; background: var(--ok-dim); border: 1px solid rgba(26,188,156,.3); color: var(--ok); border-radius: 20px; padding: 4px 12px; white-space: nowrap; }
 .auth-link { font-size: .78rem; cursor: pointer; background: none; border: none; color: var(--mut); text-decoration: none; padding: 6px 10px; border-radius: 6px; font-family: inherit; transition: background .15s; }

@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="supabase-config.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
   <style>
     /* layout */
     .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px;}
@@ -91,20 +98,7 @@
 </head>
 <body>
 
-<nav class="topbar">
-  <a href="index.html" class="topbar-logo">SEK<span>a</span>form</a>
-  <div class="topbar-nav">
-    <a href="plantillas.html" class="topbar-link">Plantillas</a>
-    <a href="digitalizador.html" class="topbar-link">Digitalizar</a>
-    <a href="llenar.html" class="topbar-link">Mis formularios</a>
-    <a href="asignaciones.html" class="topbar-link">Asignaciones</a>
-    <a href="dashboard.html" class="topbar-link active">Dashboard</a>
-  </div>
-  <div class="topbar-right">
-    <span id="userBadge" class="auth-chip" style="display:none"></span>
-    <button id="logoutBtn" class="auth-link" style="display:none" onclick="logout()">Salir</button>
-  </div>
-</nav>
+<script src="sidebar.js"></script>
 
 <div class="wrap">
   <h1 class="pg-h">Inteligencia de Negocios</h1>
@@ -187,18 +181,11 @@
   </div><!-- /mainContent -->
 </div>
 
-<script src="supabase-config.js"></script>
 <script src="chart.min.js"></script>
 <script>
 const CHART_GRID  = 'rgba(51,65,85,.6)';
 const CHART_TEXT  = '#94a3b8';
 const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-// ── Auth ────────────────────────────────────────────────────────
-async function logout() {
-  await sbSignOut();
-  window.location.href = 'login.html';
-}
 
 // ── Data loading ─────────────────────────────────────────────────
 async function loadData() {
@@ -442,14 +429,6 @@ function exportCSV() {
 async function init() {
   const now = new Date();
   document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
-
-  // Check auth state
-  const user = await sbGetUser();
-  if (user) {
-    document.getElementById('userBadge').textContent = '● ' + user.email;
-    document.getElementById('userBadge').style.display = 'inline-flex';
-    document.getElementById('logoutBtn').style.display = 'inline-block';
-  }
 
   const { plantillas, envios, fromCloud } = await loadData();
 

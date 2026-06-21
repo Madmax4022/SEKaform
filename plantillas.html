@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catálogo de Plantillas — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
   <style>
     .wrapper { max-width: 1000px; margin: 0 auto; padding: 40px 20px 60px; }
 
@@ -62,19 +68,7 @@
 </head>
 <body>
 
-<nav class="topbar">
-  <a href="index.html" class="topbar-logo">SEK<span>a</span>form</a>
-  <div class="topbar-nav">
-    <a href="plantillas.html" class="topbar-link active">Plantillas</a>
-    <a href="digitalizador.html" class="topbar-link">Digitalizar</a>
-    <a href="llenar.html" class="topbar-link">Mis formularios</a>
-    <a href="asignaciones.html" class="topbar-link">Asignaciones</a>
-    <a href="dashboard.html" class="topbar-link">Dashboard</a>
-  </div>
-  <div class="topbar-right" id="authBar">
-    <a class="auth-link" href="login.html" id="authLink">Iniciar sesión ☁</a>
-  </div>
-</nav>
+<script src="sidebar.js"></script>
 
 <div class="wrapper">
   <header class="pg-hd">
@@ -180,15 +174,6 @@ function render() {
 }
 
 render();
-
-(async () => {
-  if (typeof SKF_CONFIGURED === 'undefined' || !SKF_CONFIGURED) return;
-  const user = await sbGetUser();
-  const bar = document.getElementById('authBar');
-  if (user) {
-    bar.innerHTML = `<span class="auth-chip">☁ ${user.email}</span><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
-  }
-})();
 </script>
 </body>
 </html>

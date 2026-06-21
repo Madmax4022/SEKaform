@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Asignaciones — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="supabase-config.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
   <style>
     .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
     .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
@@ -78,20 +85,7 @@
 </head>
 <body>
 
-<nav class="topbar">
-  <a href="index.html" class="topbar-logo">SEK<span>a</span>form</a>
-  <div class="topbar-nav">
-    <a href="plantillas.html" class="topbar-link">Plantillas</a>
-    <a href="digitalizador.html" class="topbar-link">Digitalizar</a>
-    <a href="llenar.html" class="topbar-link">Mis formularios</a>
-    <a href="asignaciones.html" class="topbar-link active">Asignaciones</a>
-    <a href="dashboard.html" class="topbar-link">Dashboard</a>
-  </div>
-  <div class="topbar-right">
-    <span id="userBadge" class="auth-chip" style="display:none"></span>
-    <button id="logoutBtn" class="auth-link" style="display:none" onclick="logout()">Salir</button>
-  </div>
-</nav>
+<script src="sidebar.js"></script>
 
 <div class="wrap">
   <h1 class="pg-h">Asignaciones</h1>
@@ -123,16 +117,9 @@
   <div id="asgGroups"></div>
 </div>
 
-<script src="supabase-config.js"></script>
 <script>
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function norm(s){return String(s||'').trim().toLowerCase();}
-
-// ── Auth ─────────────────────────────────────────────────────────
-async function logout() {
-  await sbSignOut();
-  window.location.href = 'login.html';
-}
 
 // ── Storage helpers ──────────────────────────────────────────────
 function getPlantillas() { return JSON.parse(localStorage.getItem('skf_plantillas')||'[]'); }
@@ -372,13 +359,6 @@ function toast(msg,type='ok') {
 
 // ── Init ───────────────────────────────────────────────────────────
 async function init() {
-  const user = await sbGetUser();
-  if (user) {
-    document.getElementById('userBadge').textContent = '● ' + user.email;
-    document.getElementById('userBadge').style.display = 'inline-flex';
-    document.getElementById('logoutBtn').style.display = 'inline-block';
-  }
-
   const fromCloud = await syncFromCloud();
   if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
 
