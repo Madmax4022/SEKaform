@@ -236,6 +236,7 @@
     }
   </style>
   <script src="supabase-config.js"></script>
+  <script src="field-types.js"></script>
 </head>
 <body>
 
@@ -588,17 +589,8 @@ function renderFields(campos) {
   setTimeout(() => autoFill(campos), 100);
 }
 
-const _FICON = {
-  texto:'T', email:'@', telefono:'☏', numero:'#', textarea:'¶', fecha:'🗓',
-  fecha_auto:'📅', hora_auto:'⏰', ubicacion:'📍',
-  si_no:'✓✗', escala_1_5:'⭐', select:'▾', radio:'◉', checkbox:'☑', checkbox_multi:'📋',
-  firma:'✍', foto:'📷', separador:'—'
-};
-const _FCLASS = {
-  fecha_auto:'fc-auto', hora_auto:'fc-auto', ubicacion:'fc-auto',
-  firma:'fc-sig', foto:'fc-media',
-  si_no:'fc-smart', escala_1_5:'fc-smart', radio:'fc-smart', select:'fc-smart', checkbox:'fc-smart', checkbox_multi:'fc-smart'
-};
+// Íconos y clases de cada tipo de campo vienen de field-types.js (catálogo
+// compartido con digitalizador.html), no de una copia local.
 
 function buildFieldEl(c) {
   if (c.tipo === 'separador') {
@@ -609,11 +601,11 @@ function buildFieldEl(c) {
   }
 
   const fg = document.createElement('div');
-  fg.className = 'fg ' + (_FCLASS[c.tipo] || '');
+  fg.className = 'fg ' + ((FIELD_TYPE_MAP[c.tipo] && FIELD_TYPE_MAP[c.tipo].fieldClass) || '');
   fg.id = `fg_${c.id}`;
 
   const lbl = document.createElement('label');
-  const ico = _FICON[c.tipo] || 'T';
+  const ico = (FIELD_TYPE_MAP[c.tipo] && FIELD_TYPE_MAP[c.tipo].ico) || 'T';
   lbl.innerHTML = `<span class="fg-ico">${ico}</span>${c.etiqueta}${c.requerido ? '<span class="req">*</span>' : ''}`;
   fg.appendChild(lbl);
 

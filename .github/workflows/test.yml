@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  analyzeText:
+  pruebas:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,3 +18,6 @@ jobs:
 
       - name: Ejecutar pruebas de analyzeText
         run: node tests/analyzeText.test.cjs
+
+      - name: Ejecutar pruebas de field-types.js
+        run: node tests/fieldTypes.test.cjs

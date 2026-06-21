@@ -1,8 +1,9 @@
 // Batería de regresión para analyzeText() (digitalizador.html).
 //
-// No usa dependencias externas: extrae el <script> inline del HTML real y lo
-// ejecuta en un contexto vm con stubs mínimos para document/window/etc, así
-// que prueba el código de producción tal cual, sin navegador ni red.
+// No usa dependencias externas: extrae el <script> inline del HTML real (más
+// field-types.js, del que depende para TIPO_MAP) y lo ejecuta en un contexto
+// vm con stubs mínimos para document/window/etc, así que prueba el código de
+// producción tal cual, sin navegador ni red.
 //
 // Ejecutar: node tests/analyzeText.test.cjs
 
@@ -11,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const HTML_PATH = path.join(__dirname, '..', 'digitalizador.html');
+const FIELD_TYPES_PATH = path.join(__dirname, '..', 'field-types.js');
 
 function makeStub() {
   const target = function stub() { return makeStub(); };
@@ -41,6 +43,8 @@ function loadAnalyzeText() {
   sandbox.history = makeStub();
 
   vm.createContext(sandbox);
+  const fieldTypesScript = fs.readFileSync(FIELD_TYPES_PATH, 'utf8');
+  vm.runInContext(fieldTypesScript, sandbox, { filename: 'field-types.js' });
   vm.runInContext(mainScript, sandbox, { filename: 'digitalizador-inline.js' });
 
   if (typeof sandbox.analyzeText !== 'function') {

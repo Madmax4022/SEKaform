@@ -207,6 +207,7 @@
   </style>
   <script src="supabase-config.js"></script>
   <script src="form-library.js"></script>
+  <script src="field-types.js"></script>
 </head>
 <body>
 
@@ -463,32 +464,10 @@ let activeMenuId = null;
 // ══════════════════════════════════════════════════════════════════
 // FIELD TYPES
 // ══════════════════════════════════════════════════════════════════
-const TIPOS = [
-  {g:'Automáticos'},
-  {k:'fecha_auto', ico:'📅', lbl:'Fecha automática',    desc:'Hoy auto',      chip:'chip-auto'},
-  {k:'hora_auto',  ico:'⏰', lbl:'Hora automática',     desc:'Ahora auto',    chip:'chip-auto'},
-  {k:'ubicacion',  ico:'📍', lbl:'Ubicación GPS',       desc:'Coords. auto',  chip:'chip-auto'},
-  {g:'Selección'},
-  {k:'si_no',      ico:'✓✗', lbl:'Sí / No / N/A',      desc:'Cumplimiento',  chip:'chip-smart'},
-  {k:'escala_1_5', ico:'⭐',  lbl:'Escala 1–5',          desc:'Calificación',  chip:'chip-smart'},
-  {k:'select',     ico:'▼',  lbl:'Desplegable',         desc:'Lista opciones',chip:'chip-smart'},
-  {k:'radio',      ico:'◉',  lbl:'Opción única',        desc:'Radio buttons', chip:'chip-smart'},
-  {k:'checkbox',   ico:'☑',  lbl:'Casilla de verificación',desc:'Marcar/Sin marcar',chip:'chip-smart'},
-  {k:'checkbox_multi',ico:'📋',lbl:'Opción múltiple',  desc:'Varias casillas',chip:'chip-smart'},
-  {g:'Multimedia'},
-  {k:'firma',      ico:'✍',  lbl:'Firma digital',       desc:'Canvas táctil', chip:'chip-sig'},
-  {k:'foto',       ico:'📷', lbl:'Fotografía',          desc:'Cámara/galería',chip:'chip-photo'},
-  {g:'Texto'},
-  {k:'texto',      ico:'T',  lbl:'Texto corto',         desc:'Una línea',     chip:'chip-man'},
-  {k:'textarea',   ico:'¶',  lbl:'Texto largo',         desc:'Párrafo',       chip:'chip-man'},
-  {k:'numero',     ico:'#',  lbl:'Número',              desc:'Cifra',         chip:'chip-man'},
-  {k:'email',      ico:'@',  lbl:'Correo',              desc:'E-mail',        chip:'chip-man'},
-  {k:'telefono',   ico:'☏',  lbl:'Teléfono',            desc:'Tel/cel',       chip:'chip-man'},
-  {k:'fecha',      ico:'🗓', lbl:'Fecha manual',        desc:'El usuario elige',chip:'chip-man'},
-  {g:'Estructura'},
-  {k:'separador',  ico:'—',  lbl:'Separador / Título',  desc:'Encabezado',    chip:'chip-sep'},
-];
-const TIPO_MAP = Object.fromEntries(TIPOS.filter(t=>t.k).map(t=>[t.k,t]));
+// El catálogo de tipos (FIELD_TYPES/FIELD_TYPE_MAP/FIELD_TYPE_GROUPS) vive en
+// field-types.js, compartido con llenar.html. TIPO_MAP se mantiene como
+// alias para no tocar las ~10 referencias existentes en este archivo.
+const TIPO_MAP = FIELD_TYPE_MAP;
 
 // Set base que se ofrece en la página 1 para no empezar cada formulario
 // desde cero — se suma a lo que detecte la fuente elegida (si hay alguna).
@@ -679,7 +658,7 @@ function sugerirOpciones(label) {
   return [];
 }
 
-function needsOptions(tipo) { return ['select','radio','checkbox_multi','escala_1_5'].includes(tipo); }
+function needsOptions(tipo) { return fieldNeedsOptions(tipo); }
 
 // ══════════════════════════════════════════════════════════════════
 // SOURCE SELECTION
@@ -1501,12 +1480,13 @@ function openMenu(cId, btn) {
   const menu=document.getElementById('typeMenu');
   if(activeMenuId===cId && menu.classList.contains('open')){closeMenu();return;}
   activeMenuId=cId;
-  menu.innerHTML=TIPOS.map(t=>{
-    if(t.g) return `<div class="tm-section">${t.g}</div>`;
-    return `<div class="tm-item" onclick="changeType('${cId}','${t.k}')">
-      <span class="tm-ico">${t.ico}</span>
-      <div class="tm-info"><div class="tm-lbl">${t.lbl}</div><div class="tm-desc">${t.desc}</div></div>
-    </div>`;
+  menu.innerHTML=FIELD_TYPE_GROUPS.map(g=>{
+    const items = FIELD_TYPES.filter(t=>t.grupo===g).map(t=>`
+      <div class="tm-item" onclick="changeType('${cId}','${t.k}')">
+        <span class="tm-ico">${t.ico}</span>
+        <div class="tm-info"><div class="tm-lbl">${t.lbl}</div><div class="tm-desc">${t.desc}</div></div>
+      </div>`).join('');
+    return `<div class="tm-section">${g}</div>${items}`;
   }).join('');
   const r=btn.getBoundingClientRect();
   menu.style.top=Math.min(r.bottom+6,window.innerHeight-320)+'px';
