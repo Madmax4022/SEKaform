@@ -349,7 +349,8 @@ function buildTable(envios, plantillas) {
 
   if (!count) {
     document.getElementById('tableBody').innerHTML =
-      `<div class="empty"><span class="empty-ico">📋</span><h3>Sin envíos todavía</h3><p>Los registros capturados en campo aparecerán aquí.</p></div>`;
+      `<div class="empty"><span class="empty-ico">📋</span><h3>Sin envíos todavía</h3><p>Los registros capturados en campo aparecerán aquí.</p>
+      <div style="margin-top:16px"><a href="llenar.html" class="btn btn-pri" style="text-decoration:none;display:inline-flex">Llenar un formulario →</a></div></div>`;
     return;
   }
 
