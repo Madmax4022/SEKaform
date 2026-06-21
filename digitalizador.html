@@ -368,7 +368,7 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="fg">
           <label class="chk-row" style="font-weight:600">
-            <input type="checkbox" id="fPublica">
+            <input type="checkbox" id="fPublica" checked>
             🌐 Compartir públicamente (link / QR / correo / WhatsApp)
           </label>
           <div class="cod-hint">Cualquiera con el link podrá llenarlo sin necesitar cuenta — sus envíos caerán en tu mismo panel de inteligencia de negocio.</div>
@@ -1831,12 +1831,29 @@ function toast(msg,type='ok'){
   document.body.appendChild(d);_tt=setTimeout(()=>d.remove(),3500);
 }
 
+// Correo de la cuenta logueada, para prellenar "Correo de notificación" sin
+// que el usuario tenga que escribirlo cada vez — se resuelve una sola vez al
+// cargar la página y se reutiliza tanto en el paso 1 del wizard como en
+// loadPreset() de abajo.
+let _accountEmail = null;
+const _accountEmailReady = (async () => {
+  try { const u = await sbGetUser(); _accountEmail = u && u.email || null; }
+  catch { _accountEmail = null; }
+  const el = document.getElementById('fCorreoNotif');
+  if (el && !el.value && _accountEmail) el.value = _accountEmail;
+  return _accountEmail;
+})();
+
 // Load a FORM_LIBRARY template via ?preset=<id>.
 // Default: it's already complete and validated, so save it and go straight
-// to filling it out — no forced detour through the field-editing step.
+// to filling it out — no forced detour through the field-editing step. Por
+// eso necesita activar acá mismo "publica" y "correoNotificacion" con los
+// mismos valores por defecto del paso 1 del wizard (link público + correo
+// de la cuenta) — si no, un formulario tomado del catálogo precargado
+// quedaría sin esas opciones porque nunca pasa por ese paso.
 // Only with &edit=1 (the "Personalizar campos" link) does it open the wizard
 // at step 2 for review/editing.
-function loadPreset(presetId, editMode) {
+async function loadPreset(presetId, editMode) {
   const t = FORM_LIBRARY.find(x => x.id === presetId);
   if (!t) return false;
   tmpl.nombre = t.nombre;
@@ -1853,6 +1870,10 @@ function loadPreset(presetId, editMode) {
   if (fNomEl) fNomEl.value = t.nombre;
 
   if (!editMode) {
+    tmpl.publica = true;
+    if (!tmpl.shareToken) tmpl.shareToken = genShareToken();
+    await _accountEmailReady;
+    tmpl.correoNotificacion = _accountEmail || '';
     save();
     if (tmpl.id) { window.location.href = `llenar.html?tmpl=${tmpl.id}`; return true; }
   }
