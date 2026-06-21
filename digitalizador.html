@@ -360,6 +360,20 @@
           <div class="cod-hint">Identifica este tipo de formulario en el panel de inteligencia de negocio. Se genera solo — solo edítalo si quieres que se agrupe con otra plantilla existente.</div>
         </div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg">
+          <label class="chk-row" style="font-weight:600">
+            <input type="checkbox" id="fPublica">
+            🌐 Compartir públicamente (link / QR / correo / WhatsApp)
+          </label>
+          <div class="cod-hint">Cualquiera con el link podrá llenarlo sin necesitar cuenta — sus envíos caerán en tu mismo panel de inteligencia de negocio.</div>
+        </div>
+        <div class="fg">
+          <label>📧 Correo de notificación</label>
+          <input type="email" id="fCorreoNotif" placeholder="ej: supervisor@empresa.com">
+          <div class="cod-hint">Si lo configuras, se enviará un correo automático con un resumen cada vez que alguien complete este formulario.</div>
+        </div>
+      </div>
     </div>
 
     <div class="starter-box">
@@ -465,7 +479,12 @@
 // ══════════════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════════════
-let tmpl = {id:null,nombre:'',descripcion:'',codigo:'',imagen:null,sourceUrl:null,campos:[],version:'1.0',logo:null,favorito:false,creadoEn:null,actualizadoEn:null};
+let tmpl = {id:null,nombre:'',descripcion:'',codigo:'',imagen:null,sourceUrl:null,campos:[],version:'1.0',logo:null,favorito:false,publica:false,shareToken:null,correoNotificacion:'',creadoEn:null,actualizadoEn:null};
+
+function genShareToken(){
+  if (typeof crypto!=='undefined' && crypto.randomUUID) return crypto.randomUUID().replace(/-/g,'');
+  return 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+}
 let curSrc = 'img';
 let imgData = null;
 let pdfFile = null;
@@ -769,6 +788,9 @@ async function analyze() {
   if (!nom) { toast('Escribe el nombre del formulario','er'); document.getElementById('fNom').focus(); return; }
   tmpl.nombre = nom;
   tmpl.descripcion = document.getElementById('fDesc').value.trim();
+  tmpl.publica = document.getElementById('fPublica').checked;
+  tmpl.correoNotificacion = document.getElementById('fCorreoNotif').value.trim();
+  if (tmpl.publica && !tmpl.shareToken) tmpl.shareToken = genShareToken();
   commitCodigo(); // normaliza y valida duplicados si quedó en modo edición
 
   showProcessing();

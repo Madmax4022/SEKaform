@@ -52,6 +52,9 @@
     .qr-copy:hover { background: var(--pri-h); }
     .qr-note { font-size: .73rem; color: var(--mut); line-height: 1.55; background: rgba(37,99,235,.08); border: 1px solid rgba(37,99,235,.2); border-radius: 8px; padding: 9px 12px; margin-bottom: 16px; text-align: left; }
     .qr-note strong { color: var(--ok); }
+    .qr-note.hidden { display: none; }
+    .qr-share-btns { display: flex; gap: 8px; margin: 0 0 16px; }
+    .qr-share-btns.hidden { display: none; }
 
     .empty-state { text-align: center; padding: 64px 20px; }
     .es-ico { font-size: 3.5rem; display: block; margin-bottom: 14px; }
@@ -299,8 +302,15 @@
       <input class="qr-url-inp" id="qrUrlInp" readonly>
       <button class="qr-copy" onclick="copyShareUrl()">Copiar</button>
     </div>
-    <div class="qr-note">
+    <div id="qrShareBtns" class="qr-share-btns hidden">
+      <a id="qrEmailBtn" class="btn btn-sec" style="flex:1;justify-content:center;text-decoration:none" href="#" target="_blank">✉️ Correo</a>
+      <a id="qrWhatsappBtn" class="btn btn-sec" style="flex:1;justify-content:center;text-decoration:none" href="#" target="_blank">💬 WhatsApp</a>
+    </div>
+    <div class="qr-note" id="qrNote">
       <strong>✓ Cómo funciona:</strong> quien escanee el QR verá el formulario completo y podrá llenarlo. Los envíos se guardan en su dispositivo. Para recibir los datos en tu base de datos, asegúrate de que todos los usuarios usen la misma cuenta de Supabase.
+    </div>
+    <div class="qr-note hidden" id="qrNotePublic">
+      <strong>✓ Cómo funciona:</strong> quien abra este link o escanee el QR podrá llenarlo sin necesitar cuenta — su envío caerá directo en tu mismo panel de inteligencia de negocio.
     </div>
     <button class="btn btn-sec" style="width:100%;justify-content:center" onclick="closeQRModal()">Cerrar</button>
   </div>
@@ -361,6 +371,8 @@ function normalizePlantillaFromCloud(p) {
   return {
     id: p.id, nombre: p.nombre, descripcion: p.descripcion||'', codigo: p.codigo||'',
     campos: p.campos||[], version: '1.0', logo: p.logo||null, favorito: p.favorito||false,
+    publica: p.publica||false, shareToken: p.share_token||p.shareToken||null,
+    correoNotificacion: p.correo_notificacion||p.correoNotificacion||'',
     creadoEn: p.creado_en||p.creadoEn, actualizadoEn: p.actualizado_en||p.actualizadoEn
   };
 }
@@ -391,9 +403,16 @@ async function syncFromCloud() {
 }
 
 // ── Init ───────────────────────────────────────────────────────────
+let isPublicFill = false; // true cuando se llena vía ?pub=<token> sin sesión
+
 document.addEventListener('DOMContentLoaded', async () => {
-  await syncFromCloud();
   const params = new URLSearchParams(location.search);
+  const pubToken = params.get('pub');
+  if (pubToken) {
+    await openPublicTemplate(pubToken);
+    return;
+  }
+  await syncFromCloud();
   const sharedEncoded = params.get('shared');
   const urlTmpl = params.get('tmpl');
   if (sharedEncoded) {
@@ -409,6 +428,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderList();
   }
 });
+
+// Abre un formulario público (?pub=<share_token>) sin necesitar cuenta.
+// La plantilla se carga directo de Supabase (no se guarda en skf_plantillas
+// del visitante) y el envío se manda con sbSubmitPublicEnvio, que cae en el
+// dataset del dueño gracias al trigger del servidor.
+async function openPublicTemplate(token) {
+  const p = await sbLoadPublicPlantilla(token);
+  if (!p) { toast('Este formulario no está disponible públicamente','er'); renderList(); return; }
+  isPublicFill = true;
+  activeTmpl = normalizePlantillaFromCloud(p);
+  submission = {};
+  signatures = {};
+  draftId = null;
+
+  document.getElementById('topTitle').textContent = activeTmpl.nombre;
+  document.getElementById('fCod').textContent = activeTmpl.codigo||'';
+  document.getElementById('fTitle').textContent = activeTmpl.nombre;
+  document.getElementById('fDesc').textContent = activeTmpl.descripcion||'';
+  document.getElementById('histBtn').style.display='none';
+  const fLogo = document.getElementById('fLogo');
+  if (activeTmpl.logo) { fLogo.src = activeTmpl.logo; fLogo.classList.remove('hidden'); }
+  else { fLogo.classList.add('hidden'); }
+
+  renderFields(activeTmpl.campos);
+  show('vForm');
+  updateProgress();
+}
 
 function goBack() {
   const vForm = document.getElementById('vForm');
@@ -460,14 +506,33 @@ function showQR(id) {
   const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
   const t = list.find(x=>x.id===id);
   if (!t) return;
-  const encoded = encodeTemplateForShare(t);
-  if (!encoded) { toast('Error generando enlace','er'); return; }
+
+  let shareUrl;
   const base = location.origin + location.pathname;
-  const shareUrl = `${base}?shared=${encoded}`;
+  const isPublic = t.publica && t.shareToken;
+  if (isPublic) {
+    shareUrl = `${base}?pub=${t.shareToken}`;
+  } else {
+    const encoded = encodeTemplateForShare(t);
+    if (!encoded) { toast('Error generando enlace','er'); return; }
+    shareUrl = `${base}?shared=${encoded}`;
+  }
+
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=1e293b&color=f8fafc&margin=8&format=svg`;
   document.getElementById('qrFormName').textContent = t.nombre;
   document.getElementById('qrImg').src = qrApiUrl;
   document.getElementById('qrUrlInp').value = shareUrl;
+
+  document.getElementById('qrNote').classList.toggle('hidden', isPublic);
+  document.getElementById('qrNotePublic').classList.toggle('hidden', !isPublic);
+  document.getElementById('qrShareBtns').classList.toggle('hidden', !isPublic);
+  if (isPublic) {
+    const subject = encodeURIComponent(`Formulario: ${t.nombre}`);
+    const body = encodeURIComponent(`Te comparto el formulario "${t.nombre}" para que lo completes:\n\n${shareUrl}`);
+    document.getElementById('qrEmailBtn').href = `mailto:?subject=${subject}&body=${body}`;
+    document.getElementById('qrWhatsappBtn').href = `https://wa.me/?text=${body}`;
+  }
+
   document.getElementById('qrModal').classList.remove('hidden');
 }
 
@@ -986,10 +1051,18 @@ function submitForm() {
       enviadoEn: new Date().toISOString()
     };
 
-    envios.push(envio);
-    localStorage.setItem('skf_envios',JSON.stringify(envios));
-    // Non-blocking cloud sync
-    sbSyncEnvio(envio).catch(()=>{});
+    if (isPublicFill) {
+      // Sin sesión: no se guarda en el localStorage del visitante (no es su
+      // plantilla), solo se manda al servidor — el dueño lo verá en su panel.
+      sbSubmitPublicEnvio(envio).then(r => {
+        if (r && r.error) toast('No se pudo enviar al servidor: ' + r.error, 'er');
+      }).catch(()=>{});
+    } else {
+      envios.push(envio);
+      localStorage.setItem('skf_envios',JSON.stringify(envios));
+      // Non-blocking cloud sync
+      sbSyncEnvio(envio).catch(()=>{});
+    }
 
     // Remove draft if existed
     if (draftId) {

@@ -67,6 +67,9 @@ async function sbSyncPlantilla(tmpl) {
       descripcion: tmpl.descripcion || null,
       logo: tmpl.logo || null,
       favorito: tmpl.favorito || false,
+      publica: tmpl.publica || false,
+      share_token: tmpl.shareToken || null,
+      correo_notificacion: tmpl.correoNotificacion || null,
       creado_en: tmpl.creadoEn || new Date().toISOString(),
       actualizado_en: new Date().toISOString()
     };
@@ -107,6 +110,45 @@ async function sbSyncEnvio(envio) {
     const { error } = await sb.from('envios').upsert(payload);
     if (error) console.warn('[SEKaform] Sync envío:', error.message);
   } catch (e) { console.warn('[SEKaform] Sync envío error:', e.message); }
+}
+
+// Carga una plantilla pública por su share_token, sin necesitar sesión
+// (usada por llenar.html cuando alguien abre un link/QR ?pub=<token>).
+async function sbLoadPublicPlantilla(token) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token) return null;
+    const { data, error } = await sb.from('plantillas')
+      .select('*').eq('share_token', token).eq('publica', true).maybeSingle();
+    if (error || !data) return null;
+    return data;
+  } catch { return null; }
+}
+
+// Envía un formulario sin sesión. El user_id que viajamos aquí es solo un
+// placeholder: el trigger envios_asignar_dueno en el servidor lo
+// sobrescribe siempre con el dueño real de la plantilla (ver
+// supabase-schema.sql), así que el dato termina en el dataset del dueño.
+async function sbSubmitPublicEnvio(envio) {
+  try {
+    const sb = await getSB();
+    if (!sb) return { error: 'sin conexión' };
+    const payload = {
+      id: envio.id,
+      numero: null, // el servidor lo asigna (el visitante anónimo no puede leer envíos previos)
+      plantilla_id: envio.plantillaId || null,
+      plantilla_nombre: envio.plantillaNombre || '',
+      plantilla_codigo: envio.plantillaCodigo || '',
+      user_id: '00000000-0000-0000-0000-000000000000',
+      datos: envio.datos || {},
+      estado: envio.estado || 'enviado',
+      creado_en: envio.creadoEn || new Date().toISOString(),
+      enviado_en: envio.enviadoEn || new Date().toISOString()
+    };
+    const { error } = await sb.from('envios').insert(payload);
+    if (error) { console.warn('[SEKaform] Envío público:', error.message); return { error: error.message }; }
+    return { ok: true };
+  } catch (e) { console.warn('[SEKaform] Envío público error:', e.message); return { error: e.message }; }
 }
 
 async function sbLoadPlantillas() {
