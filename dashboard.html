@@ -90,6 +90,27 @@
     .setup-banner p{font-size:.82rem;color:var(--mut);line-height:1.55;}
     .setup-banner a{color:var(--pri);}
 
+    /* compliance & gaps */
+    .section-title{font-size:1rem;font-weight:800;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+    .stat-card.c-err .stat-num{color:var(--err);}
+    .rank-list{display:flex;flex-direction:column;gap:12px;}
+    .rank-row{display:flex;align-items:center;gap:10px;}
+    .rank-name{flex:0 0 38%;min-width:0;font-size:.82rem;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .rank-bar-track{flex:1;height:7px;background:var(--card2);border-radius:4px;overflow:hidden;}
+    .rank-bar-fill{height:100%;border-radius:4px;background:var(--pri);}
+    .rank-bar-fill.err{background:var(--err);}
+    .rank-bar-fill.warn{background:var(--warn);}
+    .rank-count{font-size:.78rem;font-weight:800;color:var(--mut);min-width:60px;text-align:right;}
+    .gap-empty{color:var(--mut);font-size:.83rem;text-align:center;padding:34px 10px;line-height:1.6;}
+    .recur-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--bor);}
+    .recur-row:first-child{border-top:none;padding-top:2px;}
+    .recur-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+    .recur-form{font-size:.83rem;font-weight:700;color:var(--txt);}
+    .recur-campo{font-size:.76rem;color:var(--mut);}
+    .recur-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+    .recur-last{font-size:.7rem;color:var(--mut);white-space:nowrap;}
+    .recur-count{font-size:.7rem;font-weight:800;background:var(--warn-dim);color:var(--warn);border-radius:20px;padding:3px 10px;white-space:nowrap;}
+
     @media(max-width:900px){
       .stats-grid{grid-template-columns:repeat(2,1fr);}
       .chart-grid{grid-template-columns:1fr;}
@@ -165,6 +186,47 @@
       </div>
     </div>
 
+    <!-- compliance & gaps -->
+    <h2 class="section-title">🎯 Cumplimiento y brechas</h2>
+    <div class="stats-grid">
+      <div class="stat-card c-ok" id="cardCumplimiento">
+        <div class="stat-label">Cumplimiento de asignaciones</div>
+        <div class="stat-num" id="sCumplimiento">—</div>
+        <div class="stat-desc" id="sCumplimientoDesc">sin asignaciones todavía</div>
+      </div>
+      <div class="stat-card c-warn">
+        <div class="stat-label">Hallazgos abiertos</div>
+        <div class="stat-num" id="sHzAbiertos">0</div>
+        <div class="stat-desc">de <span id="sHzTotal">0</span> reportados</div>
+      </div>
+      <div class="stat-card c-err">
+        <div class="stat-label">Críticos sin resolver</div>
+        <div class="stat-num" id="sHzCriticos">0</div>
+        <div class="stat-desc">requieren atención inmediata</div>
+      </div>
+      <div class="stat-card c-purple">
+        <div class="stat-label">Tiempo promedio de cierre</div>
+        <div class="stat-num" id="sTiempoCierre">—</div>
+        <div class="stat-desc">de una acción correctiva</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">⚠️ Formularios con más hallazgos abiertos</div>
+        <div id="rankFormularios"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">👤 Responsables con CAPA pendiente o vencida</div>
+        <div id="rankResponsables"></div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:32px">
+      <div class="chart-title">🔁 Problemas recurrentes</div>
+      <div id="recurrentList"></div>
+    </div>
+
     <!-- recent submissions table -->
     <div class="table-card">
       <div class="table-head">
@@ -192,12 +254,23 @@ const CHART_TEXT  = '#94a3b8';
 const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 // ── Data loading ─────────────────────────────────────────────────
+function mergeByCloudId(cloud, local) {
+  if (cloud === null) return local;
+  const cloudIds = new Set(cloud.map(x=>x.id));
+  return [...cloud, ...local.filter(x=>!cloudIds.has(x.id))];
+}
+
 async function loadData() {
-  const localP = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
-  const localE = JSON.parse(localStorage.getItem('skf_envios') || '[]');
+  const localP   = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
+  const localE   = JSON.parse(localStorage.getItem('skf_envios') || '[]');
+  const localH   = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');
+  const localA   = JSON.parse(localStorage.getItem('skf_acciones_correctivas') || '[]');
+  const localAsg = JSON.parse(localStorage.getItem('skf_asignaciones') || '[]');
   let plantillas = localP, envios = localE, fromCloud = false;
 
-  const sbData = await Promise.all([sbLoadPlantillas(), sbLoadEnvios()]);
+  const sbData = await Promise.all([
+    sbLoadPlantillas(), sbLoadEnvios(), sbLoadHallazgos(), sbLoadAccionesCorrectivas(), sbLoadAsignaciones()
+  ]);
   if (sbData[0] !== null && sbData[1] !== null) {
     fromCloud = true;
     const cloudP = sbData[0], cloudE = sbData[1];
@@ -206,10 +279,13 @@ async function loadData() {
     plantillas = [...cloudP, ...localP.filter(p=>!cloudPIds.has(p.id))];
     envios = [...cloudE, ...localE.filter(e=>!cloudEIds.has(e.id))];
   }
+  const hallazgos     = mergeByCloudId(sbData[2], localH);
+  const acciones      = mergeByCloudId(sbData[3], localA);
+  const asignaciones  = mergeByCloudId(sbData[4], localAsg);
 
   const sortFn = (a,b) => new Date(b.enviado_en||b.enviadoEn||b.creadoEn||0) - new Date(a.enviado_en||a.enviadoEn||a.creadoEn||0);
   envios.sort(sortFn);
-  return { plantillas, envios, fromCloud };
+  return { plantillas, envios, hallazgos, acciones, asignaciones, fromCloud };
 }
 
 // ── Stats ────────────────────────────────────────────────────────
@@ -316,6 +392,130 @@ function buildFormChart(envios, plantillas) {
       }
     }
   });
+}
+
+// ── Cumplimiento y brechas ──────────────────────────────────────────
+// Field helpers: los datos mezclan filas crudas de Supabase (snake_case)
+// con lo que ya había en localStorage (camelCase) — igual que el resto
+// de este archivo, cada accessor prueba ambas formas.
+const fHzPlantillaId = h => h.plantilla_id||h.plantillaId;
+const fHzPlantillaNom = h => h.plantilla_nombre||h.plantillaNombre||'Sin nombre';
+const fHzCampo = h => h.campo_etiqueta||h.campoEtiqueta||'';
+const fHzCreado = h => h.creado_en||h.creadoEn;
+const fAcResponsable = a => a.responsable||'Sin responsable';
+const fAcFechaLimite = a => a.fecha_limite||a.fechaLimite;
+const fAcCerrado = a => a.cerrado_en||a.cerradoEn;
+const fAcCreado = a => a.creado_en||a.creadoEn;
+const fAsgPlantillaId = a => a.plantilla_id||a.plantillaId;
+const fAsgCreado = a => a.creado_en||a.creadoEn;
+const fEnvPlantillaId = e => e.plantilla_id||e.plantillaId;
+const fEnvCreado = e => e.creado_en||e.creadoEn||e.enviado_en||e.enviadoEn;
+const fEnvLlenadoPor = e => e.llenado_por||e.llenadoPor;
+const normTxt = s => String(s||'').trim().toLowerCase();
+const escD = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+
+function computeCumplimiento(asignaciones, envios) {
+  const groups = {};
+  asignaciones.forEach(a => {
+    const k = `${fAsgPlantillaId(a)}::${fAsgCreado(a)}`;
+    (groups[k] ||= { pId: fAsgPlantillaId(a), creado: fAsgCreado(a), personas: [] }).personas.push(a.nombre);
+  });
+  let done = 0, total = 0;
+  Object.values(groups).forEach(g => {
+    g.personas.forEach(nombre => {
+      total++;
+      const match = envios.some(e =>
+        fEnvPlantillaId(e) === g.pId &&
+        new Date(fEnvCreado(e)) >= new Date(g.creado) &&
+        normTxt(fEnvLlenadoPor(e)) === normTxt(nombre)
+      );
+      if (match) done++;
+    });
+  });
+  return { done, total, pct: total ? Math.round(done/total*100) : null };
+}
+
+function renderRankList(elId, rows, colorClass) {
+  const el = document.getElementById(elId);
+  if (!rows.length) { el.innerHTML = '<div class="gap-empty">Sin datos suficientes todavía.</div>'; return; }
+  const max = Math.max(...rows.map(r=>r.count));
+  el.innerHTML = `<div class="rank-list">${rows.map(r => `
+    <div class="rank-row">
+      <span class="rank-name" title="${escD(r.name)}">${escD(r.name)}</span>
+      <div class="rank-bar-track"><div class="rank-bar-fill ${colorClass}" style="width:${Math.round(r.count/max*100)}%"></div></div>
+      <span class="rank-count">${r.countLabel || r.count}</span>
+    </div>`).join('')}</div>`;
+}
+
+function buildCompliance(hallazgos, acciones, asignaciones, envios) {
+  // Stat cards
+  const { done, total, pct } = computeCumplimiento(asignaciones, envios);
+  document.getElementById('sCumplimiento').textContent = pct === null ? '—' : pct + '%';
+  document.getElementById('sCumplimientoDesc').textContent = total ? `${done}/${total} completados` : 'sin asignaciones todavía';
+  document.getElementById('cardCumplimiento').className = 'stat-card ' + (pct === null ? '' : pct >= 90 ? 'c-ok' : pct >= 70 ? 'c-warn' : 'c-err');
+
+  const abiertos = hallazgos.filter(h => (h.estado||'abierto') !== 'cerrado');
+  document.getElementById('sHzAbiertos').textContent = abiertos.length;
+  document.getElementById('sHzTotal').textContent = hallazgos.length;
+  document.getElementById('sHzCriticos').textContent = abiertos.filter(h => h.severidad === 'critico').length;
+
+  const cerradas = acciones.filter(a => a.estado === 'completada' && fAcCerrado(a) && fAcCreado(a));
+  if (cerradas.length) {
+    const avgDays = cerradas.reduce((s,a) => s + (new Date(fAcCerrado(a)) - new Date(fAcCreado(a))), 0) / cerradas.length / 864e5;
+    document.getElementById('sTiempoCierre').textContent = avgDays < 1 ? '<1 día' : Math.round(avgDays) + ' días';
+  } else {
+    document.getElementById('sTiempoCierre').textContent = '—';
+  }
+
+  // Ranking: formularios con más hallazgos abiertos
+  const porFormulario = {};
+  abiertos.forEach(h => {
+    const k = fHzPlantillaId(h) || fHzPlantillaNom(h);
+    (porFormulario[k] ||= { name: fHzPlantillaNom(h), count: 0 }).count++;
+  });
+  renderRankList('rankFormularios',
+    Object.values(porFormulario).sort((a,b)=>b.count-a.count).slice(0,6), 'warn');
+
+  // Ranking: responsables con CAPA pendiente o vencida
+  const hoy = new Date();
+  const pendientesVencidas = acciones.filter(a => {
+    if (a.estado === 'completada') return false;
+    return a.estado === 'vencida' || (fAcFechaLimite(a) && new Date(fAcFechaLimite(a)) < hoy);
+  });
+  const porResponsable = {};
+  pendientesVencidas.forEach(a => {
+    const k = fAcResponsable(a);
+    (porResponsable[k] ||= { name: k, count: 0 }).count++;
+  });
+  renderRankList('rankResponsables',
+    Object.values(porResponsable).sort((a,b)=>b.count-a.count).slice(0,6), 'err');
+
+  // Recurrencia: mismo formulario + campo flagueado 2+ veces
+  const porCampo = {};
+  hallazgos.forEach(h => {
+    const k = `${fHzPlantillaId(h)}::${fHzCampo(h)}`;
+    const fecha = fHzCreado(h);
+    const r = (porCampo[k] ||= { plantilla: fHzPlantillaNom(h), campo: fHzCampo(h), count: 0, last: fecha });
+    r.count++;
+    if (fecha && (!r.last || new Date(fecha) > new Date(r.last))) r.last = fecha;
+  });
+  const recurrentes = Object.values(porCampo).filter(r => r.count >= 2).sort((a,b)=>b.count-a.count).slice(0,8);
+  const recEl = document.getElementById('recurrentList');
+  if (!recurrentes.length) {
+    recEl.innerHTML = '<div class="gap-empty">Sin problemas recurrentes detectados — ningún campo se ha marcado mal dos veces o más.</div>';
+  } else {
+    recEl.innerHTML = recurrentes.map(r => `
+      <div class="recur-row">
+        <div class="recur-info">
+          <span class="recur-form">${escD(r.plantilla)}</span>
+          <span class="recur-campo">${escD(r.campo) || 'Campo sin nombre'}</span>
+        </div>
+        <div class="recur-right">
+          <span class="recur-last">${r.last ? 'último: ' + new Date(r.last).toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : ''}</span>
+          <span class="recur-count">${r.count}× reportado</span>
+        </div>
+      </div>`).join('');
+  }
 }
 
 // ── Table ─────────────────────────────────────────────────────────
@@ -434,7 +634,7 @@ async function init() {
   const now = new Date();
   document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
 
-  const { plantillas, envios, fromCloud } = await loadData();
+  const { plantillas, envios, hallazgos, acciones, asignaciones, fromCloud } = await loadData();
 
   // Source badge
   const badge = document.getElementById('srcBadge');
@@ -470,6 +670,7 @@ async function init() {
     const o=document.createElement('option'); o.value=key; o.textContent=label; sel.appendChild(o);
   });
 
+  buildCompliance(hallazgos, acciones, asignaciones, envios);
   buildTable(envios, plantillas);
 
   document.getElementById('loadingState').style.display  = 'none';
