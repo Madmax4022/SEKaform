@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Hallazgos — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="supabase-config.js"></script>
@@ -209,7 +213,7 @@ function setHallazgoEstado(id, estado) {
   if (!h) return;
   h.estado = estado;
   setHallazgos(list);
-  sbSyncHallazgo(h).catch(()=>{});
+  skfSyncOrQueue('hallazgo', h);
   toast('Estado actualizado ✓','ok');
 }
 
@@ -226,11 +230,11 @@ function asignarAccion(hallazgoId) {
   const acciones = getAcciones();
   acciones.push(ac);
   setAcciones(acciones);
-  sbSyncAccionCorrectiva(ac).catch(()=>{});
+  skfSyncOrQueue('accionCorrectiva', ac);
 
   const list = getHallazgos();
   const h = list.find(x=>x.id===hallazgoId);
-  if (h && (h.estado||'abierto') === 'abierto') { h.estado = 'en_proceso'; setHallazgos(list); sbSyncHallazgo(h).catch(()=>{}); }
+  if (h && (h.estado||'abierto') === 'abierto') { h.estado = 'en_proceso'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
 
   toast('Acción correctiva asignada ✓','ok');
   render();
@@ -243,12 +247,12 @@ function setAccionEstado(id, estado) {
   ac.estado = estado;
   if (estado === 'completada') ac.cerradoEn = new Date().toISOString();
   setAcciones(acciones);
-  sbSyncAccionCorrectiva(ac).catch(()=>{});
+  skfSyncOrQueue('accionCorrectiva', ac);
 
   if (estado === 'completada') {
     const list = getHallazgos();
     const h = list.find(x=>x.id===ac.hallazgoId);
-    if (h) { h.estado = 'cerrado'; setHallazgos(list); sbSyncHallazgo(h).catch(()=>{}); }
+    if (h) { h.estado = 'cerrado'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
   }
   toast('Acción correctiva actualizada ✓','ok');
   render();

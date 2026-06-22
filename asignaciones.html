@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Asignaciones — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="supabase-config.js"></script>
@@ -199,7 +203,7 @@ async function ensurePublicShare(t) {
   const list = getPlantillas();
   const idx = list.findIndex(x=>x.id===t.id);
   if (idx>=0) { list[idx]=t; localStorage.setItem('skf_plantillas', JSON.stringify(list)); }
-  await sbSyncPlantilla(t).catch(()=>{});
+  await skfSyncOrQueue('plantilla', t);
   return t;
 }
 
@@ -224,7 +228,7 @@ async function createAsignacion() {
       plantillaId: t.id, plantillaNombre: t.nombre,
       nombre, correo: correo || null, creadoEn
     };
-    sbSyncAsignacion(a).catch(()=>{});
+    skfSyncOrQueue('asignacion', a);
     return a;
   });
   setAsignaciones([...asignaciones, ...nuevas]);
@@ -339,7 +343,7 @@ function deleteGroup(k) {
   if (!confirm('¿Eliminar esta asignación? Se quitará la lista de personas asignadas (los envíos ya recibidos no se borran).')) return;
   const asignaciones = getAsignaciones();
   const toDelete = asignaciones.filter(a => groupKey(a) === k);
-  toDelete.forEach(a => sbDeleteAsignacion(a.id).catch(()=>{}));
+  toDelete.forEach(a => skfSyncOrQueue('deleteAsignacion', { id: a.id }));
   setAsignaciones(asignaciones.filter(a => groupKey(a) !== k));
   toast('Asignación eliminada','ok');
   renderGroups();

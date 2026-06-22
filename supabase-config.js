@@ -55,9 +55,9 @@ async function sbSignOut() {
 async function sbSyncPlantilla(tmpl) {
   try {
     const sb = await getSB();
-    if (!sb) return;
+    if (!sb) return false;
     const user = await sbGetUser();
-    if (!user) return;
+    if (!user) return false;
     const payload = {
       id: tmpl.id,
       user_id: user.id,
@@ -74,27 +74,29 @@ async function sbSyncPlantilla(tmpl) {
       actualizado_en: new Date().toISOString()
     };
     const { error } = await sb.from('plantillas').upsert(payload);
-    if (error) console.warn('[SEKaform] Sync plantilla:', error.message);
-  } catch (e) { console.warn('[SEKaform] Sync plantilla error:', e.message); }
+    if (error) { console.warn('[SEKaform] Sync plantilla:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Sync plantilla error:', e.message); return false; }
 }
 
 async function sbDeletePlantilla(id) {
   try {
     const sb = await getSB();
-    if (!sb) return;
+    if (!sb) return false;
     const user = await sbGetUser();
-    if (!user) return;
+    if (!user) return false;
     const { error } = await sb.from('plantillas').delete().eq('id', id).eq('user_id', user.id);
-    if (error) console.warn('[SEKaform] Delete plantilla:', error.message);
-  } catch(e) { console.warn('[SEKaform] Delete plantilla error:', e.message); }
+    if (error) { console.warn('[SEKaform] Delete plantilla:', error.message); return false; }
+    return true;
+  } catch(e) { console.warn('[SEKaform] Delete plantilla error:', e.message); return false; }
 }
 
 async function sbSyncEnvio(envio) {
   try {
     const sb = await getSB();
-    if (!sb) return;
+    if (!sb) return false;
     const user = await sbGetUser();
-    if (!user) return;
+    if (!user) return false;
     const payload = {
       id: envio.id,
       numero: envio.numero || null,
@@ -110,8 +112,9 @@ async function sbSyncEnvio(envio) {
       enviado_en: envio.enviadoEn || new Date().toISOString()
     };
     const { error } = await sb.from('envios').upsert(payload);
-    if (error) console.warn('[SEKaform] Sync envío:', error.message);
-  } catch (e) { console.warn('[SEKaform] Sync envío error:', e.message); }
+    if (error) { console.warn('[SEKaform] Sync envío:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Sync envío error:', e.message); return false; }
 }
 
 // Carga una plantilla pública por su share_token, sin necesitar sesión
@@ -166,9 +169,9 @@ async function sbSubmitPublicEnvio(envio) {
 async function sbSyncHallazgo(h) {
   try {
     const sb = await getSB();
-    if (!sb) return;
+    if (!sb) return false;
     const user = await sbGetUser();
-    if (!user) return;
+    if (!user) return false;
     const payload = {
       id: h.id,
       user_id: user.id,
@@ -185,8 +188,9 @@ async function sbSyncHallazgo(h) {
       reportado_por: h.reportadoPor || null
     };
     const { error } = await sb.from('hallazgos').upsert(payload);
-    if (error) console.warn('[SEKaform] Sync hallazgo:', error.message);
-  } catch (e) { console.warn('[SEKaform] Sync hallazgo error:', e.message); }
+    if (error) { console.warn('[SEKaform] Sync hallazgo:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Sync hallazgo error:', e.message); return false; }
 }
 
 // Igual que sbSubmitPublicEnvio: un visitante sin cuenta llenando un link
@@ -234,9 +238,9 @@ async function sbLoadHallazgos() {
 async function sbSyncAccionCorrectiva(ac) {
   try {
     const sb = await getSB();
-    if (!sb) return;
+    if (!sb) return false;
     const user = await sbGetUser();
-    if (!user) return;
+    if (!user) return false;
     const payload = {
       id: ac.id,
       user_id: user.id,
@@ -249,8 +253,9 @@ async function sbSyncAccionCorrectiva(ac) {
       cerrado_en: ac.cerradoEn || null
     };
     const { error } = await sb.from('acciones_correctivas').upsert(payload);
-    if (error) console.warn('[SEKaform] Sync acción correctiva:', error.message);
-  } catch (e) { console.warn('[SEKaform] Sync acción correctiva error:', e.message); }
+    if (error) { console.warn('[SEKaform] Sync acción correctiva:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Sync acción correctiva error:', e.message); return false; }
 }
 
 async function sbLoadAccionesCorrectivas() {
@@ -298,9 +303,9 @@ async function sbLoadEnvios(limit = 500) {
 async function sbSyncAsignacion(a) {
   try {
     const sb = await getSB();
-    if (!sb) return;
+    if (!sb) return false;
     const user = await sbGetUser();
-    if (!user) return;
+    if (!user) return false;
     const payload = {
       id: a.id,
       user_id: user.id,
@@ -311,19 +316,21 @@ async function sbSyncAsignacion(a) {
       creado_en: a.creadoEn || new Date().toISOString()
     };
     const { error } = await sb.from('asignaciones').upsert(payload);
-    if (error) console.warn('[SEKaform] Sync asignación:', error.message);
-  } catch (e) { console.warn('[SEKaform] Sync asignación error:', e.message); }
+    if (error) { console.warn('[SEKaform] Sync asignación:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Sync asignación error:', e.message); return false; }
 }
 
 async function sbDeleteAsignacion(id) {
   try {
     const sb = await getSB();
-    if (!sb) return;
+    if (!sb) return false;
     const user = await sbGetUser();
-    if (!user) return;
+    if (!user) return false;
     const { error } = await sb.from('asignaciones').delete().eq('id', id).eq('user_id', user.id);
-    if (error) console.warn('[SEKaform] Delete asignación:', error.message);
-  } catch (e) { console.warn('[SEKaform] Delete asignación error:', e.message); }
+    if (error) { console.warn('[SEKaform] Delete asignación:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Delete asignación error:', e.message); return false; }
 }
 
 async function sbLoadAsignaciones() {
@@ -354,3 +361,106 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   badge.style.display = 'inline-block';
 });
+
+// ─────────────────────────────────────────────────────────────
+//  Cola de sincronización offline
+//
+//  Un inspector en campo no siempre tiene señal. Cada registro ya se
+//  guarda primero en localStorage (fuente de verdad local); esta cola es
+//  el segundo paso: si el envío a Supabase falla (sin conexión o error
+//  del servidor) la operación se encola en localStorage y se reintenta
+//  sola al recuperar la señal — nunca se pierde un hallazgo por falta
+//  de cobertura.
+// ─────────────────────────────────────────────────────────────
+const SKF_QUEUE_KEY = 'skf_sync_queue';
+
+function skfQueueGet() {
+  try { return JSON.parse(localStorage.getItem(SKF_QUEUE_KEY)) || []; } catch { return []; }
+}
+function skfQueueSet(q) {
+  localStorage.setItem(SKF_QUEUE_KEY, JSON.stringify(q));
+  skfUpdateSyncBadge();
+}
+function skfQueueAdd(tipo, payload) {
+  const q = skfQueueGet();
+  q.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    tipo, payload, creadoEn: new Date().toISOString()
+  });
+  skfQueueSet(q);
+}
+
+const SKF_SYNC_FNS = {
+  plantilla: sbSyncPlantilla,
+  deletePlantilla: (p) => sbDeletePlantilla(p.id),
+  envio: sbSyncEnvio,
+  envioPublico: (p) => sbSubmitPublicEnvio(p).then(r => !!(r && r.ok)),
+  hallazgo: sbSyncHallazgo,
+  hallazgoPublico: (p) => sbSubmitPublicHallazgo(p).then(r => !!(r && r.ok)),
+  accionCorrectiva: sbSyncAccionCorrectiva,
+  asignacion: sbSyncAsignacion,
+  deleteAsignacion: (p) => sbDeleteAsignacion(p.id),
+};
+
+// Intenta sincronizar de inmediato; si falla o no hay conexión, encola
+// para reintentar automáticamente más tarde. Devuelve si quedó sincronizado.
+async function skfSyncOrQueue(tipo, payload) {
+  if (navigator.onLine) {
+    try {
+      if (await SKF_SYNC_FNS[tipo](payload)) return true;
+    } catch {}
+  }
+  skfQueueAdd(tipo, payload);
+  return false;
+}
+
+let _skfProcessingQueue = false;
+async function skfProcessQueue() {
+  if (_skfProcessingQueue || !navigator.onLine) return;
+  _skfProcessingQueue = true;
+  try {
+    const q = skfQueueGet();
+    if (!q.length) return;
+    const remaining = [];
+    for (const item of q) {
+      const fn = SKF_SYNC_FNS[item.tipo];
+      let ok = false;
+      if (fn) { try { ok = await fn(item.payload); } catch { ok = false; } }
+      if (!ok) remaining.push(item);
+    }
+    skfQueueSet(remaining);
+  } finally { _skfProcessingQueue = false; }
+}
+
+function skfUpdateSyncBadge() {
+  const el = document.getElementById('skfSyncBar');
+  if (!el) return;
+  const n = skfQueueGet().length;
+  if (!navigator.onLine) {
+    el.textContent = '📡 Sin conexión' + (n ? ` · ${n} pendiente${n !== 1 ? 's' : ''} de sincronizar` : ' · tus datos se guardan localmente');
+    el.className = 'skf-sync-bar offline';
+    el.style.display = 'flex';
+  } else if (n) {
+    el.textContent = `↻ Sincronizando ${n} registro${n !== 1 ? 's' : ''}…`;
+    el.className = 'skf-sync-bar syncing';
+    el.style.display = 'flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+window.addEventListener('online', () => { skfUpdateSyncBadge(); skfProcessQueue(); });
+window.addEventListener('offline', skfUpdateSyncBadge);
+document.addEventListener('DOMContentLoaded', () => {
+  skfUpdateSyncBadge();
+  if (navigator.onLine) skfProcessQueue();
+});
+setInterval(() => { if (navigator.onLine) skfProcessQueue(); }, 30000);
+
+// ── PWA: registra el service worker para que el "app shell" cargue sin
+// conexión (indispensable para un inspector sin señal en campo). ───────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}

@@ -54,6 +54,23 @@ html.sb-collapsed .sidebar { transform: translateX(-100%); }
 
 .sidebar-backdrop { display: none; }
 
+/* ── Indicador de conexión / cola de sincronización ─────────────────
+   Flotante fijo, visible en cualquier página (inyectado por sidebar.js).
+   Aparece sin conexión o mientras hay registros pendientes de subir a
+   Supabase — así el inspector sabe que su trabajo no se ha perdido. */
+.skf-sync-bar {
+  position: fixed; top: 14px; right: 14px; z-index: 401;
+  display: none; align-items: center; gap: 6px;
+  background: var(--card); border: 1px solid var(--bor); color: var(--mut);
+  font-size: .78rem; font-weight: 700; padding: 8px 14px; border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.3); max-width: calc(100vw - 28px);
+}
+.skf-sync-bar.offline { border-color: rgba(245,158,11,.4); color: var(--warn); background: var(--warn-dim); }
+.skf-sync-bar.syncing { border-color: rgba(37,99,235,.4); color: var(--pri-h); background: var(--pri-dim); }
+@media (max-width: 860px) {
+  .skf-sync-bar { top: auto; bottom: 14px; right: 14px; }
+}
+
 body { padding-left: 232px; transition: padding-left .25s ease; }
 html.sb-collapsed body { padding-left: 0; }
 

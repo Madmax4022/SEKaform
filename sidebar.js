@@ -36,6 +36,7 @@ function skfRenderSidebar() {
   ).join('');
 
   const html = `
+    <div class="skf-sync-bar" id="skfSyncBar" style="display:none"></div>
     <button class="sidebar-toggle" id="sidebarToggle" onclick="skfToggleSidebar()" title="Mostrar/ocultar menú" aria-label="Mostrar/ocultar menú">☰</button>
     <aside class="sidebar" id="sidebar">
       <a href="index.html" class="sidebar-logo">SEK<span>a</span>form</a>
