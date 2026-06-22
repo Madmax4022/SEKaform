@@ -306,3 +306,201 @@ CREATE TRIGGER trg_envios_notificar_completado
   AFTER INSERT ON envios
   FOR EACH ROW
   EXECUTE FUNCTION envios_notificar_completado();
+
+-- ── Ubicaciones (jerarquía de sitios/áreas a inspeccionar) ─────
+-- Catálogo opcional de lugares (ej. "Planta Norte" > "Bodega 3" > "Estante
+-- A") para poder agrupar hallazgos por sitio en el dashboard de
+-- cumplimiento. padre_id permite anidar niveles; se deja NULL para un
+-- catálogo plano si el usuario no necesita jerarquía.
+CREATE TABLE IF NOT EXISTS ubicaciones (
+  id        TEXT PRIMARY KEY,
+  user_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  nombre    TEXT NOT NULL,
+  padre_id  TEXT REFERENCES ubicaciones(id) ON DELETE SET NULL,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE ubicaciones ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuarios ven sus propias ubicaciones" ON ubicaciones;
+CREATE POLICY "Usuarios ven sus propias ubicaciones"
+  ON ubicaciones FOR ALL
+  USING ((select auth.uid()) = user_id);
+
+CREATE INDEX IF NOT EXISTS ubicaciones_user_idx ON ubicaciones (user_id);
+CREATE INDEX IF NOT EXISTS ubicaciones_padre_idx ON ubicaciones (padre_id);
+
+-- ── Hallazgos (findings/no-conformidades detectadas en un envío) ───
+-- Un hallazgo es un problema concreto encontrado durante una inspección:
+-- puede surgir automáticamente (origen='automatico') cuando el inspector
+-- responde un campo marcado como crítico/mayor/menor con un valor que
+-- indica incumplimiento (ej. "No Conforme"), o manualmente
+-- (origen='manual') cuando el inspector reporta algo que no estaba
+-- previsto en ningún campo del formulario. Es la pieza central que
+-- convierte "datos capturados" en "trabajo de campo accionable" para un
+-- gerente: de aquí cuelgan las acciones_correctivas (CAPA).
+CREATE TABLE IF NOT EXISTS hallazgos (
+  id               TEXT PRIMARY KEY,
+  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  envio_id         TEXT REFERENCES envios(id) ON DELETE SET NULL,
+  plantilla_id     TEXT REFERENCES plantillas(id) ON DELETE SET NULL,
+  plantilla_nombre TEXT NOT NULL DEFAULT '',
+  campo_id         TEXT,
+  campo_etiqueta   TEXT,
+  origen           TEXT NOT NULL DEFAULT 'manual' CHECK (origen IN ('automatico','manual')),
+  severidad        TEXT NOT NULL DEFAULT 'menor' CHECK (severidad IN ('critico','mayor','menor')),
+  descripcion      TEXT,
+  foto             TEXT,
+  ubicacion_id     TEXT REFERENCES ubicaciones(id) ON DELETE SET NULL,
+  estado           TEXT NOT NULL DEFAULT 'abierto' CHECK (estado IN ('abierto','en_proceso','cerrado')),
+  reportado_por    TEXT,
+  creado_en        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  actualizado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE hallazgos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuarios ven sus propios hallazgos" ON hallazgos;
+CREATE POLICY "Usuarios ven sus propios hallazgos"
+  ON hallazgos FOR ALL
+  USING ((select auth.uid()) = user_id);
+
+-- Mismo patrón que "Anónimos envían a plantillas públicas": un visitante
+-- sin cuenta llenando un link público también puede reportar un hallazgo
+-- (ej. encuentra algo fuera de lo previsto en el formulario). El trigger
+-- hallazgos_asignar_dueno (más abajo) sobrescribe siempre el user_id real,
+-- así que no puede inyectar datos en la cuenta de otra persona.
+DROP POLICY IF EXISTS "Anónimos reportan hallazgos en plantillas públicas" ON hallazgos;
+CREATE POLICY "Anónimos reportan hallazgos en plantillas públicas"
+  ON hallazgos FOR INSERT
+  TO anon
+  WITH CHECK (
+    plantilla_id IN (SELECT id FROM plantillas WHERE publica = true)
+  );
+
+CREATE INDEX IF NOT EXISTS hallazgos_user_idx ON hallazgos (user_id, creado_en DESC);
+CREATE INDEX IF NOT EXISTS hallazgos_envio_idx ON hallazgos (envio_id);
+CREATE INDEX IF NOT EXISTS hallazgos_estado_idx ON hallazgos (user_id, estado);
+CREATE INDEX IF NOT EXISTS hallazgos_severidad_idx ON hallazgos (user_id, severidad);
+CREATE INDEX IF NOT EXISTS hallazgos_ubicacion_idx ON hallazgos (ubicacion_id);
+
+-- Igual que envios_asignar_dueno: fuerza que todo hallazgo (incluidos los
+-- anónimos vía link público) quede atribuido al dueño real de la
+-- plantilla, nunca al valor que mande el cliente.
+CREATE OR REPLACE FUNCTION hallazgos_asignar_dueno()
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
+DECLARE
+  dueno UUID;
+BEGIN
+  SELECT user_id INTO dueno FROM plantillas WHERE id = NEW.plantilla_id;
+  IF dueno IS NULL THEN
+    RAISE EXCEPTION 'plantilla_id inválido o sin dueño';
+  END IF;
+  NEW.user_id := dueno;
+  IF (select auth.role()) = 'anon' THEN
+    NEW.creado_en := NOW();
+    NEW.actualizado_en := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_hallazgos_asignar_dueno ON hallazgos;
+CREATE TRIGGER trg_hallazgos_asignar_dueno
+  BEFORE INSERT ON hallazgos
+  FOR EACH ROW
+  EXECUTE FUNCTION hallazgos_asignar_dueno();
+
+-- ── Acciones correctivas (CAPA — seguimiento del cierre de un hallazgo) ──
+-- Quién debe resolver un hallazgo, para cuándo, y si ya se cerró. No
+-- necesita policy para anon: solo el dueño de la cuenta (quien revisa los
+-- hallazgos) crea y gestiona acciones correctivas.
+CREATE TABLE IF NOT EXISTS acciones_correctivas (
+  id               TEXT PRIMARY KEY,
+  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  hallazgo_id      TEXT NOT NULL REFERENCES hallazgos(id) ON DELETE CASCADE,
+  responsable      TEXT,
+  correo           TEXT,
+  fecha_limite     DATE,
+  estado           TEXT NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','completada','vencida')),
+  evidencia_cierre TEXT,
+  cerrado_en       TIMESTAMPTZ,
+  creado_en        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE acciones_correctivas ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuarios ven sus propias acciones correctivas" ON acciones_correctivas;
+CREATE POLICY "Usuarios ven sus propias acciones correctivas"
+  ON acciones_correctivas FOR ALL
+  USING ((select auth.uid()) = user_id);
+
+CREATE INDEX IF NOT EXISTS acciones_correctivas_hallazgo_idx ON acciones_correctivas (hallazgo_id);
+CREATE INDEX IF NOT EXISTS acciones_correctivas_user_estado_idx ON acciones_correctivas (user_id, estado, fecha_limite);
+
+-- ── Alerta inmediata por correo cuando se reporta un hallazgo crítico ──
+-- Reutiliza la misma infraestructura de envios_notificar_completado
+-- (Resend + pg_net + Vault) pero dispara al instante en vez de esperar a
+-- que alguien revise el dashboard — el caso de uso es "el gerente se
+-- entera el mismo minuto que se encontró un riesgo crítico", no al cierre
+-- del día. Usa el correo_notificacion ya configurado en la plantilla.
+CREATE OR REPLACE FUNCTION hallazgos_notificar_critico()
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
+DECLARE
+  correo TEXT;
+  nombre_plantilla TEXT;
+  api_key TEXT;
+BEGIN
+  IF NEW.severidad != 'critico' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT correo_notificacion, nombre INTO correo, nombre_plantilla
+    FROM plantillas WHERE id = NEW.plantilla_id;
+
+  IF correo IS NULL OR correo = '' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT decrypted_secret INTO api_key
+    FROM vault.decrypted_secrets
+    WHERE name = 'resend_api_key'
+    LIMIT 1;
+  IF api_key IS NULL OR api_key = '' THEN
+    RETURN NEW;
+  END IF;
+
+  PERFORM net.http_post(
+    url := 'https://api.resend.com/emails',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || api_key,
+      'Content-Type', 'application/json'
+    ),
+    body := jsonb_build_object(
+      'from', 'SEKaform <onboarding@resend.dev>',
+      'to', ARRAY[correo],
+      'subject', '🔴 Hallazgo crítico: ' || COALESCE(nombre_plantilla, ''),
+      'html', '<h2>Hallazgo crítico reportado</h2>' ||
+              '<p><strong>Formulario:</strong> ' || skf_html_escape(COALESCE(nombre_plantilla, '')) || '</p>' ||
+              '<p><strong>Campo:</strong> ' || skf_html_escape(COALESCE(NEW.campo_etiqueta, '')) || '</p>' ||
+              '<p><strong>Descripción:</strong> ' || skf_html_escape(COALESCE(NEW.descripcion, '')) || '</p>' ||
+              '<p><strong>Reportado por:</strong> ' || skf_html_escape(COALESCE(NEW.reportado_por, '')) || '</p>' ||
+              '<p>Revisa el hallazgo y asigna una acción correctiva desde el dashboard de SEKaform.</p>'
+    )
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_hallazgos_notificar_critico ON hallazgos;
+CREATE TRIGGER trg_hallazgos_notificar_critico
+  AFTER INSERT ON hallazgos
+  FOR EACH ROW
+  EXECUTE FUNCTION hallazgos_notificar_critico();

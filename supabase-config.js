@@ -160,6 +160,112 @@ async function sbSubmitPublicEnvio(envio) {
   } catch (e) { console.warn('[SEKaform] Envío público error:', e.message); return { error: e.message }; }
 }
 
+// Sincroniza un hallazgo (detectado automáticamente o reportado a mano
+// durante el llenado) hacia el panel del dueño de la plantilla — ver
+// "hallazgos" en supabase-schema.sql.
+async function sbSyncHallazgo(h) {
+  try {
+    const sb = await getSB();
+    if (!sb) return;
+    const user = await sbGetUser();
+    if (!user) return;
+    const payload = {
+      id: h.id,
+      user_id: user.id,
+      envio_id: h.envioId || null,
+      plantilla_id: h.plantillaId || null,
+      plantilla_nombre: h.plantillaNombre || '',
+      campo_id: h.campoId || null,
+      campo_etiqueta: h.campoEtiqueta || null,
+      origen: h.origen || 'manual',
+      severidad: h.severidad || 'menor',
+      descripcion: h.descripcion || null,
+      foto: h.foto || null,
+      estado: h.estado || 'abierto',
+      reportado_por: h.reportadoPor || null
+    };
+    const { error } = await sb.from('hallazgos').upsert(payload);
+    if (error) console.warn('[SEKaform] Sync hallazgo:', error.message);
+  } catch (e) { console.warn('[SEKaform] Sync hallazgo error:', e.message); }
+}
+
+// Igual que sbSubmitPublicEnvio: un visitante sin cuenta llenando un link
+// público también puede reportar un hallazgo — el trigger
+// hallazgos_asignar_dueno en Supabase sobrescribe el user_id real.
+async function sbSubmitPublicHallazgo(h) {
+  try {
+    const sb = await getSB();
+    if (!sb) return { error: 'sin conexión' };
+    const payload = {
+      id: h.id,
+      user_id: '00000000-0000-0000-0000-000000000000',
+      envio_id: h.envioId || null,
+      plantilla_id: h.plantillaId || null,
+      plantilla_nombre: h.plantillaNombre || '',
+      campo_id: h.campoId || null,
+      campo_etiqueta: h.campoEtiqueta || null,
+      origen: h.origen || 'manual',
+      severidad: h.severidad || 'menor',
+      descripcion: h.descripcion || null,
+      foto: h.foto || null,
+      estado: 'abierto',
+      reportado_por: h.reportadoPor || null
+    };
+    const { error } = await sb.from('hallazgos').insert(payload);
+    if (error) { console.warn('[SEKaform] Hallazgo público:', error.message); return { error: error.message }; }
+    return { ok: true };
+  } catch (e) { console.warn('[SEKaform] Hallazgo público error:', e.message); return { error: e.message }; }
+}
+
+async function sbLoadHallazgos() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const user = await sbGetUser();
+    if (!user) return null;
+    const { data, error } = await sb.from('hallazgos')
+      .select('*').eq('user_id', user.id).order('creado_en', { ascending: false });
+    if (error) return null;
+    return data;
+  } catch { return null; }
+}
+
+// Acción correctiva (CAPA) — quién debe resolver un hallazgo y para cuándo.
+async function sbSyncAccionCorrectiva(ac) {
+  try {
+    const sb = await getSB();
+    if (!sb) return;
+    const user = await sbGetUser();
+    if (!user) return;
+    const payload = {
+      id: ac.id,
+      user_id: user.id,
+      hallazgo_id: ac.hallazgoId,
+      responsable: ac.responsable || null,
+      correo: ac.correo || null,
+      fecha_limite: ac.fechaLimite || null,
+      estado: ac.estado || 'pendiente',
+      evidencia_cierre: ac.evidenciaCierre || null,
+      cerrado_en: ac.cerradoEn || null
+    };
+    const { error } = await sb.from('acciones_correctivas').upsert(payload);
+    if (error) console.warn('[SEKaform] Sync acción correctiva:', error.message);
+  } catch (e) { console.warn('[SEKaform] Sync acción correctiva error:', e.message); }
+}
+
+async function sbLoadAccionesCorrectivas() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const user = await sbGetUser();
+    if (!user) return null;
+    const { data, error } = await sb.from('acciones_correctivas')
+      .select('*').eq('user_id', user.id).order('creado_en', { ascending: false });
+    if (error) return null;
+    return data;
+  } catch { return null; }
+}
+
 async function sbLoadPlantillas() {
   try {
     const sb = await getSB();

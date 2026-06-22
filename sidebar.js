@@ -17,6 +17,7 @@ const SKF_NAV_LINKS = [
   { href: 'digitalizador.html', ico: '⚡', label: 'Digitalizar' },
   { href: 'llenar.html',        ico: '📝', label: 'Mis formularios' },
   { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
+  { href: 'hallazgos.html',     ico: '⚠️', label: 'Hallazgos' },
   { href: 'dashboard.html',     ico: '📊', label: 'Dashboard' }
 ];
 

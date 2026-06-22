@@ -1479,6 +1479,16 @@ function buildCard(c,i) {
     <input type="checkbox" id="req_${c.id}" ${c.requerido?'checked':''} onchange="setReq('${c.id}',this.checked)">
     <label for="req_${c.id}">Requerido</label></div>`:'';
 
+  const sevHtml = fieldCanHaveSeveridad(c.tipo) ? `<div class="sev-row" style="margin-top:8px">
+    <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px">⚠️ Si la respuesta indica incumplimiento, repórtalo como</label>
+    <select onchange="setSeveridad('${c.id}',this.value)" style="width:100%">
+      <option value="" ${!c.severidad?'selected':''}>No marcar (campo informativo)</option>
+      <option value="critico" ${c.severidad==='critico'?'selected':''}>🔴 Hallazgo crítico — alerta inmediata</option>
+      <option value="mayor" ${c.severidad==='mayor'?'selected':''}>🟠 Hallazgo mayor</option>
+      <option value="menor" ${c.severidad==='menor'?'selected':''}>🟡 Hallazgo menor</option>
+    </select>
+  </div>` : '';
+
   const qualWarn = c._quality === 'garbage' ? `<div class="qual-warn qual-bad">
     🗑️ Esto probablemente no es un campo real — revisa antes de guardar
     <div class="qual-btns">
@@ -1508,7 +1518,7 @@ function buildCard(c,i) {
         <button class="fi-btn del" onclick="delC('${c.id}')">✕</button>
       </div>
     </div>
-    ${qualWarn}${optHtml}${reqChk}
+    ${qualWarn}${optHtml}${reqChk}${sevHtml}
   </div>`;
 }
 
@@ -1537,6 +1547,7 @@ function addMissingField(f){
   setTimeout(()=>document.querySelector(`#sc_${tmpl.campos[tmpl.campos.length-1].id}`)?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 function setReq(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c)c.requerido=v;}
+function setSeveridad(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v)c.severidad=v;else delete c.severidad;}}
 function setOpt(id,j,v){const c=tmpl.campos.find(x=>x.id===id);if(c&&c.opciones)c.opciones[j]=v;}
 function mvC(id,dir){const i=tmpl.campos.findIndex(c=>c.id===id),j=i+dir;if(j<0||j>=tmpl.campos.length)return;[tmpl.campos[i],tmpl.campos[j]]=[tmpl.campos[j],tmpl.campos[i]];renderSuggList();}
 function delC(id){tmpl.campos=tmpl.campos.filter(c=>c.id!==id);renderSuggList();}
@@ -1590,6 +1601,7 @@ function changeType(cId,k){
   if(k==='escala_1_5'&&!c.opciones){c.opciones=['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente'];}
   else if(needsOptions(k)&&!c.opciones){const _so=sugerirOpciones(c.etiqueta);c.opciones=_so.length?_so:[''];}
   if(!needsOptions(k))delete c.opciones;
+  if(!fieldCanHaveSeveridad(k))delete c.severidad;
   closeMenu();renderSuggList();
 }
 

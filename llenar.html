@@ -145,6 +145,23 @@
     .fg.has-error .err-msg { display: block; }
     .fg.has-error input, .fg.has-error textarea, .fg.has-error select { border-color: var(--err); }
 
+    /* hallazgo (finding) detection banner */
+    .hz-banner {
+      margin-top: 10px; padding: 10px 12px; border-radius: 9px;
+      background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25);
+    }
+    .hz-banner.hidden { display: none; }
+    .hz-banner-top { font-size: .78rem; font-weight: 700; color: var(--err); margin-bottom: 8px; }
+    .hz-banner-desc {
+      width: 100%; background: var(--inp); border: 1px solid var(--bor); border-radius: 8px;
+      color: var(--txt); font-size: .85rem; font-family: inherit; padding: 8px 10px;
+      resize: vertical; min-height: 56px; margin-bottom: 8px;
+    }
+    .hz-banner-dismiss {
+      background: none; border: none; color: var(--mut); font-size: .75rem;
+      text-decoration: underline; cursor: pointer; padding: 0;
+    }
+
     /* radio / checkbox - pill cards */
     .opts-wrap { display: flex; flex-direction: column; gap: 7px; }
     .opts-wrap.inline { flex-direction: row; flex-wrap: wrap; gap: 7px; }
@@ -301,8 +318,34 @@
     <div id="fFields"></div>
   </div>
   <div class="form-footer">
+    <button class="btn btn-sec" onclick="openManualHallazgo()">⚠️ Hallazgo</button>
     <button class="btn btn-sec" onclick="saveDraft()">💾 Borrador</button>
     <button class="btn btn-pri" onclick="submitForm()">Enviar formulario ✓</button>
+  </div>
+</div>
+
+<!-- MANUAL HALLAZGO MODAL -->
+<div class="modal-over hidden" id="manualHzModal">
+  <div class="modal-box">
+    <div class="modal-ico">⚠️</div>
+    <h2 class="modal-h">Reportar hallazgo</h2>
+    <p class="modal-p">Describe algo que encontraste y que no estaba previsto en ningún campo de este formulario.</p>
+    <div class="fg" style="text-align:left;margin-bottom:10px">
+      <label>Severidad</label>
+      <select id="mhSev">
+        <option value="critico">🔴 Crítico — alerta inmediata</option>
+        <option value="mayor">🟠 Mayor</option>
+        <option value="menor" selected>🟡 Menor</option>
+      </select>
+    </div>
+    <div class="fg" style="text-align:left;margin-bottom:10px">
+      <label>Descripción</label>
+      <textarea id="mhDesc" rows="3" placeholder="¿Qué encontraste?"></textarea>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-pri" style="justify-content:center" onclick="saveManualHallazgo()">Agregar al envío</button>
+      <button class="btn btn-sec" style="justify-content:center" onclick="closeManualHallazgo()">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -349,6 +392,7 @@
     <h2 class="modal-h">¡Formulario enviado!</h2>
     <p class="modal-p">El registro fue guardado correctamente y quedará disponible para exportar a base de datos.</p>
     <div class="modal-id" id="successId"></div>
+    <p class="modal-p hidden" id="successHz" style="margin-top:-10px;color:var(--err)"></p>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-pri" style="justify-content:center" onclick="fillAgain()">Llenar otro registro</button>
       <button class="btn btn-sec" style="justify-content:center" onclick="backToList()">Volver al inicio</button>
@@ -362,6 +406,7 @@ let activeTmpl = null;
 let submission = {};  // campo.id → value
 let signatures = {};  // campo.id → { canvas, ctx }
 let draftId = null;
+let hallazgos = [];   // hallazgos detectados/reportados durante este llenado (ver field-types.js)
 
 // ── Shared template encoding ───────────────────────────────────────
 function encodeTemplateForShare(tmpl) {
@@ -693,6 +738,7 @@ function openTemplate(id) {
   submission = {};
   signatures = {};
   draftId = null;
+  hallazgos = [];
 
   // Check for saved draft
   const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]');
@@ -821,7 +867,7 @@ function buildFieldEl(c) {
         if (submission[c.id]===o) opt.selected=true;
         inner.appendChild(opt);
       });
-      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); onCampoRespondido(c); });
       break;
     }
 
@@ -835,7 +881,7 @@ function buildFieldEl(c) {
         const inp = document.createElement('input');
         inp.type='radio'; inp.name=`r_${c.id}`; inp.value=o;
         if (submission[c.id]===o) inp.checked=true;
-        inp.addEventListener('change', () => { submission[c.id]=o; clearErr(c.id); updateProgress(); });
+        inp.addEventListener('change', () => { submission[c.id]=o; clearErr(c.id); updateProgress(); onCampoRespondido(c); });
         lbl2.appendChild(inp);
         lbl2.appendChild(document.createTextNode(o));
         inner.appendChild(lbl2);
@@ -870,7 +916,7 @@ function buildFieldEl(c) {
         inp.addEventListener('change', () => {
           const cur = Array.isArray(submission[c.id]) ? submission[c.id] : [];
           submission[c.id] = inp.checked ? [...cur,o] : cur.filter(x=>x!==o);
-          clearErr(c.id); updateProgress();
+          clearErr(c.id); updateProgress(); onCampoRespondido(c);
         });
         lbl2.appendChild(inp);
         lbl2.appendChild(document.createTextNode(o));
@@ -927,8 +973,66 @@ function buildFieldEl(c) {
   if (inner) {
     fg.appendChild(inner);
     fg.appendChild(errMsg);
+    if (c.severidad && fieldCanHaveSeveridad(c.tipo)) {
+      const hz = document.createElement('div');
+      hz.className = 'hz-banner hidden';
+      hz.id = `hz_${c.id}`;
+      const sevLbl = c.severidad==='critico'?'🔴 Hallazgo crítico':c.severidad==='mayor'?'🟠 Hallazgo mayor':'🟡 Hallazgo menor';
+      hz.innerHTML = `<div class="hz-banner-top">${sevLbl} detectado en esta respuesta</div>
+        <textarea class="hz-banner-desc" placeholder="Detalle del hallazgo (opcional)" oninput="setHallazgoDesc('${c.id}',this.value)"></textarea>
+        <button type="button" class="hz-banner-dismiss" onclick="dismissHallazgo('${c.id}')">No es un hallazgo real</button>`;
+      fg.appendChild(hz);
+    }
   }
   return fg;
+}
+
+// ── Hallazgos (detección automática + reporte manual) ───────────────
+function onCampoRespondido(c) {
+  if (!c.severidad || !fieldCanHaveSeveridad(c.tipo)) return;
+  const valor = submission[c.id];
+  const banner = document.getElementById(`hz_${c.id}`);
+  const idx = hallazgos.findIndex(h => h.campoId===c.id && h.origen==='automatico');
+  if (answerIsFinding(c.tipo, valor)) {
+    const valorTxt = Array.isArray(valor) ? valor.join(', ') : String(valor);
+    if (idx>=0) {
+      hallazgos[idx].valorDetectado = valorTxt;
+    } else {
+      hallazgos.push({ campoId:c.id, campoEtiqueta:c.etiqueta, origen:'automatico', severidad:c.severidad, descripcion:'', foto:null, valorDetectado:valorTxt, dismissed:false });
+    }
+    if (banner) banner.classList.remove('hidden');
+  } else {
+    if (idx>=0) hallazgos.splice(idx,1);
+    if (banner) banner.classList.add('hidden');
+  }
+}
+function setHallazgoDesc(campoId, v) {
+  const h = hallazgos.find(h=>h.campoId===campoId && h.origen==='automatico');
+  if (h) h.descripcion = v;
+}
+function dismissHallazgo(campoId) {
+  hallazgos = hallazgos.filter(h => !(h.campoId===campoId && h.origen==='automatico'));
+  const banner = document.getElementById(`hz_${campoId}`);
+  if (banner) banner.classList.add('hidden');
+}
+
+let manualHallazgo = null;
+function openManualHallazgo() {
+  manualHallazgo = { descripcion:'', severidad:'menor', foto:null };
+  document.getElementById('mhDesc').value='';
+  document.getElementById('mhSev').value='menor';
+  document.getElementById('manualHzModal').classList.remove('hidden');
+}
+function closeManualHallazgo() {
+  document.getElementById('manualHzModal').classList.add('hidden');
+}
+function saveManualHallazgo() {
+  const descripcion = document.getElementById('mhDesc').value.trim();
+  const severidad = document.getElementById('mhSev').value;
+  if (!descripcion) { toast('Describe el hallazgo','er'); return; }
+  hallazgos.push({ campoId:null, campoEtiqueta:null, origen:'manual', severidad, descripcion, foto:null });
+  closeManualHallazgo();
+  toast('Hallazgo agregado al envío ✓','ok');
 }
 
 // ── Canvas signature ───────────────────────────────────────────────
@@ -1139,17 +1243,40 @@ function submitForm() {
       enviadoEn: new Date().toISOString()
     };
 
+    const hallazgosEnvio = hallazgos.map(h => ({
+      id: `hz_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+      envioId: envio.id,
+      plantillaId: activeTmpl.id,
+      plantillaNombre: activeTmpl.nombre,
+      campoId: h.campoId,
+      campoEtiqueta: h.campoEtiqueta,
+      origen: h.origen,
+      severidad: h.severidad,
+      descripcion: h.descripcion || (h.valorDetectado ? `Respuesta registrada: ${h.valorDetectado}` : ''),
+      foto: h.foto || null,
+      estado: 'abierto',
+      reportadoPor: envio.llenadoPor || ''
+    }));
+
     if (isPublicFill) {
       // Sin sesión: no se guarda en el localStorage del visitante (no es su
       // plantilla), solo se manda al servidor — el dueño lo verá en su panel.
       sbSubmitPublicEnvio(envio).then(r => {
         if (r && r.error) toast('No se pudo enviar al servidor: ' + r.error, 'er');
       }).catch(()=>{});
+      hallazgosEnvio.forEach(h => sbSubmitPublicHallazgo(h).catch(()=>{}));
     } else {
       envios.push(envio);
       localStorage.setItem('skf_envios',JSON.stringify(envios));
       // Non-blocking cloud sync
       sbSyncEnvio(envio).catch(()=>{});
+
+      if (hallazgosEnvio.length) {
+        const stored = JSON.parse(localStorage.getItem('skf_hallazgos')||'[]');
+        stored.push(...hallazgosEnvio);
+        localStorage.setItem('skf_hallazgos',JSON.stringify(stored));
+        hallazgosEnvio.forEach(h => sbSyncHallazgo(h).catch(()=>{}));
+      }
     }
 
     // Remove draft if existed
@@ -1159,6 +1286,13 @@ function submitForm() {
     }
 
     document.getElementById('successId').textContent = `Envío #${numero}`;
+    const hzMsg = document.getElementById('successHz');
+    if (hallazgosEnvio.length) {
+      hzMsg.textContent = `⚠️ Se registraron ${hallazgosEnvio.length} hallazgo${hallazgosEnvio.length>1?'s':''} para seguimiento.`;
+      hzMsg.classList.remove('hidden');
+    } else {
+      hzMsg.classList.add('hidden');
+    }
     document.getElementById('successModal').classList.remove('hidden');
   } catch (e) {
     console.error('[SEKaform] submitForm error:', e);
@@ -1168,7 +1302,7 @@ function submitForm() {
 
 function fillAgain() {
   document.getElementById('successModal').classList.add('hidden');
-  submission={}; signatures={}; draftId=null;
+  submission={}; signatures={}; draftId=null; hallazgos=[];
   renderFields(activeTmpl.campos);
   updateProgress();
   window.scrollTo(0,0);
