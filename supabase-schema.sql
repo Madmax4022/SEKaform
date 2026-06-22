@@ -504,3 +504,20 @@ CREATE TRIGGER trg_hallazgos_notificar_critico
   AFTER INSERT ON hallazgos
   FOR EACH ROW
   EXECUTE FUNCTION hallazgos_notificar_critico();
+
+-- ── Alerta en tiempo real dentro de la app (Supabase Realtime) ──────────
+-- Además del correo, cualquier sesión abierta del dueño (la app, no su
+-- bandeja de entrada) recibe el hallazgo crítico al instante vía
+-- WebSocket — ver skfSubscribeCriticalAlerts en supabase-config.js. Para
+-- que el cliente reciba el evento, la tabla debe estar en la publicación
+-- de Realtime (no aplica solo con RLS). DO block porque ALTER PUBLICATION
+-- ... ADD TABLE falla si ya estaba agregada (este script se puede re-ejecutar).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'hallazgos'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE hallazgos;
+  END IF;
+END $$;

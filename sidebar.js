@@ -53,7 +53,9 @@ function skfRenderSidebar() {
     sbGetUser().then(user => {
       if (!user) return;
       const bar = document.getElementById('sidebarAuth');
-      bar.innerHTML = `<span class="auth-chip">☁ ${_skfEsc(user.email)}</span><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
+      bar.innerHTML = `<span class="auth-chip">☁ ${_skfEsc(user.email)}</span><button class="auth-bell" id="skfBellBtn" onclick="skfToggleNotifications()">🔕</button><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
+      if (typeof skfUpdateBellIcon === 'function') skfUpdateBellIcon();
+      if (typeof skfSubscribeCriticalAlerts === 'function') skfSubscribeCriticalAlerts(user);
     }).catch(() => {});
   }
 }

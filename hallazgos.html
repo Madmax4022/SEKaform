@@ -275,6 +275,14 @@ async function init() {
   render();
 }
 init();
+
+// Llega un hallazgo crítico por Realtime mientras esta página está
+// abierta (ver skfSubscribeCriticalAlerts en supabase-config.js) —
+// refresca la lista sin que el usuario tenga que recargar.
+window.addEventListener('skf:hallazgo-critico', async () => {
+  await syncFromCloud();
+  render();
+});
 </script>
 </body>
 </html>

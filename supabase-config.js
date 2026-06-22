@@ -363,6 +363,95 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ─────────────────────────────────────────────────────────────
+//  Fase 3: alertas en tiempo real de hallazgos críticos
+//
+//  Un hallazgo crítico (extintor vencido, fuga, riesgo eléctrico…) no
+//  debe esperar a que alguien abra el dashboard. Cualquier sesión
+//  abierta del dueño de la cuenta se suscribe vía Supabase Realtime
+//  (WebSocket) a los INSERT en "hallazgos"; al llegar uno con
+//  severidad "critico" se muestra un aviso dentro de la app y, si el
+//  usuario activó el campanazo, una notificación nativa del navegador
+//  (llega aunque esté en otra pestaña).
+// ─────────────────────────────────────────────────────────────
+function _skfHtmlEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function skfShowCriticalToast(h) {
+  let el = document.getElementById('skfCriticalToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'skfCriticalToast';
+    el.className = 'skf-critical-toast';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `
+    <span class="skf-critical-toast-ico">🔴</span>
+    <div class="skf-critical-toast-body">
+      <strong>Hallazgo crítico</strong>
+      <span>${_skfHtmlEsc(h.plantilla_nombre || '')}${h.campo_etiqueta ? ' · ' + _skfHtmlEsc(h.campo_etiqueta) : ''}</span>
+    </div>
+    <a class="skf-critical-toast-link" href="hallazgos.html">Ver →</a>
+    <button class="skf-critical-toast-close" onclick="this.closest('.skf-critical-toast').classList.remove('show')" aria-label="Cerrar">✕</button>
+  `;
+  el.classList.add('show');
+  clearTimeout(el._skfTimer);
+  el._skfTimer = setTimeout(() => el.classList.remove('show'), 12000);
+}
+
+function skfNotifyCritical(h) {
+  skfShowCriticalToast(h);
+  window.dispatchEvent(new CustomEvent('skf:hallazgo-critico', { detail: h }));
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
+    try {
+      const n = new Notification('🔴 Hallazgo crítico — SEKaform', {
+        body: (h.plantilla_nombre || '') + (h.campo_etiqueta ? ' · ' + h.campo_etiqueta : ''),
+        tag: 'skf-critico-' + h.id
+      });
+      n.onclick = () => { window.focus(); location.href = 'hallazgos.html'; };
+    } catch {}
+  }
+}
+
+function skfNotificationsEnabled() {
+  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+
+async function skfToggleNotifications() {
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission === 'granted') {
+    alert('Las alertas del navegador ya están activas para SEKaform. Para desactivarlas, hazlo desde la configuración de notificaciones de tu navegador.');
+    return;
+  }
+  await Notification.requestPermission();
+  skfUpdateBellIcon();
+}
+
+function skfUpdateBellIcon() {
+  const btn = document.getElementById('skfBellBtn');
+  if (!btn) return;
+  const on = skfNotificationsEnabled();
+  btn.textContent = on ? '🔔' : '🔕';
+  btn.classList.toggle('on', on);
+  btn.title = on
+    ? 'Alertas activas — los hallazgos críticos te avisan al instante, aunque estés en otra pestaña'
+    : 'Activar notificaciones del navegador para hallazgos críticos';
+}
+
+let _skfCriticalChannel = null;
+async function skfSubscribeCriticalAlerts(user) {
+  if (!SKF_CONFIGURED || !user || _skfCriticalChannel) return;
+  const sb = await getSB();
+  if (!sb) return;
+  _skfCriticalChannel = sb.channel('hallazgos-criticos-' + user.id)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'hallazgos',
+      filter: `user_id=eq.${user.id}`
+    }, (payload) => {
+      if (payload.new && payload.new.severidad === 'critico') skfNotifyCritical(payload.new);
+    })
+    .subscribe();
+}
+
+// ─────────────────────────────────────────────────────────────
 //  Cola de sincronización offline
 //
 //  Un inspector en campo no siempre tiene señal. Cada registro ya se
