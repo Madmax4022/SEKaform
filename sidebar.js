@@ -49,6 +49,16 @@ function skfRenderSidebar() {
   `;
   document.body.insertAdjacentHTML('afterbegin', html);
 
+  // On mobile the sidebar is a flyout overlay — collapse it when the user
+  // taps any nav link so the destination page doesn't re-open it.
+  document.querySelectorAll('.sidebar-link').forEach(a => {
+    a.addEventListener('click', () => {
+      if (window.matchMedia('(max-width:860px)').matches) {
+        localStorage.setItem('skf_sidebar_collapsed', 'true');
+      }
+    });
+  });
+
   if (typeof sbGetUser === 'function') {
     sbGetUser().then(user => {
       if (!user) return;
