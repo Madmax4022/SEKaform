@@ -521,3 +521,27 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE hallazgos;
   END IF;
 END $$;
+
+-- ── control_asistencia — RLS ─────────────────────────────────────────────────
+-- Tabla creada fuera del schema inicial. Habilitar RLS para que no quede
+-- expuesta públicamente vía PostgREST sin restricciones.
+ALTER TABLE IF EXISTS public.control_asistencia ENABLE ROW LEVEL SECURITY;
+
+-- Permite a cada usuario autenticado leer y escribir solo sus propias filas.
+-- Si la tabla no tiene columna user_id, reemplaza la condición por la que
+-- corresponda (ej: created_by, owner_id, etc.).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'control_asistencia'
+      AND policyname = 'Usuarios gestionan sus propios registros de asistencia'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY "Usuarios gestionan sus propios registros de asistencia"
+        ON public.control_asistencia FOR ALL
+        USING      ((select auth.uid()) = user_id)
+        WITH CHECK ((select auth.uid()) = user_id);
+    $pol$;
+  END IF;
+END $$;

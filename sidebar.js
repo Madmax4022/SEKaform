@@ -29,6 +29,38 @@ function skfToggleSidebar(forceOpen) {
   localStorage.setItem('skf_sidebar_collapsed', collapsed ? 'true' : 'false');
 }
 
+// ── Barra inferior móvil — offline prep ──────────────────────────────────────
+
+function skfPrepareOffline() {
+  const btn = document.getElementById('bbOfflineBtn');
+  if (!('serviceWorker' in navigator)) {
+    if (btn) btn.textContent = '⚠️ No soportado';
+    return;
+  }
+  if (btn) { btn.textContent = '⏳ Preparando…'; btn.disabled = true; }
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    return regs.length
+      ? Promise.all(regs.map(r => r.update()))
+      : navigator.serviceWorker.register('sw.js');
+  }).then(() => {
+    const b = document.getElementById('bbOfflineBtn');
+    if (b) { b.textContent = '✓ Lista sin conexión'; b.classList.add('bb-offline-ready'); b.disabled = false; }
+  }).catch(() => {
+    const b = document.getElementById('bbOfflineBtn');
+    if (b) { b.textContent = '📥 Sin conexión'; b.disabled = false; }
+  });
+}
+
+function _skfUpdateBottomAuth(user) {
+  const el = document.getElementById('bbAuthZone');
+  if (!el) return;
+  if (user) {
+    el.innerHTML = `<span class="bb-auth-chip">☁ ${_skfEsc(user.email)}</span>`;
+  } else {
+    el.innerHTML = `<a class="bb-btn" href="login.html">☁ Iniciar sesión</a>`;
+  }
+}
+
 function skfRenderSidebar() {
   const current = (location.pathname.split('/').pop() || 'index.html');
   const links = SKF_NAV_LINKS.map(n =>
@@ -46,6 +78,13 @@ function skfRenderSidebar() {
       </div>
     </aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="skfToggleSidebar(false)"></div>
+    <div class="skf-bottom-bar" id="skfBottomBar">
+      <a href="index.html" class="bb-btn">🏠 Inicio</a>
+      <div class="bb-auth" id="bbAuthZone">
+        <a class="bb-btn" href="login.html">☁ Iniciar sesión</a>
+      </div>
+      <button class="bb-btn" id="bbOfflineBtn" onclick="skfPrepareOffline()">📥 Sin conexión</button>
+    </div>
   `;
   document.body.insertAdjacentHTML('afterbegin', html);
 
@@ -61,11 +100,22 @@ function skfRenderSidebar() {
 
   if (typeof sbGetUser === 'function') {
     sbGetUser().then(user => {
+      _skfUpdateBottomAuth(user || null);
       if (!user) return;
       const bar = document.getElementById('sidebarAuth');
       bar.innerHTML = `<span class="auth-chip">☁ ${_skfEsc(user.email)}</span><button class="auth-bell" id="skfBellBtn" onclick="skfToggleNotifications()">🔕</button><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
       if (typeof skfUpdateBellIcon === 'function') skfUpdateBellIcon();
       if (typeof skfSubscribeCriticalAlerts === 'function') skfSubscribeCriticalAlerts(user);
+    }).catch(() => {});
+  }
+
+  // Si el cache del SW ya existe, mostrar que ya está lista para sin conexión
+  if ('caches' in window) {
+    caches.has('skf-shell-v2').then(has => {
+      if (has) {
+        const btn = document.getElementById('bbOfflineBtn');
+        if (btn) { btn.textContent = '✓ Lista sin conexión'; btn.classList.add('bb-offline-ready'); }
+      }
     }).catch(() => {});
   }
 }

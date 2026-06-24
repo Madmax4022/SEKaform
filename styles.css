@@ -68,7 +68,53 @@ html.sb-collapsed .sidebar { transform: translateX(-100%); }
 .skf-sync-bar.offline { border-color: rgba(245,158,11,.4); color: var(--warn); background: var(--warn-dim); }
 .skf-sync-bar.syncing { border-color: rgba(37,99,235,.4); color: var(--pri-h); background: var(--pri-dim); }
 @media (max-width: 860px) {
-  .skf-sync-bar { top: auto; bottom: 14px; right: 14px; }
+  .skf-sync-bar { top: auto; bottom: 68px; right: 14px; }
+}
+
+/* ── Barra inferior móvil — inicio / sesión / sin conexión ──────────
+   Solo visible en móvil. Reemplaza la necesidad de abrir el sidebar
+   para estas tres acciones de alta frecuencia. */
+.skf-bottom-bar {
+  display: none;
+}
+@media (max-width: 860px) {
+  .skf-bottom-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
+    background: var(--card); border-top: 1px solid var(--bor);
+    padding: 0 8px; height: 54px; gap: 4px;
+  }
+  body { padding-bottom: 54px; }
+}
+.bb-btn {
+  display: flex; align-items: center; gap: 4px;
+  font-size: .76rem; font-weight: 600; color: var(--mut);
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  padding: 6px 10px; border-radius: 8px; text-decoration: none;
+  transition: background .15s, color .15s; white-space: nowrap; flex-shrink: 0;
+}
+.bb-btn:hover, .bb-btn:active { background: var(--bor); color: var(--txt); }
+.bb-auth {
+  flex: 1; display: flex; justify-content: center; overflow: hidden; min-width: 0;
+}
+.bb-auth-chip {
+  font-size: .72rem; font-weight: 700;
+  background: var(--ok-dim); border: 1px solid rgba(26,188,156,.3); color: var(--ok);
+  border-radius: 20px; padding: 4px 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;
+}
+.bb-offline-ready { color: var(--ok) !important; }
+
+/* ── Despeje del botón flotante ☰ en móvil ──────────────────────────
+   El botón de menú es position:fixed (top:14 left:14, 38px). En páginas
+   sin barra de herramientas (asignaciones, dashboard, hallazgos, index,
+   plantillas) el título <h1> arranca en la esquina y queda tapado por el
+   botón. Se baja el contenido en móvil. Las páginas CON toolbar
+   (digitalizador, llenar) ya despejan el botón en la propia toolbar, así
+   que su .wrap se restaura a su padding original. */
+@media (max-width: 860px) {
+  body .wrap, body .wrapper { padding-top: 60px; }
+  body .page-toolbar ~ .wrap { padding-top: 28px; }
 }
 
 body { padding-left: 232px; transition: padding-left .25s ease; }
