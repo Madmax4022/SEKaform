@@ -109,7 +109,7 @@ const FORM_LIBRARY = [
    campos_clave:[
     {etiqueta:'Nombre completo del participante',tipo:'texto'},
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de inicio',tipo:'hora_auto'},
-    {etiqueta:'Hora de finalización',tipo:'hora_auto'},
+    {etiqueta:'Hora de finalización',tipo:'hora'},
     {etiqueta:'Facilitador / Instructor',tipo:'texto'},
     {etiqueta:'Cargo',tipo:'select',opciones:['Operario','Técnico','Profesional','Supervisor','Coordinador','Otro']},
     {etiqueta:'Firma del participante',tipo:'firma'},
@@ -134,7 +134,7 @@ const FORM_LIBRARY = [
    keywords:['permiso','altura','espacio confinado','electrico','caliente','riesgo','ats','atp','trabajador','petar','resolucion 4272','resolucion 0491'],
    campos_clave:[
     {etiqueta:'Número de permiso',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora_auto'},
+    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora'},
     {etiqueta:'Tipo de trabajo',tipo:'select',opciones:['Trabajo en altura','Espacio confinado','Trabajo en caliente','Trabajo eléctrico','Otro']},
     {etiqueta:'Descripción del trabajo',tipo:'textarea'},
     {etiqueta:'¿Se realizó análisis de riesgos?',tipo:'si_no'},
@@ -193,7 +193,7 @@ const FORM_LIBRARY = [
    keywords:['copasst','copasos','comite paritario','representante empleador','representante trabajadores','presidente copasst','secretario copasst','sgsst'],
    campos_clave:[
     {etiqueta:'Número de acta',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora_auto'},
+    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora'},
     {etiqueta:'Tipo de reunión',tipo:'select',opciones:['Ordinaria mensual','Extraordinaria']},
     {etiqueta:'Presidente del COPASST',tipo:'texto'},{etiqueta:'Secretario del COPASST',tipo:'texto'},
     {etiqueta:'Representante del empleador',tipo:'texto'},{etiqueta:'Representante de los trabajadores',tipo:'texto'},
@@ -448,7 +448,7 @@ const FORM_LIBRARY = [
    campos_clave:[
     {etiqueta:'Nombre completo',tipo:'texto'},{etiqueta:'Cédula',tipo:'numero'},
     {etiqueta:'Empresa / Contratista',tipo:'texto'},{etiqueta:'Fecha de ingreso',tipo:'fecha_auto'},
-    {etiqueta:'Hora de ingreso',tipo:'hora_auto'},{etiqueta:'Hora de salida',tipo:'hora_auto'},
+    {etiqueta:'Hora de ingreso',tipo:'hora_auto'},{etiqueta:'Hora de salida',tipo:'hora'},
     {etiqueta:'Motivo de la visita',tipo:'select',opciones:['Trabajo contratado','Visita técnica','Supervisión','Entrega de materiales','Otro']},
     {etiqueta:'¿Recibió inducción de seguridad?',tipo:'si_no'},
     {etiqueta:'EPP verificado',tipo:'checkbox_multi',opciones:['Casco','Botas de seguridad','Chaleco reflectivo','Guantes','Gafas de seguridad']},
@@ -459,7 +459,7 @@ const FORM_LIBRARY = [
    keywords:['trabajo en alturas','andamio','arnes','linea de vida','punto de anclaje','permiso de altura','resolucion 4272'],
    campos_clave:[
     {etiqueta:'Número de permiso',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
-    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora_auto'},
+    {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora'},
     {etiqueta:'Trabajador autorizado',tipo:'texto'},
     {etiqueta:'Nivel de riesgo',tipo:'select',opciones:['Riesgo I - Trabajo no rutinario','Riesgo II - Trabajo rutinario']},
     {etiqueta:'Altura de trabajo (m)',tipo:'numero'},
