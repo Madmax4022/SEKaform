@@ -411,6 +411,14 @@ let submission = {};  // campo.id → value
 let signatures = {};  // campo.id → { canvas, ctx }
 let draftId = null;
 let hallazgos = [];   // hallazgos detectados/reportados durante este llenado (ver field-types.js)
+let _autosaveTimer = null;
+
+function scheduleAutosave() {
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = setTimeout(() => {
+    if (activeTmpl && Object.keys(submission).length > 0) saveDraft(true);
+  }, 2500);
+}
 
 // ── Shared template encoding ───────────────────────────────────────
 function encodeTemplateForShare(tmpl) {
@@ -482,6 +490,13 @@ async function syncFromCloud() {
 let isPublicFill = false; // true cuando se llena vía ?pub=<token> sin sesión
 
 document.addEventListener('DOMContentLoaded', async () => {
+  window.addEventListener('beforeunload', e => {
+    if (activeTmpl && Object.keys(submission).length > 0) {
+      saveDraft(true);
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
   const params = new URLSearchParams(location.search);
   const pubToken = params.get('pub');
   if (pubToken) {
@@ -768,6 +783,11 @@ function openTemplate(id) {
   show('vForm');
   updateProgress();
   history.replaceState(null,'',`llenar.html?tmpl=${id}`);
+  // Autosave: hook delegated listener on the fields container once per open
+  const fFields = document.getElementById('fFields');
+  fFields._autosaveHooked = true;
+  fFields.addEventListener('input', scheduleAutosave, { passive: true });
+  fFields.addEventListener('change', scheduleAutosave, { passive: true });
 }
 
 function renderFields(campos) {
@@ -1197,7 +1217,7 @@ function markErr(cId) { const fg=document.getElementById(`fg_${cId}`); if(fg) fg
 function clearErr(cId) { const fg=document.getElementById(`fg_${cId}`); if(fg) fg.classList.remove('has-error'); }
 
 // ── Save draft ─────────────────────────────────────────────────────
-function saveDraft() {
+function saveDraft(silent = false) {
   if (!activeTmpl) return;
   const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]');
   const draft = {
@@ -1211,8 +1231,8 @@ function saveDraft() {
   draftId = draft.id;
   const i = drafts.findIndex(d=>d.id===draftId);
   if (i>=0) drafts[i]=draft; else drafts.push(draft);
-  localStorage.setItem('skf_borradores',JSON.stringify(drafts));
-  toast('Borrador guardado ✓','ok');
+  try { localStorage.setItem('skf_borradores',JSON.stringify(drafts)); } catch(e) { return; }
+  if (!silent) toast('Borrador guardado ✓','ok');
 }
 
 // ── Submit ─────────────────────────────────────────────────────────
@@ -1224,8 +1244,14 @@ function submitForm() {
 
   try {
     if (!validate()) {
-      toast('Completa los campos requeridos','er');
-      // Scroll to first error
+      const missing = activeTmpl.campos
+        .filter(c => c.requerido && c.tipo!=='separador')
+        .filter(c => { const v=submission[c.id]; return !v || (Array.isArray(v)?v.length===0:String(v).trim().length===0); })
+        .map(c => c.etiqueta);
+      const msg = missing.length <= 3
+        ? `Falta completar: ${missing.join(', ')}`
+        : `Faltan ${missing.length} campos requeridos`;
+      toast(msg, 'er');
       const first=document.querySelector('.has-error');
       if (first) first.scrollIntoView({behavior:'smooth',block:'center'});
       return;

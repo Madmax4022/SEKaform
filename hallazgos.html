@@ -185,8 +185,8 @@ function render() {
       </div>` : `<div class="hz-capa-form">
         <input type="text" id="resp_${esc(h.id)}" placeholder="Responsable">
         <input type="email" id="correo_${esc(h.id)}" placeholder="Correo (opcional)">
-        <input type="date" id="fecha_${esc(h.id)}">
-        <button class="btn btn-sec btn-sm" onclick="asignarAccion('${esc(h.id)}')">Asignar acción correctiva</button>
+        <input type="date" id="fecha_${esc(h.id)}" min="${new Date().toISOString().split('T')[0]}">
+        <button class="btn btn-sec btn-sm" onclick="asignarAccion('${esc(h.id)}')">Asignar acción correctiva (CAPA)</button>
       </div>`;
 
     return `<div class="hz-card sev-${esc(h.severidad)}">
@@ -253,8 +253,10 @@ function setAccionEstado(id, estado) {
     const list = getHallazgos();
     const h = list.find(x=>x.id===ac.hallazgoId);
     if (h) { h.estado = 'cerrado'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
+    toast('Acción completada — hallazgo cerrado automáticamente ✓','ok');
+  } else {
+    toast('Acción correctiva actualizada ✓','ok');
   }
-  toast('Acción correctiva actualizada ✓','ok');
   render();
 }
 

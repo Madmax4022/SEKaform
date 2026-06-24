@@ -58,7 +58,7 @@
 
 <div class="card">
   <h1 class="card-title" id="cardTitle">Iniciar sesión</h1>
-  <p class="card-sub" id="cardSub">Accede a tu base de datos y panel de inteligencia de negocios.</p>
+  <p class="card-sub" id="cardSub">Guarda tus formularios en la nube y accede desde cualquier dispositivo.</p>
 
   <div class="msg" id="msgBox"></div>
 
@@ -69,6 +69,7 @@
   <div class="fg">
     <label>Contraseña</label>
     <input type="password" id="passInp" placeholder="••••••••" autocomplete="current-password">
+    <div style="text-align:right;margin-top:6px"><a id="forgotLink" onclick="handleForgot()" style="font-size:.78rem;color:var(--mut);cursor:pointer;text-decoration:none" onmouseover="this.style.color='var(--txt)'" onmouseout="this.style.color='var(--mut)'">¿Olvidaste tu contraseña?</a></div>
   </div>
 
   <button class="btn btn-pri" id="submitBtn" onclick="handleSubmit()">
@@ -86,7 +87,7 @@
 
   <div class="badge-local">
     <strong>Modo local:</strong> Tus formularios y envíos se guardan en este dispositivo.
-    Con cuenta, se sincronizan en la nube y puedes ver el panel de BI.
+    Con cuenta, se sincronizan en la nube y puedes ver el panel de control.
   </div>
 </div>
 
@@ -101,8 +102,9 @@ function toggleMode() {
   const isSignup = mode === 'signup';
   document.getElementById('cardTitle').textContent = isSignup ? 'Crear cuenta' : 'Iniciar sesión';
   document.getElementById('cardSub').textContent = isSignup
-    ? 'Crea tu cuenta para sincronizar datos y acceder al panel BI.'
-    : 'Accede a tu base de datos y panel de inteligencia de negocios.';
+    ? 'Crea tu cuenta para sincronizar datos y acceder desde cualquier dispositivo.'
+    : 'Guarda tus formularios en la nube y accede desde cualquier dispositivo.';
+  document.getElementById('forgotLink').style.display = isSignup ? 'none' : 'inline';
   document.getElementById('submitLabel').textContent = isSignup ? 'Crear cuenta →' : 'Iniciar sesión →';
   document.getElementById('toggleText').textContent = isSignup ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
   document.getElementById('toggleLink').textContent = isSignup ? 'Iniciar sesión' : 'Crear cuenta';
@@ -140,7 +142,15 @@ async function handleSubmit() {
       window.location.href = 'index.html';
     }
   } catch (e) {
-    showMsg(e.message || 'Error al ingresar. Intenta de nuevo.', 'er');
+    const errMap = {
+      'Invalid login credentials': 'Correo o contraseña incorrectos.',
+      'Email not confirmed': 'Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada.',
+      'User already registered': 'Ya existe una cuenta con ese correo. Inicia sesión.',
+      'Password should be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres.',
+      'Unable to validate email address': 'Escribe un correo electrónico válido.',
+    };
+    const msg = errMap[e.message] || e.message || 'Error al ingresar. Intenta de nuevo.';
+    showMsg(msg, 'er');
   } finally {
     btn.disabled = false;
     document.getElementById('submitLabel').textContent = mode === 'signup' ? 'Crear cuenta →' : 'Iniciar sesión →';
@@ -149,6 +159,20 @@ async function handleSubmit() {
 
 function skipLogin() {
   window.location.href = 'index.html';
+}
+
+async function handleForgot() {
+  const email = document.getElementById('emailInp').value.trim();
+  if (!email) { showMsg('Escribe tu correo electrónico primero.', 'er'); document.getElementById('emailInp').focus(); return; }
+  if (!SKF_CONFIGURED) { showMsg('Función no disponible en modo local.', 'er'); return; }
+  try {
+    const sb = await getSB();
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/login.html' });
+    if (error) throw error;
+    showMsg('Te enviamos un link para restablecer tu contraseña. Revisa tu correo.', 'ok');
+  } catch(e) {
+    showMsg('No se pudo enviar el correo. Verifica la dirección.', 'er');
+  }
 }
 
 document.getElementById('emailInp').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('passInp').focus(); });
