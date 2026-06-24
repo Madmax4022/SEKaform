@@ -1314,6 +1314,21 @@ function submitForm() {
       }
     }
 
+    // Notificación por correo (no bloquea el flujo)
+    if (activeTmpl.correoNotificacion) {
+      try {
+        const sb = typeof _sb !== 'undefined' ? _sb : null;
+        if (sb) sb.functions.invoke('notify-envio', { body: {
+          correo: activeTmpl.correoNotificacion,
+          plantillaNombre: activeTmpl.nombre,
+          plantillaCodigo: activeTmpl.codigo || '',
+          llenadoPor: envio.llenadoPor || '',
+          datos: envio.datos,
+          numero: envio.numero,
+        }}).catch(() => {});
+      } catch (_) {}
+    }
+
     // Remove draft if existed
     if (draftId) {
       const drafts = JSON.parse(localStorage.getItem('skf_borradores')||'[]').filter(d=>d.id!==draftId);
