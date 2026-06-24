@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Hallazgos — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="supabase-config.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 24px; line-height: 1.6; max-width: 640px; }
+
+    .filters { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+    .filt-btn {
+      background: var(--card); border: 1px solid var(--bor); color: var(--mut);
+      padding: 7px 14px; border-radius: 20px; font-size: .8rem; font-weight: 700;
+      cursor: pointer; transition: all .15s; font-family: inherit;
+    }
+    .filt-btn:hover { border-color: var(--pri); color: var(--txt); }
+    .filt-btn.active { background: var(--pri); border-color: var(--pri); color: #fff; }
+
+    .hz-card { background: var(--card); border: 1px solid var(--bor); border-left: 3px solid var(--bor); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; }
+    .hz-card.sev-critico { border-left-color: var(--err); }
+    .hz-card.sev-mayor { border-left-color: var(--warn); }
+    .hz-card.sev-menor { border-left-color: #eab308; }
+    .hz-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .hz-badge { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 3px 9px; border-radius: 20px; }
+    .hz-badge.sev-critico { background: rgba(239,68,68,.15); color: var(--err); }
+    .hz-badge.sev-mayor { background: rgba(245,158,11,.15); color: var(--warn); }
+    .hz-badge.sev-menor { background: rgba(234,179,8,.15); color: #eab308; }
+    .hz-plantilla { font-weight: 800; font-size: .95rem; margin-top: 8px; }
+    .hz-campo { font-size: .78rem; color: var(--mut); margin-top: 2px; }
+    .hz-desc { font-size: .87rem; margin-top: 8px; line-height: 1.5; }
+    .hz-meta { font-size: .74rem; color: var(--mut); margin-top: 8px; }
+    .hz-estado-sel { background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 7px; padding: 6px 10px; font-size: .8rem; font-family: inherit; cursor: pointer; }
+
+    .hz-capa { margin-top: 14px; border-top: 1px solid var(--bor); padding-top: 12px; }
+    .hz-capa-existing { font-size: .85rem; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+    .hz-capa-form { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hz-capa-form input { background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 7px; padding: 8px 10px; font-size: .82rem; font-family: inherit; outline: none; }
+    .hz-capa-form input[type="text"] { flex: 1; min-width: 140px; }
+    .hz-capa-form input[type="email"] { flex: 1; min-width: 140px; }
+
+    .btn-sm { padding: 7px 13px; font-size: .8rem; border-radius: 7px; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--mut); }
+    .es-ico { font-size: 3.5rem; display: block; margin-bottom: 14px; }
+    .empty-state h2 { font-size: 1.05rem; margin-bottom: 8px; color: var(--txt); }
+    .empty-state p { font-size: .85rem; line-height: 1.55; max-width: 360px; margin: 0 auto; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 16px; background: var(--card);
+      border: 1px solid var(--bor); border-radius: 10px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 9px; font-size: 0.85rem; font-weight: 600;
+      z-index: 2000; animation: toastIn .2s ease; box-shadow: 0 8px 28px rgba(0,0,0,.5); max-width: 280px;
+    }
+    .toast.ok { border-color: var(--ok); }
+    .toast.er { border-color: var(--err); }
+    @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <h1 class="pg-h">Hallazgos</h1>
+  <p class="pg-sub">Lo que el equipo de campo encontró que no cumple — detectado automáticamente al llenar un formulario o reportado a mano. Asigna un responsable y fecha límite para cerrarlo.</p>
+
+  <div class="filters" id="filtEstado"></div>
+  <div class="filters" id="filtSev"></div>
+
+  <div id="hzList"></div>
+</div>
+
+<script>
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+function getHallazgos() { return JSON.parse(localStorage.getItem('skf_hallazgos')||'[]'); }
+function setHallazgos(list) { localStorage.setItem('skf_hallazgos', JSON.stringify(list)); }
+function getAcciones() { return JSON.parse(localStorage.getItem('skf_acciones_correctivas')||'[]'); }
+function setAcciones(list) { localStorage.setItem('skf_acciones_correctivas', JSON.stringify(list)); }
+
+function normalizeHallazgoFromCloud(h) {
+  return {
+    id: h.id, envioId: h.envio_id||h.envioId, plantillaId: h.plantilla_id||h.plantillaId,
+    plantillaNombre: h.plantilla_nombre||h.plantillaNombre, campoId: h.campo_id||h.campoId,
+    campoEtiqueta: h.campo_etiqueta||h.campoEtiqueta, origen: h.origen, severidad: h.severidad,
+    descripcion: h.descripcion, foto: h.foto, estado: h.estado||'abierto',
+    reportadoPor: h.reportado_por||h.reportadoPor, creadoEn: h.creado_en||h.creadoEn
+  };
+}
+function normalizeAccionFromCloud(a) {
+  return {
+    id: a.id, hallazgoId: a.hallazgo_id||a.hallazgoId, responsable: a.responsable,
+    correo: a.correo, fechaLimite: a.fecha_limite||a.fechaLimite, estado: a.estado||'pendiente',
+    evidenciaCierre: a.evidencia_cierre||a.evidenciaCierre, cerradoEn: a.cerrado_en||a.cerradoEn,
+    creadoEn: a.creado_en||a.creadoEn
+  };
+}
+
+async function syncFromCloud() {
+  let fromCloud = false;
+  try {
+    const [cloudH, cloudA] = await Promise.all([sbLoadHallazgos(), sbLoadAccionesCorrectivas()]);
+    if (cloudH !== null) {
+      fromCloud = true;
+      const localH = getHallazgos();
+      const normH = cloudH.map(normalizeHallazgoFromCloud);
+      const cloudIds = new Set(normH.map(h=>h.id));
+      setHallazgos([...normH, ...localH.filter(h=>!cloudIds.has(h.id))]);
+    }
+    if (cloudA !== null) {
+      const localA = getAcciones();
+      const normA = cloudA.map(normalizeAccionFromCloud);
+      const cloudIds = new Set(normA.map(a=>a.id));
+      setAcciones([...normA, ...localA.filter(a=>!cloudIds.has(a.id))]);
+    }
+  } catch (e) { /* offline-first: keep local data as-is */ }
+  return fromCloud;
+}
+
+let filtEstado = 'todos';
+let filtSev = 'todas';
+
+function renderFilters() {
+  const estados = [['todos','Todos'],['abierto','Abiertos'],['en_proceso','En atención'],['cerrado','Cerrados']];
+  document.getElementById('filtEstado').innerHTML = estados.map(([v,l]) =>
+    `<button class="filt-btn${filtEstado===v?' active':''}" onclick="setFiltEstado('${v}')">${l}</button>`).join('');
+
+  const sevs = [['todas','Todas las severidades'],['critico','🔴 Crítico'],['mayor','🟠 Mayor'],['menor','🟡 Menor']];
+  document.getElementById('filtSev').innerHTML = sevs.map(([v,l]) =>
+    `<button class="filt-btn${filtSev===v?' active':''}" onclick="setFiltSev('${v}')">${l}</button>`).join('');
+}
+function setFiltEstado(v) { filtEstado = v; renderFilters(); render(); }
+function setFiltSev(v) { filtSev = v; renderFilters(); render(); }
+
+function render() {
+  const el = document.getElementById('hzList');
+  const hallazgos = getHallazgos();
+  const acciones = getAcciones();
+
+  let list = hallazgos;
+  if (filtEstado !== 'todos') list = list.filter(h => (h.estado||'abierto') === filtEstado);
+  if (filtSev !== 'todas') list = list.filter(h => h.severidad === filtSev);
+  list = [...list].sort((a,b) => new Date(b.creadoEn||0) - new Date(a.creadoEn||0));
+
+  if (!hallazgos.length) {
+    el.innerHTML = `<div class="empty-state">
+      <span class="es-ico">✅</span>
+      <h2>Sin hallazgos todavía</h2>
+      <p>Aquí aparecen los problemas que el equipo reporta al llenar un formulario. Por ahora todo está en orden. ✓</p>
+    </div>`;
+    return;
+  }
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><p>No hay hallazgos con estos filtros.</p></div>`;
+    return;
+  }
+
+  const sevLbl = { critico:'🔴 Crítico', mayor:'🟠 Mayor', menor:'🟡 Menor' };
+
+  el.innerHTML = list.map(h => {
+    const ac = acciones.find(a => a.hallazgoId === h.id);
+    const fecha = h.creadoEn ? new Date(h.creadoEn).toLocaleString('es-CO',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    const capaHtml = ac ? `<div class="hz-capa-existing">
+        <span>👤 ${esc(ac.responsable||'Sin asignar')}</span>
+        ${ac.fechaLimite ? `<span>📅 Límite: ${esc(ac.fechaLimite)}</span>` : ''}
+        <select class="hz-estado-sel" onchange="setAccionEstado('${esc(ac.id)}',this.value)">
+          <option value="pendiente" ${ac.estado==='pendiente'?'selected':''}>Pendiente</option>
+          <option value="completada" ${ac.estado==='completada'?'selected':''}>Completada</option>
+          <option value="vencida" ${ac.estado==='vencida'?'selected':''}>Vencida</option>
+        </select>
+      </div>` : `<div class="hz-capa-form">
+        <input type="text" id="resp_${esc(h.id)}" placeholder="Responsable">
+        <input type="email" id="correo_${esc(h.id)}" placeholder="Correo (opcional)">
+        <input type="date" id="fecha_${esc(h.id)}" min="${new Date().toISOString().split('T')[0]}">
+        <button class="btn btn-sec btn-sm" onclick="asignarAccion('${esc(h.id)}')">Asignar acción correctiva (CAPA)</button>
+      </div>`;
+
+    return `<div class="hz-card sev-${esc(h.severidad)}">
+      <div class="hz-top">
+        <span class="hz-badge sev-${esc(h.severidad)}">${sevLbl[h.severidad]||h.severidad}</span>
+        <select class="hz-estado-sel" onchange="setHallazgoEstado('${esc(h.id)}',this.value)">
+          <option value="abierto" ${(h.estado||'abierto')==='abierto'?'selected':''}>Abierto</option>
+          <option value="en_proceso" ${h.estado==='en_proceso'?'selected':''}>En atención</option>
+          <option value="cerrado" ${h.estado==='cerrado'?'selected':''}>Cerrado</option>
+        </select>
+      </div>
+      <div class="hz-plantilla">${esc(h.plantillaNombre||'Formulario')}</div>
+      ${h.campoEtiqueta ? `<div class="hz-campo">Campo: ${esc(h.campoEtiqueta)}</div>` : '<div class="hz-campo">Reportado manualmente</div>'}
+      ${h.descripcion ? `<div class="hz-desc">${esc(h.descripcion)}</div>` : ''}
+      <div class="hz-meta">${fecha}${h.reportadoPor ? ' · ' + esc(h.reportadoPor) : ''}</div>
+      <div class="hz-capa">${capaHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function setHallazgoEstado(id, estado) {
+  const list = getHallazgos();
+  const h = list.find(x=>x.id===id);
+  if (!h) return;
+  h.estado = estado;
+  setHallazgos(list);
+  skfSyncOrQueue('hallazgo', h);
+  toast('Estado actualizado ✓','ok');
+}
+
+function asignarAccion(hallazgoId) {
+  const responsable = document.getElementById(`resp_${hallazgoId}`).value.trim();
+  const correo = document.getElementById(`correo_${hallazgoId}`).value.trim();
+  const fechaLimite = document.getElementById(`fecha_${hallazgoId}`).value;
+  if (!responsable) { toast('Indica un responsable','er'); return; }
+  const ac = {
+    id: `cap_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+    hallazgoId, responsable, correo: correo||null, fechaLimite: fechaLimite||null,
+    estado: 'pendiente', creadoEn: new Date().toISOString()
+  };
+  const acciones = getAcciones();
+  acciones.push(ac);
+  setAcciones(acciones);
+  skfSyncOrQueue('accionCorrectiva', ac);
+
+  const list = getHallazgos();
+  const h = list.find(x=>x.id===hallazgoId);
+  if (h && (h.estado||'abierto') === 'abierto') { h.estado = 'en_proceso'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
+
+  toast('Acción correctiva asignada ✓','ok');
+  render();
+}
+
+function setAccionEstado(id, estado) {
+  const acciones = getAcciones();
+  const ac = acciones.find(x=>x.id===id);
+  if (!ac) return;
+  ac.estado = estado;
+  if (estado === 'completada') ac.cerradoEn = new Date().toISOString();
+  setAcciones(acciones);
+  skfSyncOrQueue('accionCorrectiva', ac);
+
+  if (estado === 'completada') {
+    const list = getHallazgos();
+    const h = list.find(x=>x.id===ac.hallazgoId);
+    if (h) { h.estado = 'cerrado'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
+    toast('Acción completada — hallazgo cerrado automáticamente ✓','ok');
+  } else {
+    toast('Acción correctiva actualizada ✓','ok');
+  }
+  render();
+}
+
+let _tt;
+function toast(msg,type='ok') {
+  document.querySelectorAll('.toast').forEach(e=>e.remove());
+  clearTimeout(_tt);
+  const d=document.createElement('div');
+  d.className=`toast ${type}`;
+  d.innerHTML=`<span>${type==='ok'?'✓':'✕'}</span> ${msg}`;
+  document.body.appendChild(d);
+  _tt=setTimeout(()=>d.remove(),3200);
+}
+
+async function init() {
+  await syncFromCloud();
+  renderFilters();
+  render();
+}
+init();
+
+// Llega un hallazgo crítico por Realtime mientras esta página está
+// abierta (ver skfSubscribeCriticalAlerts en supabase-config.js) —
+// refresca la lista sin que el usuario tenga que recargar.
+window.addEventListener('skf:hallazgo-critico', async () => {
+  await syncFromCloud();
+  render();
+});
+</script>
+</body>
+</html>

@@ -14,9 +14,10 @@
 
 const SKF_NAV_LINKS = [
   { href: 'plantillas.html',    ico: '📋', label: 'Plantillas' },
-  { href: 'digitalizador.html', ico: '⚡', label: 'Digitalizar' },
+  { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
   { href: 'llenar.html',        ico: '📝', label: 'Mis formularios' },
   { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
+  { href: 'hallazgos.html',     ico: '⚠️', label: 'Hallazgos' },
   { href: 'dashboard.html',     ico: '📊', label: 'Dashboard' }
 ];
 
@@ -35,6 +36,7 @@ function skfRenderSidebar() {
   ).join('');
 
   const html = `
+    <div class="skf-sync-bar" id="skfSyncBar" style="display:none"></div>
     <button class="sidebar-toggle" id="sidebarToggle" onclick="skfToggleSidebar()" title="Mostrar/ocultar menú" aria-label="Mostrar/ocultar menú">☰</button>
     <aside class="sidebar" id="sidebar">
       <a href="index.html" class="sidebar-logo">SEK<span>a</span>form</a>
@@ -47,11 +49,23 @@ function skfRenderSidebar() {
   `;
   document.body.insertAdjacentHTML('afterbegin', html);
 
+  // On mobile the sidebar is a flyout overlay — collapse it when the user
+  // taps any nav link so the destination page doesn't re-open it.
+  document.querySelectorAll('.sidebar-link').forEach(a => {
+    a.addEventListener('click', () => {
+      if (window.matchMedia('(max-width:860px)').matches) {
+        localStorage.setItem('skf_sidebar_collapsed', 'true');
+      }
+    });
+  });
+
   if (typeof sbGetUser === 'function') {
     sbGetUser().then(user => {
       if (!user) return;
       const bar = document.getElementById('sidebarAuth');
-      bar.innerHTML = `<span class="auth-chip">☁ ${_skfEsc(user.email)}</span><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
+      bar.innerHTML = `<span class="auth-chip">☁ ${_skfEsc(user.email)}</span><button class="auth-bell" id="skfBellBtn" onclick="skfToggleNotifications()">🔕</button><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
+      if (typeof skfUpdateBellIcon === 'function') skfUpdateBellIcon();
+      if (typeof skfSubscribeCriticalAlerts === 'function') skfSubscribeCriticalAlerts(user);
     }).catch(() => {});
   }
 }

@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Digitalizador — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script id="skfSidebarPre">
@@ -239,7 +243,7 @@
 <div class="wizard">
   <div class="wz active" id="ws1"><span class="wz-n">1</span><span>Fuente</span></div>
   <div class="wz" id="ws2"><span class="wz-n">2</span><span>Campos</span></div>
-  <div class="wz" id="ws3"><span class="wz-n">3</span><span>Vista previa</span></div>
+  <div class="wz" id="ws3"><span class="wz-n">3</span><span>Revisar y guardar</span></div>
 </div>
 
 <!-- ══ PAGE 1: Source + upload ══ -->
@@ -300,8 +304,8 @@
     <div class="src-panel" id="pan-url">
       <p style="color:var(--mut);font-size:.85rem;margin-bottom:12px">Pega la URL del formulario. El sistema extrae los campos directamente del HTML de la página.</p>
       <div class="url-wrap">
-        <input type="url" class="url-inp" id="urlInp" placeholder="https://ejemplo.com/formulario">
-        <button class="btn btn-pri btn-sm" onclick="fetchURL()">Extraer</button>
+        <input type="url" class="url-inp" id="urlInp" placeholder="https://ejemplo.com/formulario" onkeydown="if(event.key==='Enter') analyze()">
+        <button class="btn btn-pri btn-sm" onclick="analyze()">Analizar →</button>
       </div>
       <div class="url-examples">
         <span style="font-size:.72rem;color:var(--mut);align-self:center">Funciona con:</span>
@@ -365,24 +369,24 @@
           <input type="text" id="fDesc" placeholder="Para qué se usa">
         </div>
         <div class="fg">
-          <label>Código *</label>
+          <label>Código</label>
           <div class="cod-row">
             <input type="text" id="fCod" readonly>
             <button type="button" class="cod-edit-btn" id="fCodBtn" onmousedown="event.preventDefault()" onclick="toggleCodEdit()" title="Editar código">✏️</button>
           </div>
-          <div class="cod-hint">Identifica este tipo de formulario en el panel de inteligencia de negocio. Se genera solo — solo edítalo si quieres que se agrupe con otra plantilla existente.</div>
+          <div class="cod-hint">Se genera automáticamente. Puedes dejarlo así.</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="fg">
           <label class="chk-row" style="font-weight:600">
             <input type="checkbox" id="fPublica" checked>
-            🌐 Compartir públicamente (link / QR / correo / WhatsApp)
+            🌐 Generar link para compartir
           </label>
           <div class="cod-hint">Cualquiera con el link podrá llenarlo sin necesitar cuenta — sus envíos caerán en tu mismo panel de inteligencia de negocio.</div>
         </div>
         <div class="fg">
-          <label>📧 Correo de notificación</label>
+          <label>📧 Correo para avisos</label>
           <input type="email" id="fCorreoNotif" placeholder="ej: supervisor@empresa.com">
           <div class="cod-hint">Si lo configuras, se enviará un correo automático con un resumen cada vez que alguien complete este formulario.</div>
         </div>
@@ -398,7 +402,7 @@
     </div>
 
     <div class="row-act">
-      <button class="btn btn-pri" id="btnAnalyze" onclick="analyze()">⚡ Analizar y digitalizar →</button>
+      <button class="btn btn-pri" id="btnAnalyze" onclick="analyze()">⚡ Crear formulario →</button>
     </div>
   </div>
 </div>
@@ -412,6 +416,7 @@
       <div class="proc-status" id="procStatus">Iniciando...</div>
       <div class="proc-bar"><div class="proc-fill" id="procFill"></div></div>
       <div class="proc-pct" id="procPct">0%</div>
+      <button id="btnCancelProc" onclick="cancelProcessing()" style="margin-top:20px;background:none;border:1px solid var(--bor);color:var(--mut);border-radius:8px;padding:8px 20px;font-size:.82rem;cursor:pointer;font-family:inherit" onmouseover="this.style.color='var(--txt)'" onmouseout="this.style.color='var(--mut)'">✕ Cancelar</button>
     </div>
   </div>
 </div>
@@ -533,7 +538,7 @@ function renderStarterGrid() {
     const t = TIPO_MAP[f.tipo];
     return `<label class="starter-chip">
       <input type="checkbox" data-idx="${idx}" ${f.on?'checked':''}>
-      <span>${t?t.ico+' ':''}${f.etiqueta}</span>
+      <span>${f.etiqueta}</span>
     </label>`;
   }).join('');
 }
@@ -911,7 +916,8 @@ async function analyze() {
       const garbageCount = tmpl.campos.filter(c=>c._quality==='garbage').length;
       msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} de selección`
         + (badCount ? ` · <span style="color:var(--warn)">⚠️ ${badCount} a revisar</span>` : '')
-        + (garbageCount ? ` · <span style="color:var(--err)">🗑️ ${garbageCount} probablemente inválido${garbageCount!==1?'s':''}</span>` : '');
+        + (garbageCount ? ` · <span style="color:var(--err)">🗑️ ${garbageCount} probablemente inválido${garbageCount!==1?'s':''}</span>` : '')
+        + (garbageCount > 1 ? ` <button onclick="removeAllGarbage()" style="margin-left:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:var(--err);border-radius:6px;padding:3px 10px;font-size:.75rem;cursor:pointer;font-family:inherit">🗑 Eliminar inválidos</button>` : '');
       sumEl.style.display='flex';
     } else {
       sumEl.style.display='none';
@@ -957,7 +963,16 @@ async function analyze() {
   }
 }
 
+let _procCancelled = false;
+
+function cancelProcessing() {
+  _procCancelled = true;
+  hideProcAndGoBack();
+  toast('Análisis cancelado','warn');
+}
+
 function hideProcAndGoBack() {
+  _procCancelled = false;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById('p1').classList.add('on');
   document.querySelectorAll('.wz').forEach((el,i)=>{el.classList.toggle('active',i===0);el.classList.remove('done');});
@@ -1445,6 +1460,19 @@ function goPg(n) {
 // ══════════════════════════════════════════════════════════════════
 // FIELD LIST
 // ══════════════════════════════════════════════════════════════════
+function removeAllGarbage() {
+  tmpl.campos = tmpl.campos.filter(c => c._quality !== 'garbage');
+  renderSuggList();
+  // Refresh detect summary counts
+  const garbageCount = 0;
+  const sumEl = document.getElementById('detectSummary');
+  const msgEl = document.getElementById('detectMsg');
+  const existing = msgEl.innerHTML;
+  // Strip garbage span and button from summary
+  msgEl.innerHTML = existing.replace(/ · <span style="color:var\(--err\)">🗑️.*?<\/span>(\s*<button[^>]*>.*?<\/button>)?/,'');
+  toast('Campos inválidos eliminados','ok');
+}
+
 function renderSuggList() {
   const el = document.getElementById('suggList');
   if (!tmpl.campos.length) {
@@ -1479,6 +1507,16 @@ function buildCard(c,i) {
     <input type="checkbox" id="req_${c.id}" ${c.requerido?'checked':''} onchange="setReq('${c.id}',this.checked)">
     <label for="req_${c.id}">Requerido</label></div>`:'';
 
+  const sevHtml = fieldCanHaveSeveridad(c.tipo) ? `<div class="sev-row" style="margin-top:8px">
+    <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px">⚠️ Si la respuesta indica incumplimiento, repórtalo como</label>
+    <select onchange="setSeveridad('${c.id}',this.value)" style="width:100%">
+      <option value="" ${!c.severidad?'selected':''}>No marcar (campo informativo)</option>
+      <option value="critico" ${c.severidad==='critico'?'selected':''}>🔴 Hallazgo crítico — alerta inmediata</option>
+      <option value="mayor" ${c.severidad==='mayor'?'selected':''}>🟠 Hallazgo mayor</option>
+      <option value="menor" ${c.severidad==='menor'?'selected':''}>🟡 Hallazgo menor</option>
+    </select>
+  </div>` : '';
+
   const qualWarn = c._quality === 'garbage' ? `<div class="qual-warn qual-bad">
     🗑️ Esto probablemente no es un campo real — revisa antes de guardar
     <div class="qual-btns">
@@ -1508,7 +1546,7 @@ function buildCard(c,i) {
         <button class="fi-btn del" onclick="delC('${c.id}')">✕</button>
       </div>
     </div>
-    ${qualWarn}${optHtml}${reqChk}
+    ${qualWarn}${optHtml}${reqChk}${sevHtml}
   </div>`;
 }
 
@@ -1537,6 +1575,7 @@ function addMissingField(f){
   setTimeout(()=>document.querySelector(`#sc_${tmpl.campos[tmpl.campos.length-1].id}`)?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 function setReq(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c)c.requerido=v;}
+function setSeveridad(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v)c.severidad=v;else delete c.severidad;}}
 function setOpt(id,j,v){const c=tmpl.campos.find(x=>x.id===id);if(c&&c.opciones)c.opciones[j]=v;}
 function mvC(id,dir){const i=tmpl.campos.findIndex(c=>c.id===id),j=i+dir;if(j<0||j>=tmpl.campos.length)return;[tmpl.campos[i],tmpl.campos[j]]=[tmpl.campos[j],tmpl.campos[i]];renderSuggList();}
 function delC(id){tmpl.campos=tmpl.campos.filter(c=>c.id!==id);renderSuggList();}
@@ -1590,6 +1629,7 @@ function changeType(cId,k){
   if(k==='escala_1_5'&&!c.opciones){c.opciones=['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente'];}
   else if(needsOptions(k)&&!c.opciones){const _so=sugerirOpciones(c.etiqueta);c.opciones=_so.length?_so:[''];}
   if(!needsOptions(k))delete c.opciones;
+  if(!fieldCanHaveSeveridad(k))delete c.severidad;
   closeMenu();renderSuggList();
 }
 
@@ -1791,8 +1831,8 @@ function save(){
   try{localStorage.setItem('skf_plantillas',JSON.stringify(listToStore));}
   catch(e){toast('Guardado sin imagen (localStorage lleno)','wa');}
   toast('Plantilla guardada ✓','ok');
-  // Non-blocking cloud sync
-  sbSyncPlantilla(tmpl).catch(()=>{});
+  // Non-blocking cloud sync (encola si falla o no hay conexión)
+  skfSyncOrQueue('plantilla', tmpl);
 }
 
 function goFill(){save();if(tmpl.id)window.location.href=`llenar.html?tmpl=${tmpl.id}`;}

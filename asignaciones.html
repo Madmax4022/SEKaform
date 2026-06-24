@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Asignaciones — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="supabase-config.js"></script>
@@ -94,8 +98,8 @@
   <div class="setup-banner" id="setupBanner">
     <div class="setup-banner-ico">☁</div>
     <div>
-      <h3>Conecta Supabase para asignar equipos</h3>
-      <p>Actualmente ves solo los datos de <strong>este dispositivo</strong>. Para asignar formularios a tu equipo y ver su cumplimiento desde cualquier lugar, configura Supabase en <code>supabase-config.js</code> y ejecuta <code>supabase-schema.sql</code>. <a href="login.html">Iniciar sesión →</a></p>
+      <h3>Necesitas una cuenta para asignar a tu equipo</h3>
+      <p>Actualmente ves solo los datos de <strong>este dispositivo</strong>. Con una cuenta puedes asignar formularios a cualquier persona de tu equipo y ver el cumplimiento desde cualquier lugar. <a href="login.html">Crear cuenta gratuita →</a></p>
     </div>
   </div>
 
@@ -108,9 +112,9 @@
     <div class="fg">
       <label>Personas asignadas</label>
       <textarea id="asgNames" placeholder="Juan Pérez&#10;María Gómez, maria@empresa.com&#10;Carlos Ruiz"></textarea>
-      <div class="fg-hint">Una persona por línea. Opcional: agrega su correo separado por coma — "Nombre, correo@ejemplo.com".</div>
+      <div class="fg-hint">Un nombre por línea. Para agregar correo: Juan Pérez, juan@empresa.com</div>
     </div>
-    <button class="btn btn-pri" onclick="createAsignacion()">Crear asignación y generar link →</button>
+    <button class="btn btn-pri" id="btnCreateAsg" onclick="createAsignacion()">Crear asignación →</button>
   </div>
 
   <h2 class="asg-list-h">Cumplimiento por asignación</h2>
@@ -182,10 +186,13 @@ async function syncFromCloud() {
 function populatePlantillaSelect() {
   const sel = document.getElementById('asgPlantilla');
   const list = getPlantillas();
+  const btn = document.getElementById('btnCreateAsg');
   if (!list.length) {
     sel.innerHTML = `<option value="">No tienes formularios todavía</option>`;
+    if (btn) btn.disabled = true;
     return;
   }
+  if (btn) btn.disabled = false;
   sel.innerHTML = list.map(t => `<option value="${esc(t.id)}">${esc(t.nombre)}${t.codigo ? ' — '+esc(t.codigo) : ''}</option>`).join('');
 }
 
@@ -199,7 +206,7 @@ async function ensurePublicShare(t) {
   const list = getPlantillas();
   const idx = list.findIndex(x=>x.id===t.id);
   if (idx>=0) { list[idx]=t; localStorage.setItem('skf_plantillas', JSON.stringify(list)); }
-  await sbSyncPlantilla(t).catch(()=>{});
+  await skfSyncOrQueue('plantilla', t);
   return t;
 }
 
@@ -224,7 +231,7 @@ async function createAsignacion() {
       plantillaId: t.id, plantillaNombre: t.nombre,
       nombre, correo: correo || null, creadoEn
     };
-    sbSyncAsignacion(a).catch(()=>{});
+    skfSyncOrQueue('asignacion', a);
     return a;
   });
   setAsignaciones([...asignaciones, ...nuevas]);
@@ -339,7 +346,7 @@ function deleteGroup(k) {
   if (!confirm('¿Eliminar esta asignación? Se quitará la lista de personas asignadas (los envíos ya recibidos no se borran).')) return;
   const asignaciones = getAsignaciones();
   const toDelete = asignaciones.filter(a => groupKey(a) === k);
-  toDelete.forEach(a => sbDeleteAsignacion(a.id).catch(()=>{}));
+  toDelete.forEach(a => skfSyncOrQueue('deleteAsignacion', { id: a.id }));
   setAsignaciones(asignaciones.filter(a => groupKey(a) !== k));
   toast('Asignación eliminada','ok');
   renderGroups();

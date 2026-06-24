@@ -41,3 +41,30 @@ const FIELD_TYPE_MAP = Object.fromEntries(FIELD_TYPES.map(t => [t.k, t]));
 function fieldNeedsOptions(tipo) {
   return !!(FIELD_TYPE_MAP[tipo] && FIELD_TYPE_MAP[tipo].needsOptions);
 }
+
+// Tipos donde la respuesta del inspector puede indicar un incumplimiento
+// (ej. "No Conforme", "1 - Deficiente") — solo estos pueden marcarse con
+// una criticidad en digitalizador.html para que llenar.html detecte
+// automáticamente un hallazgo. Los campos de texto libre no califican: no
+// hay forma confiable de saber si la respuesta es "mala" sin que el
+// inspector la reporte manualmente.
+const SEVERITY_TYPES = ['si_no', 'escala_1_5', 'select', 'radio', 'checkbox_multi'];
+function fieldCanHaveSeveridad(tipo) {
+  return SEVERITY_TYPES.includes(tipo);
+}
+
+// Detecta si una respuesta concreta indica un incumplimiento, dado el tipo
+// de campo. Reutiliza el mismo estilo de la detección por regex que ya usa
+// sugerirTipo()/sugerirOpciones() en digitalizador.html — sin requerir que
+// el creador del formulario marque opción por opción cuál es "la mala".
+const _SKF_BAD_ANSWER_RE = /no conforme|no cumple|incumple|deficiente|rechazad|inadecuad|insuficiente|vencid|da[ñn]ad|fuera de servicio/i;
+function answerIsFinding(tipo, valor) {
+  if (valor === undefined || valor === null || valor === '') return false;
+  if (tipo === 'si_no') return valor === 'No';
+  if (tipo === 'escala_1_5') return /^1\b|^2\b/.test(String(valor).trim());
+  if (tipo === 'checkbox_multi') {
+    return Array.isArray(valor) && valor.some(v => _SKF_BAD_ANSWER_RE.test(String(v)));
+  }
+  if (tipo === 'select' || tipo === 'radio') return _SKF_BAD_ANSWER_RE.test(String(valor));
+  return false;
+}

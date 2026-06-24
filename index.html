@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SEKaform — Digitalización de Documentos</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
@@ -12,98 +16,112 @@
     }
   </script>
   <style>
-    .wrapper { max-width: 900px; margin: 0 auto; padding: 60px 20px; }
+    .wrapper { max-width: 720px; margin: 0 auto; padding: 48px 20px 60px; }
 
-    header { text-align: center; margin-bottom: 56px; }
-    header h1 { font-size: 2.6rem; margin: 0 0 10px; font-weight: 900; letter-spacing: -1px; }
-    header p { color: var(--mut); font-size: 1.05rem; margin: 0; line-height: 1.6; }
+    /* ── Header ─────────────────────────────────────────────────── */
+    header { margin-bottom: 36px; }
+    header h1 { font-size: 2rem; margin: 0 0 5px; font-weight: 900; letter-spacing: -1px; }
+    header p  { color: var(--mut); font-size: .9rem; margin: 0; }
 
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-
-    .card {
-      background: var(--card); border: 1px solid var(--bor); border-radius: 16px;
-      padding: 32px; display: flex; flex-direction: column; gap: 20px;
-      transition: border-color .2s, transform .2s, box-shadow .2s;
-      text-decoration: none; color: inherit;
+    /* ── Acción principal — ¿Qué quieres hacer? ─────────────────── */
+    .actions-hd {
+      font-size: .7rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .9px; color: var(--mut); margin: 0 0 12px;
     }
-    .card:hover { border-color: var(--pri); transform: translateY(-3px); box-shadow: 0 12px 24px -6px rgba(0,0,0,.4); }
-    .card.accent { border-color: var(--ok); }
-    .card.accent:hover { border-color: var(--ok); box-shadow: 0 12px 24px -6px rgba(26,188,156,.2); }
 
-    .card-ico { font-size: 2.8rem; }
-    .card-tag { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--mut); }
-    .card.accent .card-tag { color: var(--ok); }
-    .card h2 { font-size: 1.3rem; font-weight: 800; margin: 0; }
-    .card p { color: var(--mut); font-size: 0.9rem; line-height: 1.6; margin: 0; flex: 1; }
-    .card-cta {
-      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      background: var(--pri); color: #fff; padding: 12px 22px;
-      border-radius: 8px; font-weight: 700; font-size: 0.9rem; transition: background .2s;
-      text-decoration: none;
+    .action-card {
+      display: flex; align-items: center; gap: 18px;
+      background: var(--card); border: 1px solid var(--bor); border-radius: 14px;
+      padding: 20px 22px; text-decoration: none; color: inherit;
+      transition: border-color .18s, transform .15s, box-shadow .18s;
+      margin-bottom: 10px;
+      cursor: pointer;
     }
-    .card.accent .card-cta { background: var(--ok); }
-    .card:hover .card-cta { background: var(--pri-h); }
-    .card.accent:hover .card-cta { background: #17a589; }
+    .action-card:last-of-type { margin-bottom: 0; }
+    .action-card:hover {
+      border-color: var(--pri); transform: translateY(-2px);
+      box-shadow: 0 10px 28px -6px rgba(0,0,0,.45);
+    }
+    /* Card 1 — primary accent */
+    .action-card.ac-primary {
+      border-left: 3px solid var(--pri);
+      background: linear-gradient(135deg, rgba(37,99,235,.06) 0%, var(--card) 60%);
+    }
 
-    footer { text-align: center; margin-top: 80px; font-size: 0.82rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 24px; }
+    .ac-ico  { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+    .ac-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .ac-label { font-size: 1.03rem; font-weight: 800; line-height: 1.2; }
+    .ac-sub   { font-size: .82rem; color: var(--mut); line-height: 1.4; }
+    .ac-arr   {
+      font-size: 1.1rem; color: var(--mut); flex-shrink: 0;
+      transition: transform .15s, color .15s;
+    }
+    .action-card:hover .ac-arr { transform: translateX(5px); color: var(--pri); }
 
-    /* ── Verticales ──────────────────────────────────────────────── */
-    .sec-sep { border: none; border-top: 1px solid var(--bor); margin: 56px 0 44px; }
-    .sec-hd { margin-bottom: 24px; }
-    .sec-tag { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: var(--ok); margin-bottom: 6px; }
-    .sec-title { font-size: 1.5rem; font-weight: 900; margin: 0 0 6px; letter-spacing: -.5px; }
-    .sec-sub { color: var(--mut); font-size: .88rem; line-height: 1.6; margin: 0; }
+    /* ── Enlace secundario debajo del card 3 ───────────────────── */
+    .ac-alt {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .78rem; font-weight: 600; color: var(--mut);
+      text-decoration: none; padding: 6px 4px 16px;
+      transition: color .15s;
+    }
+    .ac-alt:hover { color: var(--txt); }
 
-    .grid-v { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    /* ── Herramientas secundarias ───────────────────────────────── */
+    .tools-sep { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; color: var(--mut); margin: 28px 0 10px; }
+    .tools-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 48px; }
+    .tool-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--card); border: 1px solid var(--bor); border-radius: 9px;
+      padding: 9px 16px; text-decoration: none; color: var(--mut);
+      font-size: .82rem; font-weight: 600;
+      transition: border-color .15s, color .15s;
+    }
+    .tool-chip:hover { border-color: var(--pri); color: var(--txt); }
+
+    /* ── Verticales (formularios por sector) ────────────────────── */
+    .sec-sep   { border: none; border-top: 1px solid var(--bor); margin: 0 0 36px; }
+    .sec-hd    { margin-bottom: 18px; }
+    .sec-tag   { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: var(--ok); margin-bottom: 5px; }
+    .sec-title { font-size: 1.25rem; font-weight: 900; margin: 0 0 4px; letter-spacing: -.5px; }
+    .sec-sub   { color: var(--mut); font-size: .84rem; line-height: 1.5; margin: 0; }
+
+    .grid-v { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
     .vcard {
-      background: var(--card); border: 1px solid var(--bor); border-radius: 14px;
-      padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 8px;
-      text-decoration: none; color: inherit; transition: border-color .2s, transform .2s, box-shadow .2s;
-      position: relative;
+      background: var(--card); border: 1px solid var(--bor); border-radius: 13px;
+      padding: 18px; display: flex; flex-direction: column; gap: 6px;
+      text-decoration: none; color: inherit;
+      transition: border-color .18s, transform .18s, box-shadow .18s;
     }
     .vcard:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -4px rgba(0,0,0,.4); }
     .vcard.live { border-left: 3px solid var(--ok); }
     .vcard.live:hover { border-color: var(--ok); box-shadow: 0 8px 20px -4px rgba(26,188,156,.2); }
-    .vcard.soon { opacity: .7; }
-    .vcard.soon:hover { opacity: 1; border-color: var(--bor); }
 
-    .vcard-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
-    .vcard-ico { font-size: 2rem; line-height: 1; }
+    .vcard-head { display: flex; align-items: center; justify-content: space-between; }
+    .vcard-ico  { font-size: 1.7rem; line-height: 1; }
     .vbadge {
-      font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
-      padding: 3px 9px; border-radius: 20px;
+      font-size: .6rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .5px; padding: 2px 8px; border-radius: 20px;
     }
     .vbadge.live { background: rgba(26,188,156,.15); color: var(--ok); border: 1px solid rgba(26,188,156,.3); }
-    .vbadge.soon { background: rgba(148,163,184,.1); color: var(--mut); border: 1px solid rgba(148,163,184,.2); }
 
-    .vcard-sector { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--mut); }
-    .vcard h3 { font-size: 1rem; font-weight: 800; margin: 0; }
-    .vcard-reg { font-size: .75rem; color: var(--mut); margin: 0; }
+    .vcard-sector { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--mut); }
+    .vcard h3    { font-size: .9rem; font-weight: 800; margin: 0; line-height: 1.3; }
+    .vcard-reg   { font-size: .7rem; color: var(--mut); margin: 0; line-height: 1.4; }
 
-    .vchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-    .vchip {
-      font-size: .68rem; padding: 3px 8px; border-radius: 20px;
-      background: rgba(37,99,235,.12); color: #93c5fd; border: 1px solid rgba(37,99,235,.2);
-    }
-    .vcard.live .vchip { background: rgba(26,188,156,.1); color: #5eead4; border-color: rgba(26,188,156,.2); }
+    .vchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .vchip  { font-size: .63rem; padding: 2px 7px; border-radius: 20px; background: rgba(26,188,156,.1); color: #5eead4; border: 1px solid rgba(26,188,156,.2); }
     .vchip-more { background: transparent; color: var(--mut); border-color: var(--bor); }
+    .vcard-cta  { font-size: .74rem; font-weight: 700; color: var(--ok); margin-top: 2px; }
 
-    .vcard-cta {
-      font-size: .78rem; font-weight: 700; color: var(--ok); margin-top: 4px;
-      display: flex; align-items: center; gap: 5px;
-    }
-    .vcard.soon .vcard-cta { color: var(--mut); }
+    footer { text-align: center; margin-top: 56px; font-size: .78rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 18px; }
 
     @media (max-width: 600px) {
-      .grid-v { grid-template-columns: 1fr; }
-    }
-
-    footer { margin-top: 80px; }
-
-    @media (max-width: 600px) {
-      .grid { grid-template-columns: 1fr; }
-      header h1 { font-size: 2rem; }
+      .grid-v    { grid-template-columns: 1fr; }
+      .tools-row { flex-direction: column; }
+      .tool-chip { justify-content: center; }
+      header h1  { font-size: 1.8rem; }
     }
   </style>
 </head>
@@ -112,47 +130,52 @@
   <script src="sidebar.js"></script>
 
   <div class="wrapper">
+
     <header>
       <h1>SEKaform</h1>
-      <p>Para el equipo que trabaja en campo: inspecciones, entregas, mantenimiento, visitas.<br>
-      Convierte cualquier formulario en papel, PDF o web en uno digital — con firma, GPS y fecha automática.</p>
+      <p>Formularios digitales para el trabajo en campo.</p>
     </header>
 
-    <div class="grid">
+    <!-- ── ¿Qué quieres hacer? ────────────────────────────────── -->
+    <div class="actions-hd">¿Qué quieres hacer?</div>
 
-      <a href="digitalizador.html" class="card accent">
-        <span class="card-ico">🔍</span>
-        <div>
-          <div class="card-tag">Digitalizar</div>
-          <h2>Crear formulario</h2>
-        </div>
-        <p>Sube el documento escaneado. El sistema detecta automáticamente qué campos usar: fechas, firmas, desplegables, GPS, Sí/No, fotografías y más.</p>
-        <span class="card-cta">Crear formulario →</span>
-      </a>
+    <a href="asignaciones.html" class="action-card ac-primary">
+      <span class="ac-ico">👥</span>
+      <div class="ac-body">
+        <span class="ac-label">Asignar formularios al equipo</span>
+        <span class="ac-sub">Define quién llena qué y haz seguimiento de cumplimiento</span>
+      </div>
+      <span class="ac-arr">→</span>
+    </a>
 
-      <a href="llenar.html" class="card">
-        <span class="card-ico">✏️</span>
-        <div>
-          <div class="card-tag">Captura en campo</div>
-          <h2>Llenar formulario</h2>
-        </div>
-        <p>Abre cualquier plantilla guardada y llénala desde tu celular o tablet. Auto-fecha, firma táctil, borrador offline y envío al toque.</p>
-        <span class="card-cta">Mis formularios →</span>
-      </a>
+    <a href="llenar.html" class="action-card">
+      <span class="ac-ico">✏️</span>
+      <div class="ac-body">
+        <span class="ac-label">Llenar un formulario</span>
+        <span class="ac-sub">Abre, completa y envía desde tu celular o tablet</span>
+      </div>
+      <span class="ac-arr">→</span>
+    </a>
 
-      <a href="dashboard.html" class="card" style="grid-column:1/-1">
-        <span class="card-ico">📊</span>
-        <div>
-          <div class="card-tag">Inteligencia de negocios</div>
-          <h2>Dashboard y análisis</h2>
-        </div>
-        <p>Visualiza todos los envíos de tu organización: tendencias por día, formularios más usados, registros recientes y métricas de cumplimiento. Conecta Supabase para datos en la nube.</p>
-        <span class="card-cta">Ver dashboard →</span>
-      </a>
+    <a href="plantillas.html" class="action-card">
+      <span class="ac-ico">📋</span>
+      <div class="ac-body">
+        <span class="ac-label">Crear o buscar formulario</span>
+        <span class="ac-sub">69 plantillas listas — SST, NFPA, calidad, alimentos y más</span>
+      </div>
+      <span class="ac-arr">→</span>
+    </a>
 
+    <a href="digitalizador.html" class="ac-alt">⚡ ¿Tienes un formulario en papel o PDF? Digitalizarlo →</a>
+
+    <!-- ── Herramientas secundarias ───────────────────────────── -->
+    <div class="tools-sep">También</div>
+    <div class="tools-row">
+      <a href="dashboard.html"  class="tool-chip">📊 Panel de control</a>
+      <a href="hallazgos.html"  class="tool-chip">⚠️ Hallazgos y CAPA</a>
     </div>
 
-    <!-- ── Verticales ─────────────────────────────────────────── -->
+    <!-- ── Formularios por sector ─────────────────────────────── -->
     <hr class="sec-sep">
     <div class="sec-hd">
       <div class="sec-tag">Repositorios verticales</div>
@@ -165,36 +188,53 @@
       <a href="plantillas.html?v=sst" class="vcard live">
         <div class="vcard-head">
           <span class="vcard-ico">🏥</span>
-          <span class="vbadge live">11 templates</span>
+          <span class="vbadge live">14 templates</span>
         </div>
         <div class="vcard-sector">Salud Ocupacional</div>
         <h3>SST — Seguridad y Salud en el Trabajo</h3>
-        <p class="vcard-reg">Ley 1562/2012 · Decreto 1072/2015 · Res. 1401/2007</p>
+        <p class="vcard-reg">Ley 1562/2012 · Decreto 1072/2015 · Res. 0312/2019</p>
         <div class="vchips">
           <span class="vchip">Matriz de peligros</span>
           <span class="vchip">COPASST</span>
           <span class="vchip">Entrega EPP</span>
           <span class="vchip">Investigación AT</span>
-          <span class="vchip vchip-more">+6 más →</span>
+          <span class="vchip vchip-more">+10 más →</span>
         </div>
-        <div class="vcard-cta">Ver índice de formularios SST →</div>
+        <div class="vcard-cta">Ver índice SST →</div>
       </a>
 
-      <a href="plantillas.html?v=alimentos" class="vcard live">
+      <a href="plantillas.html?v=inmuebles" class="vcard live">
         <div class="vcard-head">
-          <span class="vcard-ico">🍔</span>
+          <span class="vcard-ico">🏢</span>
+          <span class="vbadge live">15 templates</span>
+        </div>
+        <div class="vcard-sector">Inmuebles &amp; Facilidades</div>
+        <h3>Mantenimiento y Seguridad de Edificios</h3>
+        <p class="vcard-reg">NFPA 10 · NFPA 13 · NFPA 72 · NFPA 96 · NFPA 70E</p>
+        <div class="vchips">
+          <span class="vchip">Extintores</span>
+          <span class="vchip">Rociadores</span>
+          <span class="vchip">Cuarto eléctrico</span>
+          <span class="vchip vchip-more">+12 más →</span>
+        </div>
+        <div class="vcard-cta">Ver índice NFPA →</div>
+      </a>
+
+      <a href="plantillas.html?v=calidad" class="vcard live">
+        <div class="vcard-head">
+          <span class="vcard-ico">🏆</span>
           <span class="vbadge live">8 templates</span>
         </div>
-        <div class="vcard-sector">Alimentos & Restaurantes</div>
-        <h3>INVIMA & HACCP</h3>
-        <p class="vcard-reg">Res. 2674/2013 · Decreto 60/2002 · BPM</p>
+        <div class="vcard-sector">Calidad — SGC</div>
+        <h3>ISO 9001:2015</h3>
+        <p class="vcard-reg">ISO 9001:2015 · Auditorías internas · CAPA</p>
         <div class="vchips">
-          <span class="vchip">Control de temperatura</span>
-          <span class="vchip">Control de plagas</span>
-          <span class="vchip">No conformidad INVIMA</span>
+          <span class="vchip">No conformidad</span>
+          <span class="vchip">Auditoría interna</span>
+          <span class="vchip">CAPA</span>
           <span class="vchip vchip-more">+5 más →</span>
         </div>
-        <div class="vcard-cta">Ver índice de formularios de Alimentos →</div>
+        <div class="vcard-cta">Ver índice SGC →</div>
       </a>
 
       <a href="plantillas.html?v=construccion" class="vcard live">
@@ -211,7 +251,23 @@
           <span class="vchip">ATS</span>
           <span class="vchip vchip-more">+5 más →</span>
         </div>
-        <div class="vcard-cta">Ver índice de formularios de Construcción →</div>
+        <div class="vcard-cta">Ver índice Construcción →</div>
+      </a>
+
+      <a href="plantillas.html?v=alimentos" class="vcard live">
+        <div class="vcard-head">
+          <span class="vcard-ico">🍔</span>
+          <span class="vbadge live">8 templates</span>
+        </div>
+        <div class="vcard-sector">Alimentos &amp; Restaurantes</div>
+        <h3>INVIMA &amp; HACCP</h3>
+        <p class="vcard-reg">Res. 2674/2013 · Decreto 60/2002 · BPM</p>
+        <div class="vchips">
+          <span class="vchip">Control de temperatura</span>
+          <span class="vchip">Control de plagas</span>
+          <span class="vchip vchip-more">+6 más →</span>
+        </div>
+        <div class="vcard-cta">Ver índice Alimentos →</div>
       </a>
 
       <a href="plantillas.html?v=salud" class="vcard live">
@@ -220,32 +276,14 @@
           <span class="vbadge live">8 templates</span>
         </div>
         <div class="vcard-sector">Salud</div>
-        <h3>Clínicas & Laboratorios</h3>
+        <h3>Clínicas &amp; Laboratorios</h3>
         <p class="vcard-reg">Decreto 1011/2006 · SOGCS</p>
         <div class="vchips">
           <span class="vchip">Historia clínica</span>
           <span class="vchip">Consentimiento informado</span>
-          <span class="vchip">Trazabilidad</span>
-          <span class="vchip vchip-more">+5 más →</span>
+          <span class="vchip vchip-more">+6 más →</span>
         </div>
-        <div class="vcard-cta">Ver índice de formularios de Salud →</div>
-      </a>
-
-      <a href="plantillas.html?v=inmuebles" class="vcard live">
-        <div class="vcard-head">
-          <span class="vcard-ico">🏢</span>
-          <span class="vbadge live">14 templates</span>
-        </div>
-        <div class="vcard-sector">Inmuebles & Facilidades</div>
-        <h3>Mantenimiento y Seguridad de Edificios</h3>
-        <p class="vcard-reg">NFPA 10 · NFPA 13 · NFPA 14 · NFPA 20 · NFPA 70E · NFPA 72 · NFPA 96</p>
-        <div class="vchips">
-          <span class="vchip">Cuarto eléctrico</span>
-          <span class="vchip">Extintores</span>
-          <span class="vchip">Bomba contra incendio</span>
-          <span class="vchip vchip-more">+11 más →</span>
-        </div>
-        <div class="vcard-cta">Ver índice de formularios de Inmuebles →</div>
+        <div class="vcard-cta">Ver índice Salud →</div>
       </a>
 
     </div>

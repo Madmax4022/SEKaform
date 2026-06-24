@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Catálogo de Plantillas — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script id="skfSidebarPre">
@@ -86,11 +90,12 @@
 
 <script>
 const VERTICAL_LABELS = {
+  calidad: 'Calidad — SGC ISO 9001',
   sst: 'SST — Seguridad y Salud en el Trabajo',
+  inmuebles: 'Inmuebles & Facilidades',
   construccion: 'Construcción',
   alimentos: 'Alimentos & Restaurantes',
   salud: 'Salud — Clínicas & Laboratorios',
-  inmuebles: 'Inmuebles & Facilidades',
   general: 'Plantillas generales'
 };
 
@@ -122,7 +127,11 @@ function render() {
   const active = currentFilter();
   const list = active === 'todas' ? FORM_LIBRARY : FORM_LIBRARY.filter(t => t.vertical === active);
 
-  if (active === 'sst') {
+  if (active === 'calidad') {
+    document.getElementById('pgTag').textContent = 'Sistema de Gestión de Calidad';
+    document.getElementById('pgTitle').textContent = 'Calidad — SGC bajo ISO 9001:2015';
+    document.getElementById('pgSub').textContent = 'Auditoría interna, no conformidades, CAPA, control documental, revisión por la dirección e indicadores de gestión — alineados con las cláusulas de ISO 9001:2015, listos para usar tal cual.';
+  } else if (active === 'sst') {
     document.getElementById('pgTag').textContent = 'Salud Ocupacional';
     document.getElementById('pgTitle').textContent = 'SST — Seguridad y Salud en el Trabajo';
     document.getElementById('pgSub').textContent = 'Plantillas preconfiguradas según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007 — listas para usar tal cual.';
