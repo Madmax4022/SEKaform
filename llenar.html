@@ -876,6 +876,13 @@ function buildFieldEl(c) {
       inner.id = `auto_${c.id}`;
       break;
 
+    case 'hora':
+      inner = document.createElement('input');
+      inner.type = 'time';
+      inner.value = submission[c.id]||'';
+      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      break;
+
     case 'fecha':
       inner = document.createElement('input');
       inner.type = 'date';
@@ -1173,14 +1180,8 @@ function autoFill(campos) {
     }
     if (c.tipo==='hora_auto') {
       const el=document.getElementById(`auto_${c.id}`);
-      if (el) el.value=timeStr;
-      submission[c.id]=timeStr;
-      // Keep updating time
-      setInterval(() => {
-        const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-        if (el) el.value=t;
-        submission[c.id]=t;
-      }, 1000);
+      if (el && !submission[c.id]) { el.value=timeStr; submission[c.id]=timeStr; }
+      else if (el && submission[c.id]) { el.value=submission[c.id]; }
     }
   });
 }
