@@ -470,11 +470,13 @@ function skfQueueSet(q) {
   localStorage.setItem(SKF_QUEUE_KEY, JSON.stringify(q));
   skfUpdateSyncBadge();
 }
+const SKF_QUEUE_MAX_ATTEMPTS = 5;
+
 function skfQueueAdd(tipo, payload) {
   const q = skfQueueGet();
   q.push({
     id: crypto.randomUUID ? crypto.randomUUID() : 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-    tipo, payload, creadoEn: new Date().toISOString()
+    tipo, payload, creadoEn: new Date().toISOString(), attempts: 0
   });
   skfQueueSet(q);
 }
@@ -507,6 +509,7 @@ let _skfProcessingQueue = false;
 async function skfProcessQueue() {
   if (_skfProcessingQueue || !navigator.onLine) return;
   _skfProcessingQueue = true;
+  skfUpdateSyncBadge(true);
   try {
     const q = skfQueueGet();
     if (!q.length) return;
@@ -515,22 +518,32 @@ async function skfProcessQueue() {
       const fn = SKF_SYNC_FNS[item.tipo];
       let ok = false;
       if (fn) { try { ok = await fn(item.payload); } catch { ok = false; } }
-      if (!ok) remaining.push(item);
+      if (!ok) {
+        item.attempts = (item.attempts || 0) + 1;
+        if (item.attempts < SKF_QUEUE_MAX_ATTEMPTS) remaining.push(item);
+      }
     }
     skfQueueSet(remaining);
-  } finally { _skfProcessingQueue = false; }
+  } finally {
+    _skfProcessingQueue = false;
+    skfUpdateSyncBadge(false);
+  }
 }
 
-function skfUpdateSyncBadge() {
+function skfUpdateSyncBadge(activelySyncing) {
   const el = document.getElementById('skfSyncBar');
   if (!el) return;
   const n = skfQueueGet().length;
   if (!navigator.onLine) {
-    el.textContent = '📡 Sin conexión' + (n ? ` · ${n} pendiente${n !== 1 ? 's' : ''} de sincronizar` : ' · tus datos se guardan localmente');
+    el.innerHTML = '📡 Sin conexión' + (n ? ` · ${n} pendiente${n !== 1 ? 's' : ''} de sincronizar` : ' · tus datos se guardan localmente');
     el.className = 'skf-sync-bar offline';
     el.style.display = 'flex';
+  } else if (activelySyncing) {
+    el.innerHTML = `↻ Sincronizando…`;
+    el.className = 'skf-sync-bar syncing';
+    el.style.display = 'flex';
   } else if (n) {
-    el.textContent = `↻ Sincronizando ${n} registro${n !== 1 ? 's' : ''}…`;
+    el.innerHTML = `☁ ${n} pendiente${n !== 1 ? 's' : ''} · <a href="login.html" style="color:inherit;text-decoration:underline">inicia sesión para sincronizar</a>`;
     el.className = 'skf-sync-bar syncing';
     el.style.display = 'flex';
   } else {
@@ -538,10 +551,10 @@ function skfUpdateSyncBadge() {
   }
 }
 
-window.addEventListener('online', () => { skfUpdateSyncBadge(); skfProcessQueue(); });
-window.addEventListener('offline', skfUpdateSyncBadge);
+window.addEventListener('online', () => { skfUpdateSyncBadge(false); skfProcessQueue(); });
+window.addEventListener('offline', () => skfUpdateSyncBadge(false));
 document.addEventListener('DOMContentLoaded', () => {
-  skfUpdateSyncBadge();
+  skfUpdateSyncBadge(false);
   if (navigator.onLine) skfProcessQueue();
 });
 setInterval(() => { if (navigator.onLine) skfProcessQueue(); }, 30000);
