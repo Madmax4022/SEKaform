@@ -243,7 +243,7 @@
 <div class="wizard">
   <div class="wz active" id="ws1"><span class="wz-n">1</span><span>Fuente</span></div>
   <div class="wz" id="ws2"><span class="wz-n">2</span><span>Campos</span></div>
-  <div class="wz" id="ws3"><span class="wz-n">3</span><span>Vista previa</span></div>
+  <div class="wz" id="ws3"><span class="wz-n">3</span><span>Revisar y guardar</span></div>
 </div>
 
 <!-- ══ PAGE 1: Source + upload ══ -->
@@ -369,24 +369,24 @@
           <input type="text" id="fDesc" placeholder="Para qué se usa">
         </div>
         <div class="fg">
-          <label>Código *</label>
+          <label>Código</label>
           <div class="cod-row">
             <input type="text" id="fCod" readonly>
             <button type="button" class="cod-edit-btn" id="fCodBtn" onmousedown="event.preventDefault()" onclick="toggleCodEdit()" title="Editar código">✏️</button>
           </div>
-          <div class="cod-hint">Identifica este tipo de formulario en el panel de inteligencia de negocio. Se genera solo — solo edítalo si quieres que se agrupe con otra plantilla existente.</div>
+          <div class="cod-hint">Se genera automáticamente. Puedes dejarlo así.</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="fg">
           <label class="chk-row" style="font-weight:600">
             <input type="checkbox" id="fPublica" checked>
-            🌐 Compartir públicamente (link / QR / correo / WhatsApp)
+            🌐 Generar link para compartir
           </label>
           <div class="cod-hint">Cualquiera con el link podrá llenarlo sin necesitar cuenta — sus envíos caerán en tu mismo panel de inteligencia de negocio.</div>
         </div>
         <div class="fg">
-          <label>📧 Correo de notificación</label>
+          <label>📧 Correo para avisos</label>
           <input type="email" id="fCorreoNotif" placeholder="ej: supervisor@empresa.com">
           <div class="cod-hint">Si lo configuras, se enviará un correo automático con un resumen cada vez que alguien complete este formulario.</div>
         </div>
@@ -402,7 +402,7 @@
     </div>
 
     <div class="row-act">
-      <button class="btn btn-pri" id="btnAnalyze" onclick="analyze()">⚡ Analizar y digitalizar →</button>
+      <button class="btn btn-pri" id="btnAnalyze" onclick="analyze()">⚡ Crear formulario →</button>
     </div>
   </div>
 </div>
@@ -538,7 +538,7 @@ function renderStarterGrid() {
     const t = TIPO_MAP[f.tipo];
     return `<label class="starter-chip">
       <input type="checkbox" data-idx="${idx}" ${f.on?'checked':''}>
-      <span>${t?t.ico+' ':''}${f.etiqueta}</span>
+      <span>${f.etiqueta}</span>
     </label>`;
   }).join('');
 }

@@ -135,7 +135,7 @@ let filtEstado = 'todos';
 let filtSev = 'todas';
 
 function renderFilters() {
-  const estados = [['todos','Todos'],['abierto','Abiertos'],['en_proceso','En proceso'],['cerrado','Cerrados']];
+  const estados = [['todos','Todos'],['abierto','Abiertos'],['en_proceso','En atención'],['cerrado','Cerrados']];
   document.getElementById('filtEstado').innerHTML = estados.map(([v,l]) =>
     `<button class="filt-btn${filtEstado===v?' active':''}" onclick="setFiltEstado('${v}')">${l}</button>`).join('');
 
@@ -160,7 +160,7 @@ function render() {
     el.innerHTML = `<div class="empty-state">
       <span class="es-ico">✅</span>
       <h2>Sin hallazgos todavía</h2>
-      <p>Cuando un inspector marque un campo crítico/mayor/menor en el digitalizador y la respuesta indique incumplimiento, o reporte algo manualmente al llenar un formulario, aparecerá aquí.</p>
+      <p>Aquí aparecen los problemas que el equipo reporta al llenar un formulario. Por ahora todo está en orden. ✓</p>
     </div>`;
     return;
   }
@@ -194,7 +194,7 @@ function render() {
         <span class="hz-badge sev-${esc(h.severidad)}">${sevLbl[h.severidad]||h.severidad}</span>
         <select class="hz-estado-sel" onchange="setHallazgoEstado('${esc(h.id)}',this.value)">
           <option value="abierto" ${(h.estado||'abierto')==='abierto'?'selected':''}>Abierto</option>
-          <option value="en_proceso" ${h.estado==='en_proceso'?'selected':''}>En proceso</option>
+          <option value="en_proceso" ${h.estado==='en_proceso'?'selected':''}>En atención</option>
           <option value="cerrado" ${h.estado==='cerrado'?'selected':''}>Cerrado</option>
         </select>
       </div>

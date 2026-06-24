@@ -121,8 +121,8 @@
     .fg.hidden { display: none; }
     .fg > label {
       display: flex; align-items: center; gap: 8px;
-      font-size: 0.72rem; font-weight: 700; color: var(--mut);
-      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; cursor: default;
+      font-size: 0.78rem; font-weight: 700; color: var(--mut);
+      letter-spacing: .1px; margin-bottom: 10px; cursor: default;
     }
     .fg > label .req { color: var(--err); margin-left: 2px; }
     .fg-ico {
@@ -322,9 +322,9 @@
     <div id="fFields"></div>
   </div>
   <div class="form-footer">
-    <button class="btn btn-sec" onclick="openManualHallazgo()">⚠️ Hallazgo</button>
-    <button class="btn btn-sec" onclick="saveDraft()">💾 Borrador</button>
-    <button class="btn btn-pri" onclick="submitForm()">Enviar formulario ✓</button>
+    <button class="btn btn-sec" onclick="openManualHallazgo()">Reportar problema</button>
+    <button class="btn btn-sec" onclick="saveDraft()">Guardar borrador</button>
+    <button class="btn btn-pri" onclick="submitForm()">Enviar ✓</button>
   </div>
 </div>
 
@@ -692,9 +692,9 @@ function renderList() {
     el.innerHTML = `<div class="empty-state">
       <span class="es-ico">📭</span>
       <h2>Sin plantillas todavía</h2>
-      <p>Crea tu primer formulario digital digitalizando un documento escaneado.</p>
+      <p>Ve al catálogo de plantillas para agregar tu primer formulario.</p>
       <div style="margin-top:20px">
-        <a href="digitalizador.html" class="btn btn-pri" style="text-decoration:none;display:inline-flex">Digitalizar documento →</a>
+        <a href="plantillas.html" class="btn btn-pri" style="text-decoration:none;display:inline-flex">Ver catálogo de plantillas →</a>
       </div>
     </div>`;
     return;
@@ -711,15 +711,13 @@ function renderList() {
   const sorted = [...filtered].sort((a,b) => (b.favorito?1:0) - (a.favorito?1:0));
   el.innerHTML = sorted.map(t => {
     const subs = getSubsForTemplate(t.id);
-    const cod = t.codigo ? `<div class="tmpl-cod">${t.codigo}</div>` : '';
     const d = t.actualizadoEn ? new Date(t.actualizadoEn).toLocaleDateString('es-CO') : '';
     const ico = t.logo ? `<img src="${t.logo}" class="tmpl-logo" alt="">` : `<span class="tmpl-ico">📋</span>`;
     return `<div class="tmpl-card">
       ${ico}
       <div class="tmpl-info">
-        ${cod}
         <div class="tmpl-name">${t.nombre}</div>
-        <div class="tmpl-meta">${t.campos.length} campos · ${subs} envío${subs!==1?'s':''} · ${d}</div>
+        <div class="tmpl-meta">${t.campos.length} preguntas · ${subs} registro${subs!==1?'s':''} · ${d}</div>
       </div>
       <div class="tmpl-acts">
         <button class="btn-fav ${t.favorito?'on':''}" onclick="toggleFavorito('${t.id}')" title="Marcar como favorito">${t.favorito?'★':'☆'}</button>
