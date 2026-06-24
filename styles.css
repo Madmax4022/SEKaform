@@ -105,6 +105,18 @@ html.sb-collapsed .sidebar { transform: translateX(-100%); }
 }
 .bb-offline-ready { color: var(--ok) !important; }
 
+/* ── Despeje del botón flotante ☰ en móvil ──────────────────────────
+   El botón de menú es position:fixed (top:14 left:14, 38px). En páginas
+   sin barra de herramientas (asignaciones, dashboard, hallazgos, index,
+   plantillas) el título <h1> arranca en la esquina y queda tapado por el
+   botón. Se baja el contenido en móvil. Las páginas CON toolbar
+   (digitalizador, llenar) ya despejan el botón en la propia toolbar, así
+   que su .wrap se restaura a su padding original. */
+@media (max-width: 860px) {
+  body .wrap, body .wrapper { padding-top: 60px; }
+  body .page-toolbar ~ .wrap { padding-top: 28px; }
+}
+
 body { padding-left: 232px; transition: padding-left .25s ease; }
 html.sb-collapsed body { padding-left: 0; }
 

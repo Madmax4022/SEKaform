@@ -271,8 +271,13 @@
     .toast.wa { border-color: var(--warn); }
     @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-    @media (max-width: 480px) {
-      .tmpl-acts { flex-direction: row; }
+    @media (max-width: 600px) {
+      /* La fila de acciones (★ Llenar QR Historial ✕) no cabe junto al
+         texto en pantallas angostas — el ✕ se salía del borde. Se baja a
+         una fila propia de ancho completo debajo del nombre. */
+      .tmpl-card { flex-wrap: wrap; align-items: center; }
+      .tmpl-acts { flex-basis: 100%; width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+      .tmpl-acts .btn { flex: 1 1 auto; }
       .form-footer .btn-sec { flex: 0 0 auto; padding: 12px 16px; }
     }
   </style>
