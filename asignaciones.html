@@ -236,6 +236,22 @@ async function createAsignacion() {
   });
   setAsignaciones([...asignaciones, ...nuevas]);
 
+  // Enviar correo a cada asignado que tenga email
+  const linkFormulario = shareUrlFor(t);
+  nuevas.filter(a => a.correo).forEach(a => {
+    try {
+      if (typeof _sb !== 'undefined') {
+        _sb.functions.invoke('notify-asignacion', { body: {
+          nombre: a.nombre,
+          correo: a.correo,
+          plantillaNombre: t.nombre,
+          plantillaCodigo: t.codigo || '',
+          linkFormulario,
+        }}).catch(() => {});
+      }
+    } catch (_) {}
+  });
+
   document.getElementById('asgNames').value = '';
   toast(`Asignación creada — ${nuevas.length} persona${nuevas.length!==1?'s':''}`, 'ok');
   renderGroups();
