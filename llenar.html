@@ -301,7 +301,11 @@
 <!-- VIEW: template list -->
 <div class="view on" id="vList">
   <div class="wrap">
-    <h1 class="pg-h">Mis formularios</h1>
+    <h1 class="pg-h">Mis formularios<button class="skf-help" data-help-t="¿Qué puedo hacer aquí?" data-help="Estos son los formularios que ya activaste o creaste.
+• ▶ Llenar: abre el formulario para capturar datos.
+• QR: genera un link y código QR para que otras personas lo llenen desde su celular, sin necesidad de cuenta.
+• Historial: muestra todos los envíos recibidos.
+• Si dejas un formulario a medias, se guarda solo como borrador — al volver a abrirlo te preguntará si quieres continuarlo.">?</button></h1>
     <p class="pg-sub">Selecciona una plantilla para llenar, o crea una nueva digitalizando un documento.</p>
     <div class="filters" id="tmplFilters"></div>
     <div id="tmplList"></div>
@@ -327,7 +331,7 @@
     <div id="fFields"></div>
   </div>
   <div class="form-footer">
-    <button class="btn btn-sec" onclick="openManualHallazgo()">Reportar problema</button>
+    <button class="btn btn-sec" onclick="openManualHallazgo()">⚠️ Reportar hallazgo</button>
     <button class="btn btn-sec" onclick="saveDraft()">Guardar borrador</button>
     <button class="btn btn-pri" onclick="submitForm()">Enviar ✓</button>
   </div>
@@ -876,6 +880,13 @@ function buildFieldEl(c) {
       inner.id = `auto_${c.id}`;
       break;
 
+    case 'hora':
+      inner = document.createElement('input');
+      inner.type = 'time';
+      inner.value = submission[c.id]||'';
+      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      break;
+
     case 'fecha':
       inner = document.createElement('input');
       inner.type = 'date';
@@ -1173,14 +1184,8 @@ function autoFill(campos) {
     }
     if (c.tipo==='hora_auto') {
       const el=document.getElementById(`auto_${c.id}`);
-      if (el) el.value=timeStr;
-      submission[c.id]=timeStr;
-      // Keep updating time
-      setInterval(() => {
-        const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-        if (el) el.value=t;
-        submission[c.id]=t;
-      }, 1000);
+      if (el && !submission[c.id]) { el.value=timeStr; submission[c.id]=timeStr; }
+      else if (el && submission[c.id]) { el.value=submission[c.id]; }
     }
   });
 }
@@ -1311,6 +1316,21 @@ function submitForm() {
         localStorage.setItem('skf_hallazgos',JSON.stringify(stored));
         hallazgosEnvio.forEach(h => skfSyncOrQueue('hallazgo', h));
       }
+    }
+
+    // Notificación por correo (no bloquea el flujo)
+    if (activeTmpl.correoNotificacion) {
+      try {
+        const sb = typeof _sb !== 'undefined' ? _sb : null;
+        if (sb) sb.functions.invoke('notify-envio', { body: {
+          correo: activeTmpl.correoNotificacion,
+          plantillaNombre: activeTmpl.nombre,
+          plantillaCodigo: activeTmpl.codigo || '',
+          llenadoPor: envio.llenadoPor || '',
+          datos: envio.datos,
+          numero: envio.numero,
+        }}).catch(() => {});
+      } catch (_) {}
     }
 
     // Remove draft if existed

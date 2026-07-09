@@ -120,7 +120,10 @@
 <div class="wrapper">
   <header class="pg-hd">
     <div class="pg-tag" id="pgTag">Repositorio de plantillas</div>
-    <h1 class="pg-title" id="pgTitle">Formularios disponibles</h1>
+    <h1 class="pg-title" id="pgTitle"><span id="pgTitleTxt">Formularios disponibles</span><button class="skf-help" data-help-t="¿Cómo uso esta página?" data-help="• Escribe en el buscador el nombre del formulario o el tema que necesitas (por ejemplo «extintores»).
+• O toca una categoría para abrirla y ver sus formularios.
+• «Usar esta plantilla» te lleva directo a activarla y empezar a llenarla.
+• «✎ Personalizar» te deja cambiar sus campos antes, si necesitas algo distinto.">?</button></h1>
     <p class="pg-sub" id="pgSub">Cada plantilla ya está lista para usar: elige una y empieza a llenarla de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.</p>
   </header>
 
@@ -228,31 +231,31 @@ function render() {
 
   if (active === 'calidad') {
     document.getElementById('pgTag').textContent = 'Sistema de Gestión de Calidad';
-    document.getElementById('pgTitle').textContent = 'Calidad — SGC bajo ISO 9001:2015';
+    document.getElementById('pgTitleTxt').textContent = 'Calidad — SGC bajo ISO 9001:2015';
     document.getElementById('pgSub').textContent = 'Auditoría interna, no conformidades, CAPA, control documental, revisión por la dirección e indicadores de gestión — alineados con las cláusulas de ISO 9001:2015, listos para usar tal cual.';
   } else if (active === 'sst') {
     document.getElementById('pgTag').textContent = 'Salud Ocupacional';
-    document.getElementById('pgTitle').textContent = 'SST — Seguridad y Salud en el Trabajo';
+    document.getElementById('pgTitleTxt').textContent = 'SST — Seguridad y Salud en el Trabajo';
     document.getElementById('pgSub').textContent = 'Plantillas preconfiguradas según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007 — listas para usar tal cual.';
   } else if (active === 'construccion') {
     document.getElementById('pgTag').textContent = 'Construcción';
-    document.getElementById('pgTitle').textContent = 'Construcción — Seguridad en obra y control de avance';
+    document.getElementById('pgTitleTxt').textContent = 'Construcción — Seguridad en obra y control de avance';
     document.getElementById('pgSub').textContent = 'Permisos de trabajo en alturas, inspección de andamios, bitácora de obra y control de acceso — listas para usar tal cual.';
   } else if (active === 'alimentos') {
     document.getElementById('pgTag').textContent = 'Alimentos & Restaurantes';
-    document.getElementById('pgTitle').textContent = 'Alimentos — INVIMA, HACCP y BPM';
+    document.getElementById('pgTitleTxt').textContent = 'Alimentos — INVIMA, HACCP y BPM';
     document.getElementById('pgSub').textContent = 'Control de temperatura, limpieza y desinfección, control de plagas y trazabilidad de lote — listas para usar tal cual.';
   } else if (active === 'salud') {
     document.getElementById('pgTag').textContent = 'Salud';
-    document.getElementById('pgTitle').textContent = 'Salud — Clínicas y Laboratorios';
+    document.getElementById('pgTitleTxt').textContent = 'Salud — Clínicas y Laboratorios';
     document.getElementById('pgSub').textContent = 'Triage, consentimiento informado, esterilización, manejo de residuos hospitalarios y seguridad del paciente — listas para usar tal cual.';
   } else if (active === 'inmuebles') {
     document.getElementById('pgTag').textContent = 'Inmuebles & Facilidades';
-    document.getElementById('pgTitle').textContent = 'Inmuebles — Mantenimiento y seguridad de edificios';
+    document.getElementById('pgTitleTxt').textContent = 'Inmuebles — Mantenimiento y seguridad de edificios';
     document.getElementById('pgSub').textContent = 'Cuartos eléctricos, extintores, alarmas, bombas contra incendio, ascensores y aseo de áreas comunes — checklists alineados con NFPA, listos para usar tal cual.';
   } else {
     document.getElementById('pgTag').textContent = 'Repositorio de plantillas';
-    document.getElementById('pgTitle').textContent = 'Formularios disponibles';
+    document.getElementById('pgTitleTxt').textContent = 'Formularios disponibles';
     document.getElementById('pgSub').textContent = 'Cada plantilla ya está lista para usar: elige una y empieza a llenarla de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.';
   }
 
