@@ -61,6 +61,56 @@ function _skfUpdateBottomAuth(user) {
   }
 }
 
+// ── Icono de ayuda «?» — popover de guía ─────────────────────────────────────
+// Cualquier página puede poner <button class="skf-help" data-help-t="Título"
+// data-help="Texto">?</button>. Un solo popover global se abre bajo el icono
+// tocado y se cierra al tocar fuera, al tocar la ✕ o al abrir otro.
+
+function _skfCloseHelp() {
+  const pop = document.getElementById('skfHelpPop');
+  if (pop) pop.remove();
+  document.querySelectorAll('.skf-help.on').forEach(b => b.classList.remove('on'));
+}
+
+function _skfOpenHelp(btn) {
+  _skfCloseHelp();
+  btn.classList.add('on');
+  const pop = document.createElement('div');
+  pop.className = 'skf-help-pop';
+  pop.id = 'skfHelpPop';
+  const t = document.createElement('div');
+  t.className = 'skf-help-pop-t';
+  const tSpan = document.createElement('span');
+  tSpan.textContent = btn.dataset.helpT || '¿Cómo funciona?';
+  const x = document.createElement('button');
+  x.className = 'skf-help-pop-x';
+  x.textContent = '✕';
+  x.setAttribute('aria-label', 'Cerrar ayuda');
+  x.addEventListener('click', _skfCloseHelp);
+  t.appendChild(tSpan); t.appendChild(x);
+  const b = document.createElement('div');
+  b.className = 'skf-help-pop-b';
+  b.textContent = btn.dataset.help || '';
+  pop.appendChild(t); pop.appendChild(b);
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect();
+  const w = pop.offsetWidth;
+  const left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
+  pop.style.top = (window.scrollY + r.bottom + 8) + 'px';
+  pop.style.left = (window.scrollX + left) + 'px';
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.skf-help');
+  if (btn) {
+    e.preventDefault(); e.stopPropagation();
+    if (btn.classList.contains('on')) _skfCloseHelp();
+    else _skfOpenHelp(btn);
+    return;
+  }
+  if (!e.target.closest('#skfHelpPop')) _skfCloseHelp();
+});
+
 function skfRenderSidebar() {
   const current = (location.pathname.split('/').pop() || 'index.html');
   const links = SKF_NAV_LINKS.map(n =>

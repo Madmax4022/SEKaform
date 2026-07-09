@@ -301,7 +301,11 @@
 <!-- VIEW: template list -->
 <div class="view on" id="vList">
   <div class="wrap">
-    <h1 class="pg-h">Mis formularios</h1>
+    <h1 class="pg-h">Mis formularios<button class="skf-help" data-help-t="¿Qué puedo hacer aquí?" data-help="Estos son los formularios que ya activaste o creaste.
+• ▶ Llenar: abre el formulario para capturar datos.
+• QR: genera un link y código QR para que otras personas lo llenen desde su celular, sin necesidad de cuenta.
+• Historial: muestra todos los envíos recibidos.
+• Si dejas un formulario a medias, se guarda solo como borrador — al volver a abrirlo te preguntará si quieres continuarlo.">?</button></h1>
     <p class="pg-sub">Selecciona una plantilla para llenar, o crea una nueva digitalizando un documento.</p>
     <div class="filters" id="tmplFilters"></div>
     <div id="tmplList"></div>
@@ -327,7 +331,7 @@
     <div id="fFields"></div>
   </div>
   <div class="form-footer">
-    <button class="btn btn-sec" onclick="openManualHallazgo()">Reportar problema</button>
+    <button class="btn btn-sec" onclick="openManualHallazgo()">⚠️ Reportar hallazgo</button>
     <button class="btn btn-sec" onclick="saveDraft()">Guardar borrador</button>
     <button class="btn btn-pri" onclick="submitForm()">Enviar ✓</button>
   </div>
