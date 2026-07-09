@@ -104,7 +104,11 @@
   </div>
 
   <div class="card asg-new">
-    <h2>+ Nueva asignación</h2>
+    <h2>+ Nueva asignación<button class="skf-help" data-help-t="¿Cómo creo una asignación?" data-help="1. Elige el formulario que deben llenar.
+2. Escribe una persona por línea.
+3. Si agregas su correo separado por coma (María Gómez, maria@empresa.com), le llegará un email con el link del formulario.
+
+Las personas asignadas NO necesitan cuenta: abren el link, escriben su nombre y llenan. Abajo verás quién ya respondió y quién falta.">?</button></h2>
     <div class="fg">
       <label>Plantilla a asignar</label>
       <select id="asgPlantilla"></select>
@@ -117,7 +121,10 @@
     <button class="btn btn-pri" id="btnCreateAsg" onclick="createAsignacion()">Crear asignación →</button>
   </div>
 
-  <h2 class="asg-list-h">Cumplimiento por asignación</h2>
+  <h2 class="asg-list-h">Cumplimiento por asignación<button class="skf-help" data-help-t="¿Cómo leo esta lista?" data-help="Cada tarjeta es un formulario asignado y muestra el avance:
+• Completado: la persona ya envió su respuesta (con fecha y hora).
+• Pendiente: aún no responde.
+• «🔗 Copiar link» te da el enlace para reenviárselo por WhatsApp o correo a quien le falte.">?</button></h2>
   <div id="asgGroups"></div>
 </div>
 
