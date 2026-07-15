@@ -1,10 +1,15 @@
 // ─────────────────────────────────────────────────────────────
-//  SEKaform — Supabase Configuration
+//  SEKaform — Supabase Configuration (modelo multi-organización)
+//
+//  Los datos pertenecen a una ORGANIZACIÓN, no a un usuario. Cada persona es
+//  MIEMBRO de una organización con un ROL (dueño/admin/editor/lector). El
+//  cliente resuelve la organización activa con skfGetOrg() y todas las
+//  funciones de datos quedan scoped a esa organización. La nube es la fuente
+//  de verdad; localStorage es caché/resiliencia sin conexión.
 //
 //  1. Create a project at https://supabase.com
-//  2. Go to Settings → API and copy your URL and anon key
-//  3. Replace the values below
-//  4. Run supabase-schema.sql in the SQL editor
+//  2. Settings → API: copia URL y anon key
+//  3. Corre supabase-schema.sql en el SQL editor
 // ─────────────────────────────────────────────────────────────
 const SKF_SUPABASE_URL = 'https://bdfppxvinyoszcfsvbcx.supabase.co';
 const SKF_SUPABASE_KEY = 'sb_publishable_fet4FKrvN60SoZtZa_2ylg_2PkhWIWU';
@@ -48,19 +53,67 @@ async function sbSignUp(email, password) {
 }
 
 async function sbSignOut() {
+  skfClearOrg();
   const sb = await getSB();
   if (sb) await sb.auth.signOut();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Contexto de organización
+//
+//  Resuelve (y cachea) la organización activa del usuario y su rol. Al
+//  registrarse, un trigger en el servidor ya crea la organización y deja al
+//  usuario como "dueño"; skf_asegurar_org() es la red de seguridad idempotente
+//  para cuentas que no la tengan aún. Todas las funciones de datos usan esto
+//  para saber a qué organización pertenecen los registros que leen/escriben.
+// ─────────────────────────────────────────────────────────────
+let _skfOrg = null; // { orgId, rol }
+
+async function skfGetOrg() {
+  if (_skfOrg) return _skfOrg;
+  const sb = await getSB();
+  if (!sb) return null;
+  const user = await sbGetUser();
+  if (!user) return null;
+  try {
+    // Idempotente: devuelve la organización existente o la crea.
+    const { data: oid, error } = await sb.rpc('skf_asegurar_org');
+    if (!error && oid) {
+      const { data: m } = await sb.from('miembros')
+        .select('rol').eq('org_id', oid).eq('user_id', user.id).maybeSingle();
+      _skfOrg = { orgId: oid, rol: m ? m.rol : 'editor' };
+      return _skfOrg;
+    }
+    // Respaldo si la RPC no estuviera disponible: lectura directa.
+    const { data } = await sb.from('miembros')
+      .select('org_id, rol').eq('user_id', user.id)
+      .order('creado_en', { ascending: true }).limit(1).maybeSingle();
+    if (data) { _skfOrg = { orgId: data.org_id, rol: data.rol }; return _skfOrg; }
+  } catch (e) { console.warn('[SEKaform] skfGetOrg:', e.message); }
+  return null;
+}
+
+function skfClearOrg() { _skfOrg = null; }
+
+// Rol del usuario en su organización: 'dueno' | 'admin' | 'editor' | 'lector'.
+// Lo consumen las páginas para mostrar/ocultar acciones de escritura.
+async function skfRol() { const o = await skfGetOrg(); return o ? o.rol : null; }
+async function skfPuedeEscribir() {
+  const r = await skfRol();
+  return r === 'dueno' || r === 'admin' || r === 'editor';
 }
 
 async function sbSyncPlantilla(tmpl) {
   try {
     const sb = await getSB();
     if (!sb) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
     const user = await sbGetUser();
-    if (!user) return false;
     const payload = {
       id: tmpl.id,
-      user_id: user.id,
+      org_id: org.orgId,
+      autor_id: user ? user.id : null,
       nombre: tmpl.nombre,
       campos: tmpl.campos,
       codigo: tmpl.codigo || null,
@@ -83,9 +136,9 @@ async function sbDeletePlantilla(id) {
   try {
     const sb = await getSB();
     if (!sb) return false;
-    const user = await sbGetUser();
-    if (!user) return false;
-    const { error } = await sb.from('plantillas').delete().eq('id', id).eq('user_id', user.id);
+    if (!(await skfGetOrg())) return false;
+    // RLS limita el borrado a la organización del usuario; basta el id.
+    const { error } = await sb.from('plantillas').delete().eq('id', id);
     if (error) { console.warn('[SEKaform] Delete plantilla:', error.message); return false; }
     return true;
   } catch(e) { console.warn('[SEKaform] Delete plantilla error:', e.message); return false; }
@@ -95,15 +148,18 @@ async function sbSyncEnvio(envio) {
   try {
     const sb = await getSB();
     if (!sb) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
     const user = await sbGetUser();
-    if (!user) return false;
     const payload = {
       id: envio.id,
+      org_id: org.orgId,                       // el trigger lo reafirma desde la plantilla
+      autor_id: user ? user.id : null,
       numero: envio.numero || null,
       plantilla_id: envio.plantillaId || null,
       plantilla_nombre: envio.plantillaNombre || '',
       plantilla_codigo: envio.plantillaCodigo || '',
-      user_id: user.id,
+      unidad_id: envio.unidadId || null,       // sede/área/contratista
       datos: envio.datos || {},
       estado: envio.estado || 'enviado',
       llenado_por: envio.llenadoPor || null,
@@ -118,15 +174,13 @@ async function sbSyncEnvio(envio) {
 }
 
 // Carga una plantilla pública por su share_token, sin necesitar sesión
-// (usada por llenar.html cuando alguien abre un link/QR ?pub=<token>).
+// (usada por llenar.html cuando alguien abre un link/QR ?pub=<token>). Solo
+// selecciona columnas públicas: org_id/autor_id/correo_notificacion quedan
+// además revocados a nivel de columna en el esquema (segunda capa de defensa).
 async function sbLoadPublicPlantilla(token) {
   try {
     const sb = await getSB();
     if (!sb || !token) return null;
-    // Columnas explícitas (no '*'): user_id y correo_notificacion son
-    // privados del dueño y no deben viajar a un visitante anónimo. La base
-    // de datos también revoca esas columnas a nivel de permisos (ver
-    // supabase-schema.sql) como segunda capa de defensa.
     const { data, error } = await sb.from('plantillas')
       .select('id, nombre, campos, codigo, descripcion, logo, publica, share_token')
       .eq('share_token', token).eq('publica', true).maybeSingle();
@@ -135,21 +189,19 @@ async function sbLoadPublicPlantilla(token) {
   } catch { return null; }
 }
 
-// Envía un formulario sin sesión. El user_id que viajamos aquí es solo un
-// placeholder: el trigger envios_asignar_dueno en el servidor lo
-// sobrescribe siempre con el dueño real de la plantilla (ver
-// supabase-schema.sql), así que el dato termina en el dataset del dueño.
+// Envía un formulario sin sesión. No viaja org_id: el trigger envios_asignar_org
+// lo fija desde la organización dueña de la plantilla, así el dato cae en el
+// dataset correcto sin que un anónimo pueda inyectar en otra organización.
 async function sbSubmitPublicEnvio(envio) {
   try {
     const sb = await getSB();
     if (!sb) return { error: 'sin conexión' };
     const payload = {
       id: envio.id,
-      numero: null, // el servidor lo asigna (el visitante anónimo no puede leer envíos previos)
+      numero: null, // el servidor lo asigna (el visitante anónimo no lee envíos previos)
       plantilla_id: envio.plantillaId || null,
       plantilla_nombre: envio.plantillaNombre || '',
       plantilla_codigo: envio.plantillaCodigo || '',
-      user_id: '00000000-0000-0000-0000-000000000000',
       datos: envio.datos || {},
       estado: envio.estado || 'enviado',
       llenado_por: envio.llenadoPor || null,
@@ -163,18 +215,17 @@ async function sbSubmitPublicEnvio(envio) {
   } catch (e) { console.warn('[SEKaform] Envío público error:', e.message); return { error: e.message }; }
 }
 
-// Sincroniza un hallazgo (detectado automáticamente o reportado a mano
-// durante el llenado) hacia el panel del dueño de la plantilla — ver
-// "hallazgos" en supabase-schema.sql.
+// Sincroniza un hallazgo (automático o manual) hacia la organización dueña de
+// la plantilla.
 async function sbSyncHallazgo(h) {
   try {
     const sb = await getSB();
     if (!sb) return false;
-    const user = await sbGetUser();
-    if (!user) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
     const payload = {
       id: h.id,
-      user_id: user.id,
+      org_id: org.orgId,
       envio_id: h.envioId || null,
       plantilla_id: h.plantillaId || null,
       plantilla_nombre: h.plantillaNombre || '',
@@ -184,6 +235,7 @@ async function sbSyncHallazgo(h) {
       severidad: h.severidad || 'menor',
       descripcion: h.descripcion || null,
       foto: h.foto || null,
+      unidad_id: h.unidadId || null,
       estado: h.estado || 'abierto',
       reportado_por: h.reportadoPor || null
     };
@@ -193,16 +245,15 @@ async function sbSyncHallazgo(h) {
   } catch (e) { console.warn('[SEKaform] Sync hallazgo error:', e.message); return false; }
 }
 
-// Igual que sbSubmitPublicEnvio: un visitante sin cuenta llenando un link
-// público también puede reportar un hallazgo — el trigger
-// hallazgos_asignar_dueno en Supabase sobrescribe el user_id real.
+// Igual que sbSubmitPublicEnvio: un visitante sin cuenta puede reportar un
+// hallazgo desde un link público — el trigger hallazgos_asignar_org fija el
+// org_id real.
 async function sbSubmitPublicHallazgo(h) {
   try {
     const sb = await getSB();
     if (!sb) return { error: 'sin conexión' };
     const payload = {
       id: h.id,
-      user_id: '00000000-0000-0000-0000-000000000000',
       envio_id: h.envioId || null,
       plantilla_id: h.plantillaId || null,
       plantilla_nombre: h.plantillaNombre || '',
@@ -225,10 +276,10 @@ async function sbLoadHallazgos() {
   try {
     const sb = await getSB();
     if (!sb) return null;
-    const user = await sbGetUser();
-    if (!user) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
     const { data, error } = await sb.from('hallazgos')
-      .select('*').eq('user_id', user.id).order('creado_en', { ascending: false });
+      .select('*').eq('org_id', org.orgId).order('creado_en', { ascending: false });
     if (error) return null;
     return data;
   } catch { return null; }
@@ -239,11 +290,11 @@ async function sbSyncAccionCorrectiva(ac) {
   try {
     const sb = await getSB();
     if (!sb) return false;
-    const user = await sbGetUser();
-    if (!user) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
     const payload = {
       id: ac.id,
-      user_id: user.id,
+      org_id: org.orgId,
       hallazgo_id: ac.hallazgoId,
       responsable: ac.responsable || null,
       correo: ac.correo || null,
@@ -262,10 +313,10 @@ async function sbLoadAccionesCorrectivas() {
   try {
     const sb = await getSB();
     if (!sb) return null;
-    const user = await sbGetUser();
-    if (!user) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
     const { data, error } = await sb.from('acciones_correctivas')
-      .select('*').eq('user_id', user.id).order('creado_en', { ascending: false });
+      .select('*').eq('org_id', org.orgId).order('creado_en', { ascending: false });
     if (error) return null;
     return data;
   } catch { return null; }
@@ -275,10 +326,10 @@ async function sbLoadPlantillas() {
   try {
     const sb = await getSB();
     if (!sb) return null;
-    const user = await sbGetUser();
-    if (!user) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
     const { data, error } = await sb.from('plantillas')
-      .select('*').eq('user_id', user.id).order('actualizado_en', { ascending: false });
+      .select('*').eq('org_id', org.orgId).order('actualizado_en', { ascending: false });
     if (error) return null;
     return data;
   } catch { return null; }
@@ -288,11 +339,56 @@ async function sbLoadEnvios(limit = 500) {
   try {
     const sb = await getSB();
     if (!sb) return null;
-    const user = await sbGetUser();
-    if (!user) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
     const { data, error } = await sb.from('envios')
-      .select('*').eq('user_id', user.id)
+      .select('*').eq('org_id', org.orgId)
       .order('enviado_en', { ascending: false }).limit(limit);
+    if (error) return null;
+    return data;
+  } catch { return null; }
+}
+
+// ── Unidades (sede/área/contratista) — dimensión de reporte ─────────────
+async function sbSyncUnidad(u) {
+  try {
+    const sb = await getSB();
+    if (!sb) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
+    const payload = {
+      id: u.id,
+      org_id: org.orgId,
+      nombre: u.nombre,
+      tipo: u.tipo || 'sede',
+      padre_id: u.padreId || null,
+      creado_en: u.creadoEn || new Date().toISOString()
+    };
+    const { error } = await sb.from('unidades').upsert(payload);
+    if (error) { console.warn('[SEKaform] Sync unidad:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Sync unidad error:', e.message); return false; }
+}
+
+async function sbDeleteUnidad(id) {
+  try {
+    const sb = await getSB();
+    if (!sb) return false;
+    if (!(await skfGetOrg())) return false;
+    const { error } = await sb.from('unidades').delete().eq('id', id);
+    if (error) { console.warn('[SEKaform] Delete unidad:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Delete unidad error:', e.message); return false; }
+}
+
+async function sbLoadUnidades() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
+    const { data, error } = await sb.from('unidades')
+      .select('*').eq('org_id', org.orgId).order('creado_en', { ascending: true });
     if (error) return null;
     return data;
   } catch { return null; }
@@ -304,13 +400,14 @@ async function sbSyncAsignacion(a) {
   try {
     const sb = await getSB();
     if (!sb) return false;
-    const user = await sbGetUser();
-    if (!user) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
     const payload = {
       id: a.id,
-      user_id: user.id,
+      org_id: org.orgId,
       plantilla_id: a.plantillaId || null,
       plantilla_nombre: a.plantillaNombre || '',
+      unidad_id: a.unidadId || null,
       nombre: a.nombre,
       correo: a.correo || null,
       creado_en: a.creadoEn || new Date().toISOString()
@@ -325,9 +422,8 @@ async function sbDeleteAsignacion(id) {
   try {
     const sb = await getSB();
     if (!sb) return false;
-    const user = await sbGetUser();
-    if (!user) return false;
-    const { error } = await sb.from('asignaciones').delete().eq('id', id).eq('user_id', user.id);
+    if (!(await skfGetOrg())) return false;
+    const { error } = await sb.from('asignaciones').delete().eq('id', id);
     if (error) { console.warn('[SEKaform] Delete asignación:', error.message); return false; }
     return true;
   } catch (e) { console.warn('[SEKaform] Delete asignación error:', e.message); return false; }
@@ -337,10 +433,10 @@ async function sbLoadAsignaciones() {
   try {
     const sb = await getSB();
     if (!sb) return null;
-    const user = await sbGetUser();
-    if (!user) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
     const { data, error } = await sb.from('asignaciones')
-      .select('*').eq('user_id', user.id).order('creado_en', { ascending: false });
+      .select('*').eq('org_id', org.orgId).order('creado_en', { ascending: false });
     if (error) return null;
     return data;
   } catch { return null; }
@@ -367,8 +463,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 //
 //  Un hallazgo crítico (extintor vencido, fuga, riesgo eléctrico…) no
 //  debe esperar a que alguien abra el dashboard. Cualquier sesión
-//  abierta del dueño de la cuenta se suscribe vía Supabase Realtime
-//  (WebSocket) a los INSERT en "hallazgos"; al llegar uno con
+//  abierta de un miembro de la organización se suscribe vía Supabase
+//  Realtime (WebSocket) a los INSERT en "hallazgos"; al llegar uno con
 //  severidad "critico" se muestra un aviso dentro de la app y, si el
 //  usuario activó el campanazo, una notificación nativa del navegador
 //  (llega aunque esté en otra pestaña).
@@ -437,14 +533,18 @@ function skfUpdateBellIcon() {
 }
 
 let _skfCriticalChannel = null;
-async function skfSubscribeCriticalAlerts(user) {
-  if (!SKF_CONFIGURED || !user || _skfCriticalChannel) return;
+// El parámetro se mantiene por compatibilidad con quien la llama (sidebar.js),
+// pero la suscripción ahora se filtra por organización, no por usuario.
+async function skfSubscribeCriticalAlerts(_user) {
+  if (!SKF_CONFIGURED || _skfCriticalChannel) return;
+  const org = await skfGetOrg();
+  if (!org) return;
   const sb = await getSB();
   if (!sb) return;
-  _skfCriticalChannel = sb.channel('hallazgos-criticos-' + user.id)
+  _skfCriticalChannel = sb.channel('hallazgos-criticos-' + org.orgId)
     .on('postgres_changes', {
       event: 'INSERT', schema: 'public', table: 'hallazgos',
-      filter: `user_id=eq.${user.id}`
+      filter: `org_id=eq.${org.orgId}`
     }, (payload) => {
       if (payload.new && payload.new.severidad === 'critico') skfNotifyCritical(payload.new);
     })
@@ -454,12 +554,11 @@ async function skfSubscribeCriticalAlerts(user) {
 // ─────────────────────────────────────────────────────────────
 //  Cola de sincronización offline
 //
-//  Un inspector en campo no siempre tiene señal. Cada registro ya se
-//  guarda primero en localStorage (fuente de verdad local); esta cola es
-//  el segundo paso: si el envío a Supabase falla (sin conexión o error
-//  del servidor) la operación se encola en localStorage y se reintenta
-//  sola al recuperar la señal — nunca se pierde un hallazgo por falta
-//  de cobertura.
+//  Un inspector en campo no siempre tiene señal. La nube es la fuente de
+//  verdad, pero cada registro se guarda primero en localStorage como caché
+//  y, si el envío a Supabase falla (sin conexión o error del servidor), la
+//  operación se encola en localStorage y se reintenta sola al recuperar la
+//  señal — nunca se pierde un hallazgo por falta de cobertura.
 // ─────────────────────────────────────────────────────────────
 const SKF_QUEUE_KEY = 'skf_sync_queue';
 
@@ -491,6 +590,8 @@ const SKF_SYNC_FNS = {
   accionCorrectiva: sbSyncAccionCorrectiva,
   asignacion: sbSyncAsignacion,
   deleteAsignacion: (p) => sbDeleteAsignacion(p.id),
+  unidad: sbSyncUnidad,
+  deleteUnidad: (p) => sbDeleteUnidad(p.id),
 };
 
 // Intenta sincronizar de inmediato; si falla o no hay conexión, encola
