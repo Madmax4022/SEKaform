@@ -462,6 +462,20 @@ async function sbDeleteAsignacion(id) {
   } catch (e) { console.warn('[SEKaform] Delete asignación error:', e.message); return false; }
 }
 
+// Datos de la organización activa (nombre + logo) para los reportes con marca.
+async function sbLoadOrg() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
+    const { data, error } = await sb.from('organizaciones')
+      .select('id, nombre, logo').eq('id', org.orgId).maybeSingle();
+    if (error) return null;
+    return data || null;
+  } catch { return null; }
+}
+
 async function sbLoadAsignaciones() {
   try {
     const sb = await getSB();

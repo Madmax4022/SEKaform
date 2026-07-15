@@ -282,6 +282,7 @@
           <select class="filter-sel" id="formFilter" onchange="applyFilter()">
             <option value="">Todos los formularios</option>
           </select>
+          <button class="btn-export" onclick="reporteConsolidado()">📄 Reporte (PDF)</button>
           <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla</button>
         </div>
       </div>
@@ -573,7 +574,122 @@ function buildCompliance(hallazgos, acciones, asignaciones, envios) {
 
 // ── Comparativo por unidad ──────────────────────────────────────────
 let _biEnvios = [], _biHallazgos = [], _biUnidades = [];
+let _bi = {};            // dataset completo, para los reportes
+let _biOrg = null;       // { nombre, logo } de la organización, para la marca
 const U_TIPO_LBL = { sede:'sedes', area:'áreas', contratista:'contratistas' };
+const U_ICO_DASH = { sede:'🏢', area:'🗂️', contratista:'🤝', otro:'📍' };
+
+function unidadNombreDash(id) {
+  if (!id) return '';
+  const u = (_bi.unidades||[]).find(x => x.id === id);
+  return u ? `${U_ICO_DASH[u.tipo||'sede']||'📍'} ${u.nombre}` : '';
+}
+
+// ── Reportes con marca (imprimir → guardar como PDF) ────────────────
+// Sin dependencias externas: se arma un documento HTML con la marca de la
+// organización y se imprime vía un iframe oculto; el navegador ofrece
+// "Guardar como PDF". Funciona sin conexión.
+function _reportDoc(title, bodyHtml, opts) {
+  opts = opts || {};
+  const brandName = (_biOrg && _biOrg.nombre) ? _biOrg.nombre : 'SEKaform';
+  const logoSrc = (_biOrg && _biOrg.logo) || opts.logoFallback || '';
+  const logo = logoSrc ? `<img src="${logoSrc}" alt="" style="height:46px;width:auto;border-radius:6px">` : '';
+  const fecha = new Date().toLocaleString('es-CO', { dateStyle:'long', timeStyle:'short' });
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${escD(title)}</title>
+  <style>
+    *{box-sizing:border-box} body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#14203a;margin:0;padding:34px;font-size:13px;line-height:1.5}
+    .rpt-brand{display:flex;align-items:center;gap:14px;border-bottom:2px solid #1a56db;padding-bottom:14px;margin-bottom:22px}
+    .rpt-brand h1{font-size:19px;margin:0;color:#1a56db;letter-spacing:-.01em}
+    .rpt-brand .sub{color:#6b7280;font-size:11px;margin-top:3px}
+    h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin:24px 0 12px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #eef1f5;vertical-align:top}
+    th{background:#f4f6fa;color:#6b7280;text-transform:uppercase;font-size:10px;letter-spacing:.05em}
+    td:nth-child(n+2),th:nth-child(n+2){text-align:right}
+    .kv{display:grid;grid-template-columns:190px 1fr;gap:3px 14px}
+    .kv .k{color:#6b7280} .kv .v{font-weight:700}
+    .foot{margin-top:30px;color:#9ca3af;font-size:10px;border-top:1px solid #eef1f5;padding-top:10px}
+    img.ev{max-height:130px;border-radius:6px}
+    @media print{body{padding:0}@page{margin:15mm}}
+  </style></head><body>
+  <div class="rpt-brand">${logo}<div><h1>${escD(brandName)}</h1><div class="sub">${escD(title)} · Generado el ${fecha} · SEKaform</div></div></div>
+  ${bodyHtml}
+  <div class="foot">Documento generado automáticamente por SEKaform — ${escD(brandName)}</div>
+  </body></html>`;
+}
+
+function printReport(title, bodyHtml, opts) {
+  const html = _reportDoc(title, bodyHtml, opts);
+  const ifr = document.createElement('iframe');
+  ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0');
+  document.body.appendChild(ifr);
+  const doc = ifr.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  let done = false;
+  const go = () => { if (done) return; done = true; try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch(e){} setTimeout(()=>ifr.remove(), 1500); };
+  ifr.onload = go;
+  setTimeout(go, 500);
+}
+
+function reporteConsolidado() {
+  const st = computeStats(_bi.envios||[]);
+  const { done, total, pct } = computeCumplimiento(_bi.asignaciones||[], _bi.envios||[]);
+  const abiertos = (_bi.hallazgos||[]).filter(h => (h.estado||'abierto') !== 'cerrado');
+  const criticos = abiertos.filter(h => h.severidad === 'critico').length;
+  const resumen = `<div class="kv">
+    <div class="k">Formularios</div><div class="v">${(_bi.plantillas||[]).length}</div>
+    <div class="k">Envíos totales</div><div class="v">${st.total}</div>
+    <div class="k">Envíos este mes</div><div class="v">${st.month}</div>
+    <div class="k">Cumplimiento de asignaciones</div><div class="v">${pct===null?'—':pct+'% ('+done+'/'+total+')'}</div>
+    <div class="k">Hallazgos abiertos</div><div class="v">${abiertos.length} de ${(_bi.hallazgos||[]).length}</div>
+    <div class="k">Críticos sin resolver</div><div class="v">${criticos}</div>
+  </div>`;
+
+  const tipo = document.getElementById('unidadTipoSel').value;
+  const unidadesTipo = (_bi.unidades||[]).filter(u => (u.tipo||'sede') === tipo);
+  const idset = new Set(unidadesTipo.map(u=>u.id));
+  const filas = unidadesTipo.map(u => {
+    const env = (_bi.envios||[]).filter(e => fEnvUnidad(e) === u.id).length;
+    const ab = (_bi.hallazgos||[]).filter(h => fHzUnidad(h) === u.id && (h.estado||'abierto') !== 'cerrado');
+    return { n:u.nombre, e:env, a:ab.length, c:ab.filter(h=>h.severidad==='critico').length };
+  }).sort((a,b)=>b.e-a.e);
+  const envSin = (_bi.envios||[]).filter(e => !idset.has(fEnvUnidad(e))).length;
+  const hzSin  = (_bi.hallazgos||[]).filter(h => !idset.has(fHzUnidad(h)) && (h.estado||'abierto') !== 'cerrado');
+  if (envSin || hzSin.length) filas.push({ n:'Sin asignar', e:envSin, a:hzSin.length, c:hzSin.filter(h=>h.severidad==='critico').length });
+  const cmp = unidadesTipo.length
+    ? `<table><thead><tr><th>Unidad</th><th>Envíos</th><th>Abiertos</th><th>Críticos</th></tr></thead><tbody>${filas.map(f=>`<tr><td>${escD(f.n)}</td><td>${f.e}</td><td>${f.a}</td><td>${f.c}</td></tr>`).join('')}</tbody></table>`
+    : `<p style="color:#9ca3af">No hay ${U_TIPO_LBL[tipo]||'unidades'} registradas.</p>`;
+
+  printReport('Reporte del panel', `<h2>Resumen</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}`);
+}
+
+let _reportEnvios = [];
+function printEnvioReport(i) {
+  const e = _reportEnvios[i];
+  if (!e) return;
+  const campoMap = buildCampoMap(_bi.plantillas||[]);
+  const pId = e.plantilla_id||e.plantillaId||'';
+  const plant = (_bi.plantillas||[]).find(p => p.id === pId);
+  const filas = Object.entries(e.datos||{}).filter(([,v]) => v!==null && v!==undefined && v!=='').map(([k,v]) => {
+    const lbl = campoMap[pId]?.[k]?.etiqueta || k;
+    let val;
+    if (Array.isArray(v)) val = escD(v.join(', '));
+    else if (typeof v === 'string' && v.startsWith('data:image')) val = `<img class="ev" src="${v}" alt="">`;
+    else val = escD(String(v));
+    return `<tr><td style="width:230px;color:#6b7280;text-align:left">${escD(lbl)}</td><td style="text-align:left;font-weight:600">${val}</td></tr>`;
+  }).join('');
+  const unidad = unidadNombreDash(fEnvUnidad(e));
+  const meta = `<div class="kv">
+    <div class="k">Formulario</div><div class="v">${escD(e.plantilla_nombre||e.plantillaNombre||'')}</div>
+    <div class="k">Código</div><div class="v">${escD(e.plantilla_codigo||e.plantillaCodigo||'—')}</div>
+    <div class="k">Unidad</div><div class="v">${escD(unidad||'—')}</div>
+    <div class="k">Llenado por</div><div class="v">${escD(e.llenado_por||e.llenadoPor||'—')}</div>
+    <div class="k">Fecha</div><div class="v">${new Date(fEnvCreado(e)).toLocaleString('es-CO')}</div>
+    <div class="k">N.º de registro</div><div class="v">${e.numero||'—'}</div>
+  </div>`;
+  const cuerpo = `<h2>Datos del registro</h2>${meta}<h2>Respuestas</h2><table>${filas || '<tr><td>Sin datos registrados</td></tr>'}</table>`;
+  printReport('Reporte de registro' + (e.numero?(' #'+e.numero):''), cuerpo, { logoFallback: plant && plant.logo });
+}
 
 function renderComparativo() {
   const el = document.getElementById('comparativoBody');
@@ -671,7 +787,8 @@ function buildTable(envios, plantillas) {
     return;
   }
 
-  const rows = filtered.slice(0,100).map((e,i) => {
+  _reportEnvios = filtered.slice(0,100);
+  const rows = _reportEnvios.map((e,i) => {
     const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
     const d = raw ? new Date(raw).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '—';
     const estado = e.estado||'enviado';
@@ -693,7 +810,7 @@ function buildTable(envios, plantillas) {
       <td>${nombre} <span class="detail-expand-hint">▸ ${campoEntries.length} campo${campoEntries.length!==1?'s':''}</span></td>
       <td class="mut">${d}</td>
       <td><span class="badge ${estado==='enviado'?'ok':'draft'}">${estado==='enviado'?'✓ Enviado':'Borrador'}</span></td>
-      <td class="mut" style="font-size:.72rem;font-family:monospace">${id}</td>
+      <td class="mut" style="font-size:.72rem;font-family:monospace;white-space:nowrap">${id} <button onclick="event.stopPropagation();printEnvioReport(${i})" title="Reporte con marca (PDF)" style="background:none;border:1px solid var(--bor);border-radius:6px;cursor:pointer;padding:2px 6px;font-size:.82rem;margin-left:4px">📄</button></td>
     </tr>
     <tr class="detail-row" id="det_${i}" style="display:none">
       <td colspan="4"><div class="detail-cell"><div class="detail-grid">${detailItems||'<span style="color:var(--mut);font-size:.82rem">Sin datos registrados</span>'}</div></div></td>
@@ -732,11 +849,12 @@ function exportCSV() {
   });
   const unique = [...new Map(colKeys.map(k=>[k,k])).values()];
   const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
-  const header = ['Formulario','Fecha','Estado','N°',...unique.map(k=>colLabels[k])].map(esc).join(',');
+  const header = ['Formulario','Fecha','Estado','N°','Unidad',...unique.map(k=>colLabels[k])].map(esc).join(',');
   const rows = envios.map(e => {
     const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
     const fecha = raw ? new Date(raw).toLocaleString('es-CO') : '';
     const pId = e.plantilla_id||e.plantillaId||'';
+    const uni = (_bi.unidades||[]).find(x => x.id === (e.unidad_id||e.unidadId));
     const vals = unique.map(col => {
       const [cPId,k] = col.split('§');
       if (cPId!==pId) return '';
@@ -745,7 +863,7 @@ function exportCSV() {
       if (typeof v==='string'&&v.startsWith('data:image')) return '[imagen]';
       return String(v??'');
     });
-    return [e.plantilla_nombre||e.plantillaNombre||'',fecha,e.estado||'enviado',e.numero||(e.id||'').slice(-12),...vals].map(esc).join(',');
+    return [e.plantilla_nombre||e.plantillaNombre||'',fecha,e.estado||'enviado',e.numero||(e.id||'').slice(-12),uni?uni.nombre:'',...vals].map(esc).join(',');
   });
   const csv = [header,...rows].join('\r\n');
   const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
@@ -788,8 +906,10 @@ async function init() {
     document.getElementById('chartTrend').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:40px 0">Gráfica no disponible sin conexión</p>';
   }
 
-  // Comparativo por unidad
+  // Comparativo por unidad + datos para reportes
   _biEnvios = envios; _biHallazgos = hallazgos; _biUnidades = unidades;
+  _bi = { plantillas, envios, hallazgos, acciones, asignaciones, unidades };
+  sbLoadOrg().then(o => { _biOrg = o; }).catch(()=>{});
   renderComparativo();
   // Populate form filter dropdown (una opción por código de formulario, no por nombre)
   const groups = new Map(); // key -> label
