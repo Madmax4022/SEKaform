@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Sedes y áreas — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="supabase-config.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 28px; line-height: 1.6; max-width: 620px; }
+
+    .card { background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 22px 22px 20px; margin-bottom: 28px; }
+    .card h2 { font-size: 1rem; font-weight: 800; margin-bottom: 16px; }
+
+    .u-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .u-fg { flex: 1; min-width: 160px; }
+    .u-fg.small { flex: 0 0 auto; min-width: 150px; }
+    .u-fg label { display: block; font-size: .78rem; font-weight: 700; color: var(--mut); margin-bottom: 7px; }
+    .u-fg input, .u-fg select {
+      width: 100%; background: var(--inp); border: 1px solid var(--bor); color: var(--txt);
+      border-radius: 8px; padding: 10px 12px; font-size: .9rem; font-family: inherit; outline: none; transition: border-color .15s;
+    }
+    .u-fg input:focus, .u-fg select:focus { border-color: var(--pri); }
+
+    .u-group { margin-bottom: 22px; }
+    .u-group-h { font-size: .8rem; font-weight: 800; color: var(--mut); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+    .u-group-h .cnt { font-family: var(--mono, monospace); font-weight: 600; color: var(--pri); background: rgba(37,99,235,.12); border-radius: 20px; padding: 1px 9px; font-size: .74rem; }
+    .u-row { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--bor); border-radius: 10px; padding: 11px 14px; margin-bottom: 8px; }
+    .u-row-ico { font-size: 1.1rem; flex-shrink: 0; }
+    .u-row-name { flex: 1; min-width: 0; font-weight: 600; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .u-row-acts { display: flex; gap: 6px; flex-shrink: 0; }
+    .u-mini { background: transparent; border: 1px solid var(--bor); color: var(--mut); border-radius: 7px; padding: 5px 10px; font-size: .76rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
+    .u-mini:hover { color: var(--txt); border-color: var(--mut); }
+    .u-mini.del:hover { color: var(--err); border-color: rgba(239,68,68,.5); background: rgba(239,68,68,.08); }
+
+    .empty-state { text-align: center; padding: 56px 20px; color: var(--mut); }
+    .es-ico { font-size: 3.2rem; display: block; margin-bottom: 14px; }
+    .empty-state h2 { font-size: 1.05rem; margin-bottom: 8px; color: var(--txt); }
+    .empty-state p { font-size: .85rem; line-height: 1.55; max-width: 340px; margin: 0 auto; }
+
+    .setup-banner { background: rgba(37,99,235,.1); border: 1px solid rgba(37,99,235,.3); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: none; }
+    .setup-banner.on { display: flex; align-items: flex-start; gap: 14px; }
+    .setup-banner-ico { font-size: 1.5rem; flex-shrink: 0; }
+    .setup-banner h3 { font-size: .9rem; font-weight: 700; margin-bottom: 4px; }
+    .setup-banner p { font-size: .82rem; color: var(--mut); line-height: 1.55; }
+    .setup-banner a { color: var(--pri); }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 16px; background: var(--card);
+      border: 1px solid var(--bor); border-radius: 10px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 9px; font-size: 0.85rem; font-weight: 600;
+      z-index: 2000; animation: toastIn .2s ease; box-shadow: 0 8px 28px rgba(0,0,0,.5); max-width: 280px;
+    }
+    .toast.ok { border-color: var(--ok); }
+    .toast.er { border-color: var(--err); }
+    @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <h1 class="pg-h">Sedes y áreas<button class="skf-help" data-help-t="¿Para qué sirven las unidades?" data-help="Una unidad es un lugar o grupo por el que quieres separar y comparar tus registros: una sede, un área, o un contratista.
+
+Cuando etiquetas tus formularios y hallazgos con una unidad, después el panel puede compararlas entre sí (por ejemplo: cumplimiento de la Sede Norte vs la Sede Sur, o qué contratista deja más pendientes).
+
+Crea aquí las que uses. Puedes empezar con pocas y agregar más cuando las necesites.">?</button></h1>
+  <p class="pg-sub">Define los lugares o grupos por los que quieres separar tus registros — sedes, áreas o contratistas. Luego los eliges al llenar y asignar formularios, y el panel los compara entre sí.</p>
+
+  <div class="setup-banner" id="setupBanner">
+    <div class="setup-banner-ico">☁</div>
+    <div>
+      <h3>Necesitas una cuenta para compartir tus unidades</h3>
+      <p>Sin sesión, las unidades se guardan solo en <strong>este dispositivo</strong>. Con una cuenta quedan disponibles para todo tu equipo. <a href="login.html">Crear cuenta gratuita →</a></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>+ Nueva unidad</h2>
+    <div class="u-form">
+      <div class="u-fg">
+        <label for="uNombre">Nombre</label>
+        <input type="text" id="uNombre" placeholder="Ej. Sede Norte, Cocina, Aseo ACME" autocomplete="off"
+               onkeydown="if(event.key==='Enter')crearUnidad()">
+      </div>
+      <div class="u-fg small">
+        <label for="uTipo">Tipo</label>
+        <select id="uTipo">
+          <option value="sede">🏢 Sede</option>
+          <option value="area">🗂️ Área</option>
+          <option value="contratista">🤝 Contratista</option>
+          <option value="otro">📍 Otro</option>
+        </select>
+      </div>
+      <button class="btn btn-pri" onclick="crearUnidad()">Agregar</button>
+    </div>
+  </div>
+
+  <div id="uLista"></div>
+</div>
+
+<script>
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+const U_TIPOS = {
+  sede:        { ico: '🏢', label: 'Sedes' },
+  area:        { ico: '🗂️', label: 'Áreas' },
+  contratista: { ico: '🤝', label: 'Contratistas' },
+  otro:        { ico: '📍', label: 'Otros' }
+};
+
+function getUnidades(){ try { return JSON.parse(localStorage.getItem('skf_unidades')||'[]'); } catch { return []; } }
+function setUnidades(l){ localStorage.setItem('skf_unidades', JSON.stringify(l)); }
+
+function normalizeUnidadFromCloud(u){
+  return { id: u.id, nombre: u.nombre, tipo: u.tipo||'sede',
+           padreId: u.padre_id||u.padreId||null, creadoEn: u.creado_en||u.creadoEn };
+}
+
+async function syncFromCloud(){
+  if (!navigator.onLine) return false;
+  let fromCloud = false;
+  try {
+    await skfProcessQueue();
+    const cloudU = await sbLoadUnidades();
+    if (cloudU !== null) fromCloud = true;
+    skfReconcile('skf_unidades', cloudU, normalizeUnidadFromCloud);
+  } catch(e) { /* offline-first */ }
+  return fromCloud;
+}
+
+function toast(msg, type='ok'){
+  const d = document.createElement('div');
+  d.className = 'toast ' + type;
+  d.innerHTML = `<span>${type==='ok'?'✓':'✕'}</span> ${esc(msg)}`;
+  document.body.appendChild(d);
+  setTimeout(()=>{ d.style.opacity='0'; d.style.transition='opacity .3s'; setTimeout(()=>d.remove(),300); }, 2600);
+}
+
+function crearUnidad(){
+  const inp = document.getElementById('uNombre');
+  const nombre = inp.value.trim();
+  if (!nombre) { toast('Escribe un nombre','er'); inp.focus(); return; }
+  const tipo = document.getElementById('uTipo').value;
+  const u = {
+    id: `uni_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    nombre, tipo, padreId: null, creadoEn: new Date().toISOString()
+  };
+  const list = getUnidades();
+  list.push(u);
+  setUnidades(list);
+  skfSyncOrQueue('unidad', u);
+  inp.value = '';
+  inp.focus();
+  render();
+  toast('Unidad agregada');
+}
+
+function renombrarUnidad(id){
+  const list = getUnidades();
+  const u = list.find(x=>x.id===id);
+  if (!u) return;
+  const nuevo = prompt('Nuevo nombre para la unidad:', u.nombre);
+  if (nuevo === null) return;
+  const t = nuevo.trim();
+  if (!t) { toast('El nombre no puede quedar vacío','er'); return; }
+  u.nombre = t;
+  setUnidades(list);
+  skfSyncOrQueue('unidad', u);
+  render();
+  toast('Nombre actualizado');
+}
+
+function borrarUnidad(id){
+  const list = getUnidades();
+  const u = list.find(x=>x.id===id);
+  if (!u) return;
+  if (!confirm(`¿Borrar la unidad "${u.nombre}"?\n\nLos registros que ya la usaban no se pierden: solo quedan sin unidad asignada.`)) return;
+  setUnidades(list.filter(x=>x.id!==id));
+  skfSyncOrQueue('deleteUnidad', { id });
+  render();
+  toast('Unidad borrada');
+}
+
+function render(){
+  const el = document.getElementById('uLista');
+  const list = getUnidades();
+  if (!list.length){
+    el.innerHTML = `<div class="empty-state">
+      <span class="es-ico">🏢</span>
+      <h2>Aún no tienes unidades</h2>
+      <p>Crea tu primera sede, área o contratista arriba. Podrás elegirla al llenar y asignar formularios, y comparar resultados entre unidades en el panel.</p>
+    </div>`;
+    return;
+  }
+  const orden = ['sede','area','contratista','otro'];
+  el.innerHTML = orden.map(tipo => {
+    const items = list.filter(u => (u.tipo||'sede') === tipo);
+    if (!items.length) return '';
+    const meta = U_TIPOS[tipo];
+    return `<div class="u-group">
+      <p class="u-group-h">${meta.ico} ${meta.label} <span class="cnt">${items.length}</span></p>
+      ${items.map(u => `<div class="u-row">
+        <span class="u-row-ico">${meta.ico}</span>
+        <span class="u-row-name">${esc(u.nombre)}</span>
+        <span class="u-row-acts">
+          <button class="u-mini" onclick="renombrarUnidad('${u.id}')">Renombrar</button>
+          <button class="u-mini del" onclick="borrarUnidad('${u.id}')">Borrar</button>
+        </span>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+async function init(){
+  const fromCloud = await syncFromCloud();
+  if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
+  render();
+}
+init();
+</script>
+</body>
+</html>

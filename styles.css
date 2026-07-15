@@ -232,3 +232,29 @@ footer { text-align: center; font-size: .82rem; color: var(--mut); border-top: 1
 }
 .skf-help-pop-x:hover { color: var(--txt); }
 .skf-help-pop-b { font-size: .8rem; line-height: 1.65; color: var(--mut); white-space: pre-line; }
+
+/* ── Rol de solo lectura (lector) ───────────────────────────────────
+   El servidor ya rechaza las escrituras de un lector (policies RLS por
+   rol). Esto es solo UX: un aviso y ocultar/desactivar los controles de
+   escritura para no mostrar botones que fallarían. Se activa poniendo la
+   clase .skf-lector en <html> (lo hace skfApplyRoleGating en sidebar.js). */
+.skf-readonly-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.35);
+  color: var(--txt); border-radius: 10px; padding: 10px 14px;
+  margin: 0 0 20px; font-size: .84rem; line-height: 1.5;
+}
+.skf-readonly-bar strong { color: var(--warn, #f59e0b); }
+
+.skf-lector .form-footer,
+.skf-lector .asg-new,
+.skf-lector #asgGroups .btn-danger,
+.skf-lector .u-form,
+.skf-lector .u-mini,
+.skf-lector .tcard-cta,
+.skf-lector .tcard-cta-sec,
+.skf-lector .tmpl-acts .btn-pri,
+.skf-lector .hz-capa-form,
+.skf-lector .sidebar-link[href="digitalizador.html"] { display: none !important; }
+
+.skf-lector .hz-estado-sel { pointer-events: none; opacity: .6; }

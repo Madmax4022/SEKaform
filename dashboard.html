@@ -111,6 +111,23 @@
     .recur-last{font-size:.7rem;color:var(--mut);white-space:nowrap;}
     .recur-count{font-size:.7rem;font-weight:800;background:var(--warn-dim);color:var(--warn);border-radius:20px;padding:3px 10px;white-space:nowrap;}
 
+    /* comparativo por unidad */
+    .cmp-table{display:flex;flex-direction:column;}
+    .cmp-head,.cmp-row{display:grid;grid-template-columns:1fr 42% 62px 62px;gap:10px;align-items:center;}
+    .cmp-head{font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700;padding-bottom:10px;border-bottom:1px solid var(--bor);}
+    .cmp-head span:nth-child(n+3),.cmp-row span:nth-child(n+3){text-align:right;}
+    .cmp-row{padding:11px 0;border-top:1px solid var(--bor);}
+    .cmp-row:first-of-type{border-top:none;}
+    .cmp-name{font-size:.84rem;font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+    .cmp-bar{display:flex;align-items:center;gap:8px;}
+    .cmp-bar-track{flex:1;height:8px;background:var(--card2);border-radius:5px;overflow:hidden;}
+    .cmp-bar-fill{height:100%;border-radius:5px;background:var(--pri);}
+    .cmp-bar-num{font-size:.8rem;font-weight:800;color:var(--txt);min-width:26px;text-align:right;}
+    .cmp-num{font-size:.85rem;font-weight:800;color:var(--mut);}
+    .cmp-num.hasc{color:var(--warn);}
+    .cmp-num.crit{color:var(--err);}
+    .cmp-row.sinasignar .cmp-name{color:var(--mut);font-style:italic;font-weight:600;}
+
     @media(max-width:900px){
       .stats-grid{grid-template-columns:repeat(2,1fr);}
       .chart-grid{grid-template-columns:1fr;}
@@ -229,6 +246,31 @@
       <div id="recurrentList"></div>
     </div>
 
+    <!-- comparativo por unidad -->
+    <h2 class="section-title">🏢 Comparativo por unidad<button class="skf-help" data-help-t="¿Cómo comparo mis unidades?" data-help="Elige si quieres comparar Sedes, Áreas o Contratistas. Verás, para cada uno:
+• Envíos: cuántos formularios se llenaron ahí.
+• Abiertos: hallazgos sin cerrar.
+• Críticos: los urgentes sin resolver.
+
+«Sin asignar» reúne los registros que no tienen unidad elegida. Para que aparezcan aquí, etiqueta tus formularios con su unidad al llenar y asignar.">?</button></h2>
+    <div class="chart-card" style="margin-bottom:24px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:.8rem;color:var(--mut)">Comparar:</span>
+        <select id="unidadTipoSel" class="filter-sel" onchange="renderComparativo()">
+          <option value="sede">🏢 Sedes</option>
+          <option value="area">🗂️ Áreas</option>
+          <option value="contratista">🤝 Contratistas</option>
+        </select>
+      </div>
+      <div id="comparativoBody"></div>
+    </div>
+
+    <!-- tendencia mensual -->
+    <div class="chart-card" style="margin-bottom:32px">
+      <div class="chart-title">📈 Tendencia mensual — envíos y hallazgos (últimos 6 meses)</div>
+      <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
+    </div>
+
     <!-- recent submissions table -->
     <div class="table-card">
       <div class="table-head">
@@ -240,6 +282,7 @@
           <select class="filter-sel" id="formFilter" onchange="applyFilter()">
             <option value="">Todos los formularios</option>
           </select>
+          <button class="btn-export" onclick="reporteConsolidado()">📄 Reporte (PDF)</button>
           <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla</button>
         </div>
       </div>
@@ -263,6 +306,11 @@ function mergeByCloudId(cloud, local) {
 }
 
 async function loadData() {
+  // Nube-como-verdad: empuja lo pendiente antes de leer para que los números
+  // incluyan lo recién sincronizado.
+  if (navigator.onLine && typeof skfProcessQueue === 'function') {
+    try { await skfProcessQueue(); } catch {}
+  }
   const localP   = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
   const localE   = JSON.parse(localStorage.getItem('skf_envios') || '[]');
   const localH   = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');
@@ -270,8 +318,9 @@ async function loadData() {
   const localAsg = JSON.parse(localStorage.getItem('skf_asignaciones') || '[]');
   let plantillas = localP, envios = localE, fromCloud = false;
 
+  const localU   = JSON.parse(localStorage.getItem('skf_unidades') || '[]');
   const sbData = await Promise.all([
-    sbLoadPlantillas(), sbLoadEnvios(), sbLoadHallazgos(), sbLoadAccionesCorrectivas(), sbLoadAsignaciones()
+    sbLoadPlantillas(), sbLoadEnvios(), sbLoadHallazgos(), sbLoadAccionesCorrectivas(), sbLoadAsignaciones(), sbLoadUnidades()
   ]);
   if (sbData[0] !== null && sbData[1] !== null) {
     fromCloud = true;
@@ -284,10 +333,11 @@ async function loadData() {
   const hallazgos     = mergeByCloudId(sbData[2], localH);
   const acciones      = mergeByCloudId(sbData[3], localA);
   const asignaciones  = mergeByCloudId(sbData[4], localAsg);
+  const unidades      = mergeByCloudId(sbData[5], localU);
 
   const sortFn = (a,b) => new Date(b.enviado_en||b.enviadoEn||b.creadoEn||0) - new Date(a.enviado_en||a.enviadoEn||a.creadoEn||0);
   envios.sort(sortFn);
-  return { plantillas, envios, hallazgos, acciones, asignaciones, fromCloud };
+  return { plantillas, envios, hallazgos, acciones, asignaciones, unidades, fromCloud };
 }
 
 // ── Stats ────────────────────────────────────────────────────────
@@ -413,6 +463,8 @@ const fAsgCreado = a => a.creado_en||a.creadoEn;
 const fEnvPlantillaId = e => e.plantilla_id||e.plantillaId;
 const fEnvCreado = e => e.creado_en||e.creadoEn||e.enviado_en||e.enviadoEn;
 const fEnvLlenadoPor = e => e.llenado_por||e.llenadoPor;
+const fEnvUnidad = e => e.unidad_id||e.unidadId||null;
+const fHzUnidad = h => h.unidad_id||h.unidadId||null;
 const normTxt = s => String(s||'').trim().toLowerCase();
 const escD = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 
@@ -520,6 +572,194 @@ function buildCompliance(hallazgos, acciones, asignaciones, envios) {
   }
 }
 
+// ── Comparativo por unidad ──────────────────────────────────────────
+let _biEnvios = [], _biHallazgos = [], _biUnidades = [];
+let _bi = {};            // dataset completo, para los reportes
+let _biOrg = null;       // { nombre, logo } de la organización, para la marca
+const U_TIPO_LBL = { sede:'sedes', area:'áreas', contratista:'contratistas' };
+const U_ICO_DASH = { sede:'🏢', area:'🗂️', contratista:'🤝', otro:'📍' };
+
+function unidadNombreDash(id) {
+  if (!id) return '';
+  const u = (_bi.unidades||[]).find(x => x.id === id);
+  return u ? `${U_ICO_DASH[u.tipo||'sede']||'📍'} ${u.nombre}` : '';
+}
+
+// ── Reportes con marca (imprimir → guardar como PDF) ────────────────
+// Sin dependencias externas: se arma un documento HTML con la marca de la
+// organización y se imprime vía un iframe oculto; el navegador ofrece
+// "Guardar como PDF". Funciona sin conexión.
+function _reportDoc(title, bodyHtml, opts) {
+  opts = opts || {};
+  const brandName = (_biOrg && _biOrg.nombre) ? _biOrg.nombre : 'SEKaform';
+  const logoSrc = (_biOrg && _biOrg.logo) || opts.logoFallback || '';
+  const logo = logoSrc ? `<img src="${logoSrc}" alt="" style="height:46px;width:auto;border-radius:6px">` : '';
+  const fecha = new Date().toLocaleString('es-CO', { dateStyle:'long', timeStyle:'short' });
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${escD(title)}</title>
+  <style>
+    *{box-sizing:border-box} body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#14203a;margin:0;padding:34px;font-size:13px;line-height:1.5}
+    .rpt-brand{display:flex;align-items:center;gap:14px;border-bottom:2px solid #1a56db;padding-bottom:14px;margin-bottom:22px}
+    .rpt-brand h1{font-size:19px;margin:0;color:#1a56db;letter-spacing:-.01em}
+    .rpt-brand .sub{color:#6b7280;font-size:11px;margin-top:3px}
+    h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin:24px 0 12px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #eef1f5;vertical-align:top}
+    th{background:#f4f6fa;color:#6b7280;text-transform:uppercase;font-size:10px;letter-spacing:.05em}
+    td:nth-child(n+2),th:nth-child(n+2){text-align:right}
+    .kv{display:grid;grid-template-columns:190px 1fr;gap:3px 14px}
+    .kv .k{color:#6b7280} .kv .v{font-weight:700}
+    .foot{margin-top:30px;color:#9ca3af;font-size:10px;border-top:1px solid #eef1f5;padding-top:10px}
+    img.ev{max-height:130px;border-radius:6px}
+    @media print{body{padding:0}@page{margin:15mm}}
+  </style></head><body>
+  <div class="rpt-brand">${logo}<div><h1>${escD(brandName)}</h1><div class="sub">${escD(title)} · Generado el ${fecha} · SEKaform</div></div></div>
+  ${bodyHtml}
+  <div class="foot">Documento generado automáticamente por SEKaform — ${escD(brandName)}</div>
+  </body></html>`;
+}
+
+function printReport(title, bodyHtml, opts) {
+  const html = _reportDoc(title, bodyHtml, opts);
+  const ifr = document.createElement('iframe');
+  ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0');
+  document.body.appendChild(ifr);
+  const doc = ifr.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  let done = false;
+  const go = () => { if (done) return; done = true; try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch(e){} setTimeout(()=>ifr.remove(), 1500); };
+  ifr.onload = go;
+  setTimeout(go, 500);
+}
+
+function reporteConsolidado() {
+  const st = computeStats(_bi.envios||[]);
+  const { done, total, pct } = computeCumplimiento(_bi.asignaciones||[], _bi.envios||[]);
+  const abiertos = (_bi.hallazgos||[]).filter(h => (h.estado||'abierto') !== 'cerrado');
+  const criticos = abiertos.filter(h => h.severidad === 'critico').length;
+  const resumen = `<div class="kv">
+    <div class="k">Formularios</div><div class="v">${(_bi.plantillas||[]).length}</div>
+    <div class="k">Envíos totales</div><div class="v">${st.total}</div>
+    <div class="k">Envíos este mes</div><div class="v">${st.month}</div>
+    <div class="k">Cumplimiento de asignaciones</div><div class="v">${pct===null?'—':pct+'% ('+done+'/'+total+')'}</div>
+    <div class="k">Hallazgos abiertos</div><div class="v">${abiertos.length} de ${(_bi.hallazgos||[]).length}</div>
+    <div class="k">Críticos sin resolver</div><div class="v">${criticos}</div>
+  </div>`;
+
+  const tipo = document.getElementById('unidadTipoSel').value;
+  const unidadesTipo = (_bi.unidades||[]).filter(u => (u.tipo||'sede') === tipo);
+  const idset = new Set(unidadesTipo.map(u=>u.id));
+  const filas = unidadesTipo.map(u => {
+    const env = (_bi.envios||[]).filter(e => fEnvUnidad(e) === u.id).length;
+    const ab = (_bi.hallazgos||[]).filter(h => fHzUnidad(h) === u.id && (h.estado||'abierto') !== 'cerrado');
+    return { n:u.nombre, e:env, a:ab.length, c:ab.filter(h=>h.severidad==='critico').length };
+  }).sort((a,b)=>b.e-a.e);
+  const envSin = (_bi.envios||[]).filter(e => !idset.has(fEnvUnidad(e))).length;
+  const hzSin  = (_bi.hallazgos||[]).filter(h => !idset.has(fHzUnidad(h)) && (h.estado||'abierto') !== 'cerrado');
+  if (envSin || hzSin.length) filas.push({ n:'Sin asignar', e:envSin, a:hzSin.length, c:hzSin.filter(h=>h.severidad==='critico').length });
+  const cmp = unidadesTipo.length
+    ? `<table><thead><tr><th>Unidad</th><th>Envíos</th><th>Abiertos</th><th>Críticos</th></tr></thead><tbody>${filas.map(f=>`<tr><td>${escD(f.n)}</td><td>${f.e}</td><td>${f.a}</td><td>${f.c}</td></tr>`).join('')}</tbody></table>`
+    : `<p style="color:#9ca3af">No hay ${U_TIPO_LBL[tipo]||'unidades'} registradas.</p>`;
+
+  printReport('Reporte del panel', `<h2>Resumen</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}`);
+}
+
+let _reportEnvios = [];
+function printEnvioReport(i) {
+  const e = _reportEnvios[i];
+  if (!e) return;
+  const campoMap = buildCampoMap(_bi.plantillas||[]);
+  const pId = e.plantilla_id||e.plantillaId||'';
+  const plant = (_bi.plantillas||[]).find(p => p.id === pId);
+  const filas = Object.entries(e.datos||{}).filter(([,v]) => v!==null && v!==undefined && v!=='').map(([k,v]) => {
+    const lbl = campoMap[pId]?.[k]?.etiqueta || k;
+    let val;
+    if (Array.isArray(v)) val = escD(v.join(', '));
+    else if (typeof v === 'string' && v.startsWith('data:image')) val = `<img class="ev" src="${v}" alt="">`;
+    else val = escD(String(v));
+    return `<tr><td style="width:230px;color:#6b7280;text-align:left">${escD(lbl)}</td><td style="text-align:left;font-weight:600">${val}</td></tr>`;
+  }).join('');
+  const unidad = unidadNombreDash(fEnvUnidad(e));
+  const meta = `<div class="kv">
+    <div class="k">Formulario</div><div class="v">${escD(e.plantilla_nombre||e.plantillaNombre||'')}</div>
+    <div class="k">Código</div><div class="v">${escD(e.plantilla_codigo||e.plantillaCodigo||'—')}</div>
+    <div class="k">Unidad</div><div class="v">${escD(unidad||'—')}</div>
+    <div class="k">Llenado por</div><div class="v">${escD(e.llenado_por||e.llenadoPor||'—')}</div>
+    <div class="k">Fecha</div><div class="v">${new Date(fEnvCreado(e)).toLocaleString('es-CO')}</div>
+    <div class="k">N.º de registro</div><div class="v">${e.numero||'—'}</div>
+  </div>`;
+  const cuerpo = `<h2>Datos del registro</h2>${meta}<h2>Respuestas</h2><table>${filas || '<tr><td>Sin datos registrados</td></tr>'}</table>`;
+  printReport('Reporte de registro' + (e.numero?(' #'+e.numero):''), cuerpo, { logoFallback: plant && plant.logo });
+}
+
+function renderComparativo() {
+  const el = document.getElementById('comparativoBody');
+  const tipo = document.getElementById('unidadTipoSel').value;
+  const unidadesTipo = _biUnidades.filter(u => (u.tipo||'sede') === tipo);
+
+  if (!unidadesTipo.length) {
+    el.innerHTML = `<div class="gap-empty">No has creado ${U_TIPO_LBL[tipo]||'unidades'} todavía.<br>
+      <a href="unidades.html" style="color:var(--pri)">Crea unidades</a> y etiqueta tus formularios al llenar y asignar para comparar aquí.</div>`;
+    return;
+  }
+
+  const idset = new Set(unidadesTipo.map(u=>u.id));
+  const rows = unidadesTipo.map(u => {
+    const env = _biEnvios.filter(e => fEnvUnidad(e) === u.id).length;
+    const abiertos = _biHallazgos.filter(h => fHzUnidad(h) === u.id && (h.estado||'abierto') !== 'cerrado');
+    return { name: u.nombre, envios: env, abiertos: abiertos.length,
+             criticos: abiertos.filter(h => h.severidad === 'critico').length };
+  }).sort((a,b) => b.envios - a.envios);
+
+  // "Sin asignar": registros sin unidad de este tipo
+  const envSin = _biEnvios.filter(e => !idset.has(fEnvUnidad(e))).length;
+  const hzSin  = _biHallazgos.filter(h => !idset.has(fHzUnidad(h)) && (h.estado||'abierto') !== 'cerrado');
+  if (envSin || hzSin.length) {
+    rows.push({ name: 'Sin asignar', envios: envSin, abiertos: hzSin.length,
+                criticos: hzSin.filter(h => h.severidad === 'critico').length, _sin: true });
+  }
+
+  const maxEnv = Math.max(1, ...rows.map(r => r.envios));
+  el.innerHTML = `<div class="cmp-table">
+    <div class="cmp-head"><span>Unidad</span><span>Envíos</span><span>Abiertos</span><span>Críticos</span></div>
+    ${rows.map(r => `<div class="cmp-row${r._sin?' sinasignar':''}">
+      <span class="cmp-name" title="${escD(r.name)}">${escD(r.name)}</span>
+      <span class="cmp-bar">
+        <span class="cmp-bar-track"><span class="cmp-bar-fill" style="width:${Math.round(r.envios/maxEnv*100)}%"></span></span>
+        <span class="cmp-bar-num">${r.envios}</span>
+      </span>
+      <span class="cmp-num${r.abiertos?' hasc':''}">${r.abiertos}</span>
+      <span class="cmp-num${r.criticos?' crit':''}">${r.criticos}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+function buildTrendChart(envios, hallazgos) {
+  const labels = [], envCounts = [], hzCounts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear(), m = d.getMonth();
+    labels.push(`${MONTHS_ES[m]} ${String(y).slice(2)}`);
+    envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+    hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+  }
+  new Chart(document.getElementById('chartTrend'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Envíos',    data: envCounts, backgroundColor: 'rgba(37,99,235,.75)',  borderRadius: 5 },
+      { label: 'Hallazgos', data: hzCounts,  backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 5 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { color: CHART_TEXT, font:{size:11}, boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: CHART_TEXT, font:{size:11} }, grid: { color: CHART_GRID } },
+        y: { beginAtZero: true, ticks: { color: CHART_TEXT, precision: 0, font:{size:11} }, grid: { color: CHART_GRID } }
+      }
+    }
+  });
+}
+
 // ── Table ─────────────────────────────────────────────────────────
 let _allEnvios = [], _allPlantillas = [], _activeFilter = '';
 
@@ -547,7 +787,8 @@ function buildTable(envios, plantillas) {
     return;
   }
 
-  const rows = filtered.slice(0,100).map((e,i) => {
+  _reportEnvios = filtered.slice(0,100);
+  const rows = _reportEnvios.map((e,i) => {
     const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
     const d = raw ? new Date(raw).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '—';
     const estado = e.estado||'enviado';
@@ -569,7 +810,7 @@ function buildTable(envios, plantillas) {
       <td>${nombre} <span class="detail-expand-hint">▸ ${campoEntries.length} campo${campoEntries.length!==1?'s':''}</span></td>
       <td class="mut">${d}</td>
       <td><span class="badge ${estado==='enviado'?'ok':'draft'}">${estado==='enviado'?'✓ Enviado':'Borrador'}</span></td>
-      <td class="mut" style="font-size:.72rem;font-family:monospace">${id}</td>
+      <td class="mut" style="font-size:.72rem;font-family:monospace;white-space:nowrap">${id} <button onclick="event.stopPropagation();printEnvioReport(${i})" title="Reporte con marca (PDF)" style="background:none;border:1px solid var(--bor);border-radius:6px;cursor:pointer;padding:2px 6px;font-size:.82rem;margin-left:4px">📄</button></td>
     </tr>
     <tr class="detail-row" id="det_${i}" style="display:none">
       <td colspan="4"><div class="detail-cell"><div class="detail-grid">${detailItems||'<span style="color:var(--mut);font-size:.82rem">Sin datos registrados</span>'}</div></div></td>
@@ -608,11 +849,12 @@ function exportCSV() {
   });
   const unique = [...new Map(colKeys.map(k=>[k,k])).values()];
   const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
-  const header = ['Formulario','Fecha','Estado','N°',...unique.map(k=>colLabels[k])].map(esc).join(',');
+  const header = ['Formulario','Fecha','Estado','N°','Unidad',...unique.map(k=>colLabels[k])].map(esc).join(',');
   const rows = envios.map(e => {
     const raw = e.enviado_en||e.enviadoEn||e.creadoEn;
     const fecha = raw ? new Date(raw).toLocaleString('es-CO') : '';
     const pId = e.plantilla_id||e.plantillaId||'';
+    const uni = (_bi.unidades||[]).find(x => x.id === (e.unidad_id||e.unidadId));
     const vals = unique.map(col => {
       const [cPId,k] = col.split('§');
       if (cPId!==pId) return '';
@@ -621,7 +863,7 @@ function exportCSV() {
       if (typeof v==='string'&&v.startsWith('data:image')) return '[imagen]';
       return String(v??'');
     });
-    return [e.plantilla_nombre||e.plantillaNombre||'',fecha,e.estado||'enviado',e.numero||(e.id||'').slice(-12),...vals].map(esc).join(',');
+    return [e.plantilla_nombre||e.plantillaNombre||'',fecha,e.estado||'enviado',e.numero||(e.id||'').slice(-12),uni?uni.nombre:'',...vals].map(esc).join(',');
   });
   const csv = [header,...rows].join('\r\n');
   const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
@@ -636,7 +878,7 @@ async function init() {
   const now = new Date();
   document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
 
-  const { plantillas, envios, hallazgos, acciones, asignaciones, fromCloud } = await loadData();
+  const { plantillas, envios, hallazgos, acciones, asignaciones, unidades, fromCloud } = await loadData();
 
   // Source badge
   const badge = document.getElementById('srcBadge');
@@ -657,10 +899,18 @@ async function init() {
   if (typeof Chart !== 'undefined') {
     buildDailyChart(envios);
     buildFormChart(envios, plantillas);
+    buildTrendChart(envios, hallazgos);
   } else {
     document.getElementById('chartDaily').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:60px 0">Gráficas no disponibles sin conexión</p>';
     document.getElementById('chartForms').parentNode.innerHTML = '';
+    document.getElementById('chartTrend').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:40px 0">Gráfica no disponible sin conexión</p>';
   }
+
+  // Comparativo por unidad + datos para reportes
+  _biEnvios = envios; _biHallazgos = hallazgos; _biUnidades = unidades;
+  _bi = { plantillas, envios, hallazgos, acciones, asignaciones, unidades };
+  sbLoadOrg().then(o => { _biOrg = o; }).catch(()=>{});
+  renderComparativo();
   // Populate form filter dropdown (una opción por código de formulario, no por nombre)
   const groups = new Map(); // key -> label
   envios.forEach(e => {
