@@ -70,6 +70,11 @@ html.sb-collapsed .sidebar { transform: translateX(-100%); }
 @media (max-width: 860px) {
   .skf-sync-bar { top: auto; bottom: 68px; right: 14px; }
 }
+/* En escritorio, si la página tiene barra de herramientas, la barra de sync
+   baja debajo de ella para no chocar con los botones (Historial/Nueva). */
+@media (min-width: 861px) {
+  body.skf-has-toolbar .skf-sync-bar { top: 62px; }
+}
 
 /* ── Barra inferior móvil — inicio / sesión / sin conexión ──────────
    Solo visible en móvil. Reemplaza la necesidad de abrir el sidebar
