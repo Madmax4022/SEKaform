@@ -162,6 +162,17 @@ function skfRenderSidebar() {
   `;
   document.body.insertAdjacentHTML('afterbegin', html);
 
+  // En páginas con barra de herramientas (llenar, digitalizador) los botones
+  // de la toolbar viven arriba a la derecha, justo donde flota la barra de
+  // sincronización — se marca el body para bajarla y evitar el choque (CSS).
+  // La toolbar puede estar más abajo en el HTML que este script, así que se
+  // comprueba cuando el DOM ya está listo.
+  const _skfMarkToolbar = () => {
+    if (document.querySelector('.page-toolbar')) document.body.classList.add('skf-has-toolbar');
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _skfMarkToolbar);
+  else _skfMarkToolbar();
+
   // On mobile the sidebar is a flyout overlay — collapse it when the user
   // taps any nav link so the destination page doesn't re-open it.
   document.querySelectorAll('.sidebar-link').forEach(a => {
