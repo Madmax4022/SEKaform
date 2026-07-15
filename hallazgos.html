@@ -106,6 +106,7 @@ function normalizeHallazgoFromCloud(h) {
     plantillaNombre: h.plantilla_nombre||h.plantillaNombre, campoId: h.campo_id||h.campoId,
     campoEtiqueta: h.campo_etiqueta||h.campoEtiqueta, origen: h.origen, severidad: h.severidad,
     descripcion: h.descripcion, foto: h.foto, estado: h.estado||'abierto',
+    unidadId: h.unidad_id||h.unidadId||null,
     reportadoPor: h.reportado_por||h.reportadoPor, creadoEn: h.creado_en||h.creadoEn
   };
 }

@@ -111,6 +111,23 @@
     .recur-last{font-size:.7rem;color:var(--mut);white-space:nowrap;}
     .recur-count{font-size:.7rem;font-weight:800;background:var(--warn-dim);color:var(--warn);border-radius:20px;padding:3px 10px;white-space:nowrap;}
 
+    /* comparativo por unidad */
+    .cmp-table{display:flex;flex-direction:column;}
+    .cmp-head,.cmp-row{display:grid;grid-template-columns:1fr 42% 62px 62px;gap:10px;align-items:center;}
+    .cmp-head{font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700;padding-bottom:10px;border-bottom:1px solid var(--bor);}
+    .cmp-head span:nth-child(n+3),.cmp-row span:nth-child(n+3){text-align:right;}
+    .cmp-row{padding:11px 0;border-top:1px solid var(--bor);}
+    .cmp-row:first-of-type{border-top:none;}
+    .cmp-name{font-size:.84rem;font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+    .cmp-bar{display:flex;align-items:center;gap:8px;}
+    .cmp-bar-track{flex:1;height:8px;background:var(--card2);border-radius:5px;overflow:hidden;}
+    .cmp-bar-fill{height:100%;border-radius:5px;background:var(--pri);}
+    .cmp-bar-num{font-size:.8rem;font-weight:800;color:var(--txt);min-width:26px;text-align:right;}
+    .cmp-num{font-size:.85rem;font-weight:800;color:var(--mut);}
+    .cmp-num.hasc{color:var(--warn);}
+    .cmp-num.crit{color:var(--err);}
+    .cmp-row.sinasignar .cmp-name{color:var(--mut);font-style:italic;font-weight:600;}
+
     @media(max-width:900px){
       .stats-grid{grid-template-columns:repeat(2,1fr);}
       .chart-grid{grid-template-columns:1fr;}
@@ -229,6 +246,31 @@
       <div id="recurrentList"></div>
     </div>
 
+    <!-- comparativo por unidad -->
+    <h2 class="section-title">🏢 Comparativo por unidad<button class="skf-help" data-help-t="¿Cómo comparo mis unidades?" data-help="Elige si quieres comparar Sedes, Áreas o Contratistas. Verás, para cada uno:
+• Envíos: cuántos formularios se llenaron ahí.
+• Abiertos: hallazgos sin cerrar.
+• Críticos: los urgentes sin resolver.
+
+«Sin asignar» reúne los registros que no tienen unidad elegida. Para que aparezcan aquí, etiqueta tus formularios con su unidad al llenar y asignar.">?</button></h2>
+    <div class="chart-card" style="margin-bottom:24px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:.8rem;color:var(--mut)">Comparar:</span>
+        <select id="unidadTipoSel" class="filter-sel" onchange="renderComparativo()">
+          <option value="sede">🏢 Sedes</option>
+          <option value="area">🗂️ Áreas</option>
+          <option value="contratista">🤝 Contratistas</option>
+        </select>
+      </div>
+      <div id="comparativoBody"></div>
+    </div>
+
+    <!-- tendencia mensual -->
+    <div class="chart-card" style="margin-bottom:32px">
+      <div class="chart-title">📈 Tendencia mensual — envíos y hallazgos (últimos 6 meses)</div>
+      <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
+    </div>
+
     <!-- recent submissions table -->
     <div class="table-card">
       <div class="table-head">
@@ -275,8 +317,9 @@ async function loadData() {
   const localAsg = JSON.parse(localStorage.getItem('skf_asignaciones') || '[]');
   let plantillas = localP, envios = localE, fromCloud = false;
 
+  const localU   = JSON.parse(localStorage.getItem('skf_unidades') || '[]');
   const sbData = await Promise.all([
-    sbLoadPlantillas(), sbLoadEnvios(), sbLoadHallazgos(), sbLoadAccionesCorrectivas(), sbLoadAsignaciones()
+    sbLoadPlantillas(), sbLoadEnvios(), sbLoadHallazgos(), sbLoadAccionesCorrectivas(), sbLoadAsignaciones(), sbLoadUnidades()
   ]);
   if (sbData[0] !== null && sbData[1] !== null) {
     fromCloud = true;
@@ -289,10 +332,11 @@ async function loadData() {
   const hallazgos     = mergeByCloudId(sbData[2], localH);
   const acciones      = mergeByCloudId(sbData[3], localA);
   const asignaciones  = mergeByCloudId(sbData[4], localAsg);
+  const unidades      = mergeByCloudId(sbData[5], localU);
 
   const sortFn = (a,b) => new Date(b.enviado_en||b.enviadoEn||b.creadoEn||0) - new Date(a.enviado_en||a.enviadoEn||a.creadoEn||0);
   envios.sort(sortFn);
-  return { plantillas, envios, hallazgos, acciones, asignaciones, fromCloud };
+  return { plantillas, envios, hallazgos, acciones, asignaciones, unidades, fromCloud };
 }
 
 // ── Stats ────────────────────────────────────────────────────────
@@ -418,6 +462,8 @@ const fAsgCreado = a => a.creado_en||a.creadoEn;
 const fEnvPlantillaId = e => e.plantilla_id||e.plantillaId;
 const fEnvCreado = e => e.creado_en||e.creadoEn||e.enviado_en||e.enviadoEn;
 const fEnvLlenadoPor = e => e.llenado_por||e.llenadoPor;
+const fEnvUnidad = e => e.unidad_id||e.unidadId||null;
+const fHzUnidad = h => h.unidad_id||h.unidadId||null;
 const normTxt = s => String(s||'').trim().toLowerCase();
 const escD = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 
@@ -523,6 +569,79 @@ function buildCompliance(hallazgos, acciones, asignaciones, envios) {
         </div>
       </div>`).join('');
   }
+}
+
+// ── Comparativo por unidad ──────────────────────────────────────────
+let _biEnvios = [], _biHallazgos = [], _biUnidades = [];
+const U_TIPO_LBL = { sede:'sedes', area:'áreas', contratista:'contratistas' };
+
+function renderComparativo() {
+  const el = document.getElementById('comparativoBody');
+  const tipo = document.getElementById('unidadTipoSel').value;
+  const unidadesTipo = _biUnidades.filter(u => (u.tipo||'sede') === tipo);
+
+  if (!unidadesTipo.length) {
+    el.innerHTML = `<div class="gap-empty">No has creado ${U_TIPO_LBL[tipo]||'unidades'} todavía.<br>
+      <a href="unidades.html" style="color:var(--pri)">Crea unidades</a> y etiqueta tus formularios al llenar y asignar para comparar aquí.</div>`;
+    return;
+  }
+
+  const idset = new Set(unidadesTipo.map(u=>u.id));
+  const rows = unidadesTipo.map(u => {
+    const env = _biEnvios.filter(e => fEnvUnidad(e) === u.id).length;
+    const abiertos = _biHallazgos.filter(h => fHzUnidad(h) === u.id && (h.estado||'abierto') !== 'cerrado');
+    return { name: u.nombre, envios: env, abiertos: abiertos.length,
+             criticos: abiertos.filter(h => h.severidad === 'critico').length };
+  }).sort((a,b) => b.envios - a.envios);
+
+  // "Sin asignar": registros sin unidad de este tipo
+  const envSin = _biEnvios.filter(e => !idset.has(fEnvUnidad(e))).length;
+  const hzSin  = _biHallazgos.filter(h => !idset.has(fHzUnidad(h)) && (h.estado||'abierto') !== 'cerrado');
+  if (envSin || hzSin.length) {
+    rows.push({ name: 'Sin asignar', envios: envSin, abiertos: hzSin.length,
+                criticos: hzSin.filter(h => h.severidad === 'critico').length, _sin: true });
+  }
+
+  const maxEnv = Math.max(1, ...rows.map(r => r.envios));
+  el.innerHTML = `<div class="cmp-table">
+    <div class="cmp-head"><span>Unidad</span><span>Envíos</span><span>Abiertos</span><span>Críticos</span></div>
+    ${rows.map(r => `<div class="cmp-row${r._sin?' sinasignar':''}">
+      <span class="cmp-name" title="${escD(r.name)}">${escD(r.name)}</span>
+      <span class="cmp-bar">
+        <span class="cmp-bar-track"><span class="cmp-bar-fill" style="width:${Math.round(r.envios/maxEnv*100)}%"></span></span>
+        <span class="cmp-bar-num">${r.envios}</span>
+      </span>
+      <span class="cmp-num${r.abiertos?' hasc':''}">${r.abiertos}</span>
+      <span class="cmp-num${r.criticos?' crit':''}">${r.criticos}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+function buildTrendChart(envios, hallazgos) {
+  const labels = [], envCounts = [], hzCounts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear(), m = d.getMonth();
+    labels.push(`${MONTHS_ES[m]} ${String(y).slice(2)}`);
+    envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+    hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+  }
+  new Chart(document.getElementById('chartTrend'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Envíos',    data: envCounts, backgroundColor: 'rgba(37,99,235,.75)',  borderRadius: 5 },
+      { label: 'Hallazgos', data: hzCounts,  backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 5 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { color: CHART_TEXT, font:{size:11}, boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: CHART_TEXT, font:{size:11} }, grid: { color: CHART_GRID } },
+        y: { beginAtZero: true, ticks: { color: CHART_TEXT, precision: 0, font:{size:11} }, grid: { color: CHART_GRID } }
+      }
+    }
+  });
 }
 
 // ── Table ─────────────────────────────────────────────────────────
@@ -641,7 +760,7 @@ async function init() {
   const now = new Date();
   document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
 
-  const { plantillas, envios, hallazgos, acciones, asignaciones, fromCloud } = await loadData();
+  const { plantillas, envios, hallazgos, acciones, asignaciones, unidades, fromCloud } = await loadData();
 
   // Source badge
   const badge = document.getElementById('srcBadge');
@@ -662,10 +781,16 @@ async function init() {
   if (typeof Chart !== 'undefined') {
     buildDailyChart(envios);
     buildFormChart(envios, plantillas);
+    buildTrendChart(envios, hallazgos);
   } else {
     document.getElementById('chartDaily').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:60px 0">Gráficas no disponibles sin conexión</p>';
     document.getElementById('chartForms').parentNode.innerHTML = '';
+    document.getElementById('chartTrend').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:40px 0">Gráfica no disponible sin conexión</p>';
   }
+
+  // Comparativo por unidad
+  _biEnvios = envios; _biHallazgos = hallazgos; _biUnidades = unidades;
+  renderComparativo();
   // Populate form filter dropdown (una opción por código de formulario, no por nombre)
   const groups = new Map(); // key -> label
   envios.forEach(e => {
