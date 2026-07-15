@@ -263,6 +263,11 @@ function mergeByCloudId(cloud, local) {
 }
 
 async function loadData() {
+  // Nube-como-verdad: empuja lo pendiente antes de leer para que los números
+  // incluyan lo recién sincronizado.
+  if (navigator.onLine && typeof skfProcessQueue === 'function') {
+    try { await skfProcessQueue(); } catch {}
+  }
   const localP   = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
   const localE   = JSON.parse(localStorage.getItem('skf_envios') || '[]');
   const localH   = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');

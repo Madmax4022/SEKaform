@@ -120,21 +120,13 @@ function normalizeAccionFromCloud(a) {
 
 async function syncFromCloud() {
   let fromCloud = false;
+  if (!navigator.onLine) return fromCloud;
   try {
+    await skfProcessQueue();   // empuja lo pendiente antes de leer: la nube queda al día
     const [cloudH, cloudA] = await Promise.all([sbLoadHallazgos(), sbLoadAccionesCorrectivas()]);
-    if (cloudH !== null) {
-      fromCloud = true;
-      const localH = getHallazgos();
-      const normH = cloudH.map(normalizeHallazgoFromCloud);
-      const cloudIds = new Set(normH.map(h=>h.id));
-      setHallazgos([...normH, ...localH.filter(h=>!cloudIds.has(h.id))]);
-    }
-    if (cloudA !== null) {
-      const localA = getAcciones();
-      const normA = cloudA.map(normalizeAccionFromCloud);
-      const cloudIds = new Set(normA.map(a=>a.id));
-      setAcciones([...normA, ...localA.filter(a=>!cloudIds.has(a.id))]);
-    }
+    if (cloudH !== null) fromCloud = true;
+    skfReconcile('skf_hallazgos', cloudH, normalizeHallazgoFromCloud);
+    skfReconcile('skf_acciones_correctivas', cloudA, normalizeAccionFromCloud);
   } catch (e) { /* offline-first: keep local data as-is */ }
   return fromCloud;
 }

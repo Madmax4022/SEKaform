@@ -103,6 +103,39 @@ async function skfPuedeEscribir() {
   return r === 'dueno' || r === 'admin' || r === 'editor';
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Reconciliación nube-como-verdad
+//
+//  La nube es la fuente de verdad; localStorage es caché. Al reconciliar:
+//   · la nube gana en conflictos (ítem con el mismo id → se queda el de la nube),
+//   · los borrados remotos se propagan (un ítem que ANTES estaba en la nube y
+//     ya no está, se elimina del caché local),
+//   · los ítems locales que la nube nunca ha visto (creados sin conexión, aún
+//     en la cola de sincronización) se conservan — nunca se pierde un registro
+//     de campo sin sincronizar.
+//
+//  Guardar el set de ids vistos en la nube (`<key>__synced`) es lo que permite
+//  distinguir "borrado remoto" (antes estaba) de "creado local" (nunca estuvo)
+//  sin arriesgar datos. Con cloudItems === null (sin conexión / sin sesión /
+//  error) no se toca nada: se devuelve el caché local intacto.
+// ─────────────────────────────────────────────────────────────
+function skfReconcile(key, cloudItems, normalizeFn) {
+  if (cloudItems == null) {
+    try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+  }
+  const norm = cloudItems.map(normalizeFn);
+  const cloudIds = new Set(norm.map(x => x.id));
+  const syncedKey = key + '__synced';
+  let prevSynced, local;
+  try { prevSynced = new Set(JSON.parse(localStorage.getItem(syncedKey) || '[]')); } catch { prevSynced = new Set(); }
+  try { local = JSON.parse(localStorage.getItem(key) || '[]'); } catch { local = []; }
+  const localOnly = local.filter(x => x && !cloudIds.has(x.id) && !prevSynced.has(x.id));
+  const merged = [...norm, ...localOnly];
+  localStorage.setItem(key, JSON.stringify(merged));
+  localStorage.setItem(syncedKey, JSON.stringify([...cloudIds]));
+  return merged;
+}
+
 async function sbSyncPlantilla(tmpl) {
   try {
     const sb = await getSB();

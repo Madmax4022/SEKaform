@@ -164,27 +164,14 @@ function normalizeAsignacionFromCloud(a) {
 
 async function syncFromCloud() {
   let fromCloud = false;
+  if (!navigator.onLine) return fromCloud;
   try {
+    await skfProcessQueue();   // empuja lo pendiente antes de leer: la nube queda al día
     const [cloudP, cloudE, cloudA] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios(), sbLoadAsignaciones()]);
-    if (cloudP !== null) {
-      fromCloud = true;
-      const localP = getPlantillas();
-      const normP = cloudP.map(normalizePlantillaFromCloud);
-      const cloudIds = new Set(normP.map(p=>p.id));
-      localStorage.setItem('skf_plantillas', JSON.stringify([...normP, ...localP.filter(p=>!cloudIds.has(p.id))]));
-    }
-    if (cloudE !== null) {
-      const localE = getEnvios();
-      const normE = cloudE.map(normalizeEnvioFromCloud);
-      const cloudIds = new Set(normE.map(e=>e.id));
-      localStorage.setItem('skf_envios', JSON.stringify([...normE, ...localE.filter(e=>!cloudIds.has(e.id))]));
-    }
-    if (cloudA !== null) {
-      const localA = getAsignaciones();
-      const normA = cloudA.map(normalizeAsignacionFromCloud);
-      const cloudIds = new Set(normA.map(a=>a.id));
-      setAsignaciones([...normA, ...localA.filter(a=>!cloudIds.has(a.id))]);
-    }
+    if (cloudP !== null) fromCloud = true;
+    skfReconcile('skf_plantillas', cloudP, normalizePlantillaFromCloud);
+    skfReconcile('skf_envios', cloudE, normalizeEnvioFromCloud);
+    skfReconcile('skf_asignaciones', cloudA, normalizeAsignacionFromCloud);
   } catch(e) { /* offline-first: keep local data as-is */ }
   return fromCloud;
 }

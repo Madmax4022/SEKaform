@@ -478,20 +478,12 @@ function normalizeEnvioFromCloud(e) {
   };
 }
 async function syncFromCloud() {
+  if (!navigator.onLine) return;
   try {
+    await skfProcessQueue();   // empuja lo pendiente antes de leer: la nube queda al día
     const [cloudP, cloudE] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios()]);
-    if (cloudP) {
-      const localP = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
-      const normP = cloudP.map(normalizePlantillaFromCloud);
-      const cloudIds = new Set(normP.map(p=>p.id));
-      localStorage.setItem('skf_plantillas', JSON.stringify([...normP, ...localP.filter(p=>!cloudIds.has(p.id))]));
-    }
-    if (cloudE) {
-      const localE = JSON.parse(localStorage.getItem('skf_envios')||'[]');
-      const normE = cloudE.map(normalizeEnvioFromCloud);
-      const cloudIds = new Set(normE.map(e=>e.id));
-      localStorage.setItem('skf_envios', JSON.stringify([...normE, ...localE.filter(e=>!cloudIds.has(e.id))]));
-    }
+    skfReconcile('skf_plantillas', cloudP, normalizePlantillaFromCloud);
+    skfReconcile('skf_envios', cloudE, normalizeEnvioFromCloud);
   } catch(e) { /* offline-first: keep local data as-is */ }
 }
 
