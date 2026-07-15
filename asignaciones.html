@@ -114,6 +114,11 @@ Las personas asignadas NO necesitan cuenta: abren el link, escriben su nombre y 
       <select id="asgPlantilla"></select>
     </div>
     <div class="fg">
+      <label>Unidad — sede / área / contratista (opcional)</label>
+      <select id="asgUnidad"></select>
+      <div class="fg-hint">¿No aparece la que buscas? <a href="unidades.html" style="color:var(--pri)">Crea sedes y áreas aquí</a>.</div>
+    </div>
+    <div class="fg">
       <label>Personas asignadas</label>
       <textarea id="asgNames" placeholder="Juan Pérez&#10;María Gómez, maria@empresa.com&#10;Carlos Ruiz"></textarea>
       <div class="fg-hint">Un nombre por línea. Para agregar correo: Juan Pérez, juan@empresa.com</div>
@@ -137,6 +142,7 @@ function getPlantillas() { return JSON.parse(localStorage.getItem('skf_plantilla
 function getEnvios() { return JSON.parse(localStorage.getItem('skf_envios')||'[]'); }
 function getAsignaciones() { return JSON.parse(localStorage.getItem('skf_asignaciones')||'[]'); }
 function setAsignaciones(list) { localStorage.setItem('skf_asignaciones', JSON.stringify(list)); }
+function getUnidades() { try { return JSON.parse(localStorage.getItem('skf_unidades')||'[]'); } catch { return []; } }
 
 function normalizePlantillaFromCloud(p) {
   return {
@@ -158,8 +164,13 @@ function normalizeEnvioFromCloud(e) {
 function normalizeAsignacionFromCloud(a) {
   return {
     id: a.id, plantillaId: a.plantilla_id||a.plantillaId, plantillaNombre: a.plantilla_nombre||a.plantillaNombre,
+    unidadId: a.unidad_id||a.unidadId||null,
     nombre: a.nombre, correo: a.correo||null, creadoEn: a.creado_en||a.creadoEn
   };
+}
+function normalizeUnidadFromCloud(u) {
+  return { id: u.id, nombre: u.nombre, tipo: u.tipo||'sede',
+           padreId: u.padre_id||u.padreId||null, creadoEn: u.creado_en||u.creadoEn };
 }
 
 async function syncFromCloud() {
@@ -167,11 +178,12 @@ async function syncFromCloud() {
   if (!navigator.onLine) return fromCloud;
   try {
     await skfProcessQueue();   // empuja lo pendiente antes de leer: la nube queda al día
-    const [cloudP, cloudE, cloudA] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios(), sbLoadAsignaciones()]);
+    const [cloudP, cloudE, cloudA, cloudU] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios(), sbLoadAsignaciones(), sbLoadUnidades()]);
     if (cloudP !== null) fromCloud = true;
     skfReconcile('skf_plantillas', cloudP, normalizePlantillaFromCloud);
     skfReconcile('skf_envios', cloudE, normalizeEnvioFromCloud);
     skfReconcile('skf_asignaciones', cloudA, normalizeAsignacionFromCloud);
+    skfReconcile('skf_unidades', cloudU, normalizeUnidadFromCloud);
   } catch(e) { /* offline-first: keep local data as-is */ }
   return fromCloud;
 }
@@ -188,6 +200,25 @@ function populatePlantillaSelect() {
   }
   if (btn) btn.disabled = false;
   sel.innerHTML = list.map(t => `<option value="${esc(t.id)}">${esc(t.nombre)}${t.codigo ? ' — '+esc(t.codigo) : ''}</option>`).join('');
+}
+
+const U_ICO = { sede:'🏢', area:'🗂️', contratista:'🤝', otro:'📍' };
+function unidadNombre(id) {
+  if (!id) return '';
+  const u = getUnidades().find(x=>x.id===id);
+  return u ? `${U_ICO[u.tipo||'sede']||'📍'} ${u.nombre}` : '';
+}
+function populateUnidadSelect() {
+  const sel = document.getElementById('asgUnidad');
+  if (!sel) return;
+  const list = getUnidades();
+  let html = '<option value="">Sin especificar</option>';
+  ['sede','area','contratista','otro'].forEach(t => {
+    list.filter(u => (u.tipo||'sede') === t).forEach(u => {
+      html += `<option value="${esc(u.id)}">${U_ICO[t]} ${esc(u.nombre)}</option>`;
+    });
+  });
+  sel.innerHTML = html;
 }
 
 async function ensurePublicShare(t) {
@@ -217,12 +248,13 @@ async function createAsignacion() {
   await ensurePublicShare(t);
 
   const creadoEn = new Date().toISOString();
+  const unidadId = document.getElementById('asgUnidad').value || null;
   const asignaciones = getAsignaciones();
   const nuevas = lines.map(line => {
     const [nombre, correo] = line.split(',').map(s=>s && s.trim());
     const a = {
       id: `asg_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
-      plantillaId: t.id, plantillaNombre: t.nombre,
+      plantillaId: t.id, plantillaNombre: t.nombre, unidadId,
       nombre, correo: correo || null, creadoEn
     };
     skfSyncOrQueue('asignacion', a);
@@ -299,7 +331,7 @@ function renderGroups() {
   const groups = {};
   asignaciones.forEach(a => {
     const k = groupKey(a);
-    if (!groups[k]) groups[k] = { plantillaId: a.plantillaId, plantillaNombre: a.plantillaNombre, creadoEn: a.creadoEn, personas: [] };
+    if (!groups[k]) groups[k] = { plantillaId: a.plantillaId, plantillaNombre: a.plantillaNombre, unidadId: a.unidadId||null, creadoEn: a.creadoEn, personas: [] };
     groups[k].personas.push(a);
   });
 
@@ -325,7 +357,7 @@ function renderGroups() {
       <div class="asg-group-top" onclick="toggleGroup('${esc(k)}')">
         <div class="asg-group-info">
           <div class="asg-group-name">${esc(g.plantillaNombre)}</div>
-          <div class="asg-group-meta">Asignado el ${fecha} · ${total} persona${total!==1?'s':''}</div>
+          <div class="asg-group-meta">Asignado el ${fecha} · ${total} persona${total!==1?'s':''}${g.unidadId && unidadNombre(g.unidadId) ? ' · '+esc(unidadNombre(g.unidadId)) : ''}</div>
         </div>
         <div class="asg-group-acts">
           ${t ? `<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();copyShareLinkById('${esc(t.id)}')">🔗 Copiar link</button>` : ''}
@@ -380,6 +412,7 @@ async function init() {
   if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
 
   populatePlantillaSelect();
+  populateUnidadSelect();
   renderGroups();
 }
 

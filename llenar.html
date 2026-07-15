@@ -328,6 +328,10 @@
       <input type="text" id="fillerName" placeholder="Tu nombre completo">
       <div class="err-msg">Este campo es requerido</div>
     </div>
+    <div class="fg hidden" id="fg_unidad">
+      <label><span class="fg-ico">🏢</span>Unidad — sede / área (opcional)</label>
+      <select id="fillUnidad" style="width:100%;background:var(--inp);border:1px solid var(--bor);color:var(--txt);border-radius:8px;padding:11px 12px;font-size:.9rem;font-family:inherit;outline:none"></select>
+    </div>
     <div id="fFields"></div>
   </div>
   <div class="form-footer">
@@ -472,18 +476,42 @@ function normalizeEnvioFromCloud(e) {
   return {
     id: e.id, numero: e.numero, plantillaId: e.plantilla_id||e.plantillaId, plantillaNombre: e.plantilla_nombre||e.plantillaNombre,
     plantillaCodigo: e.plantilla_codigo||e.plantillaCodigo||'',
+    unidadId: e.unidad_id||e.unidadId||null,
     estado: e.estado||'enviado', datos: e.datos||{},
     llenadoPor: e.llenado_por||e.llenadoPor||null, llenadoCorreo: e.llenado_correo||e.llenadoCorreo||null,
     creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn
   };
 }
+function normalizeUnidadFromCloud(u) {
+  return { id: u.id, nombre: u.nombre, tipo: u.tipo||'sede',
+           padreId: u.padre_id||u.padreId||null, creadoEn: u.creado_en||u.creadoEn };
+}
+function getUnidades() { try { return JSON.parse(localStorage.getItem('skf_unidades')||'[]'); } catch { return []; } }
+const U_ICO_FILL = { sede:'🏢', area:'🗂️', contratista:'🤝', otro:'📍' };
+function populateFillUnidad() {
+  const fg = document.getElementById('fg_unidad');
+  const sel = document.getElementById('fillUnidad');
+  if (!fg || !sel) return;
+  const list = getUnidades();
+  if (!list.length) { fg.classList.add('hidden'); sel.innerHTML = ''; return; }
+  let html = '<option value="">Sin especificar</option>';
+  ['sede','area','contratista','otro'].forEach(t => {
+    list.filter(u => (u.tipo||'sede') === t).forEach(u => {
+      html += `<option value="${_escU(u.id)}">${U_ICO_FILL[t]} ${_escU(u.nombre)}</option>`;
+    });
+  });
+  sel.innerHTML = html;
+  fg.classList.remove('hidden');
+}
+function _escU(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 async function syncFromCloud() {
   if (!navigator.onLine) return;
   try {
     await skfProcessQueue();   // empuja lo pendiente antes de leer: la nube queda al día
-    const [cloudP, cloudE] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios()]);
+    const [cloudP, cloudE, cloudU] = await Promise.all([sbLoadPlantillas(), sbLoadEnvios(), sbLoadUnidades()]);
     skfReconcile('skf_plantillas', cloudP, normalizePlantillaFromCloud);
     skfReconcile('skf_envios', cloudE, normalizeEnvioFromCloud);
+    skfReconcile('skf_unidades', cloudU, normalizeUnidadFromCloud);
   } catch(e) { /* offline-first: keep local data as-is */ }
 }
 
@@ -548,6 +576,7 @@ async function openPublicTemplate(token) {
   else { fLogo.classList.add('hidden'); }
 
   document.getElementById('fg_fillerName').classList.remove('hidden');
+  document.getElementById('fg_unidad').classList.add('hidden');   // el visitante anónimo no elige unidad
   document.getElementById('fillerName').value = '';
 
   renderFields(activeTmpl.campos);
@@ -777,6 +806,7 @@ function openTemplate(id) {
   if (t.logo) { fLogo.src = t.logo; fLogo.classList.remove('hidden'); }
   else { fLogo.classList.add('hidden'); }
   document.getElementById('fg_fillerName').classList.add('hidden');
+  populateFillUnidad();   // selector de unidad (solo llenado con sesión)
 
   renderFields(t.campos);
   show('vForm');
@@ -1268,6 +1298,7 @@ function submitForm() {
       plantillaCodigo: activeTmpl.codigo || '',
       estado: 'enviado',
       datos: {...submission},
+      unidadId: isPublicFill ? null : (document.getElementById('fillUnidad') ? document.getElementById('fillUnidad').value || null : null),
       llenadoPor: isPublicFill ? document.getElementById('fillerName').value.trim() : '',
       creadoEn: new Date().toISOString(),
       enviadoEn: new Date().toISOString()

@@ -7,7 +7,7 @@
 // hay red simplemente fallan, y supabase-config.js ya las encola para
 // reintentarlas al volver la conexión (ver SKF_QUEUE_KEY).
 
-const CACHE_VERSION = 'skf-shell-v2';
+const CACHE_VERSION = 'skf-shell-v3';
 
 const SHELL_ASSETS = [
   'index.html',
@@ -16,6 +16,7 @@ const SHELL_ASSETS = [
   'digitalizador.html',
   'llenar.html',
   'asignaciones.html',
+  'unidades.html',
   'hallazgos.html',
   'dashboard.html',
   'styles.css',
