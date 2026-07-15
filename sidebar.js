@@ -112,6 +112,29 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#skfHelpPop')) _skfCloseHelp();
 });
 
+// ── Rol de solo lectura ──────────────────────────────────────────────────────
+// Si el usuario es "lector" en su organización, muestra un aviso y activa la
+// clase .skf-lector en <html> (styles.css oculta/desactiva los controles de
+// escritura). El servidor ya rechaza esas escrituras por RLS; esto solo evita
+// mostrar botones que fallarían. Si no se puede resolver el rol (sin sesión,
+// sin conexión), no se gatea nada: se muestra la UI completa y el servidor
+// sigue siendo la autoridad.
+async function skfApplyRoleGating() {
+  if (typeof skfRol !== 'function') return;
+  let rol = null;
+  try { rol = await skfRol(); } catch {}
+  if (rol !== 'lector') return;
+  document.documentElement.classList.add('skf-lector');
+  if (document.getElementById('skfReadonlyBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'skfReadonlyBar';
+  bar.className = 'skf-readonly-bar';
+  bar.innerHTML = '👁️ Tu rol es <strong>solo lectura</strong>: puedes ver todo, pero no crear ni editar. Pídele a un administrador de tu organización que cambie tu permiso si necesitas editar.';
+  const host = document.querySelector('.page.on .wrap') || document.querySelector('.wrap, .wrapper');
+  if (host) host.insertAdjacentElement('afterbegin', bar);
+  else document.body.insertAdjacentElement('afterbegin', bar);
+}
+
 function skfRenderSidebar() {
   const current = (location.pathname.split('/').pop() || 'index.html');
   const links = SKF_NAV_LINKS.map(n =>
@@ -153,6 +176,7 @@ function skfRenderSidebar() {
     sbGetUser().then(user => {
       _skfUpdateBottomAuth(user || null);
       if (!user) return;
+      skfApplyRoleGating();
       const bar = document.getElementById('sidebarAuth');
       bar.innerHTML = `<span class="auth-chip">☁ ${_skfEsc(user.email)}</span><button class="auth-bell" id="skfBellBtn" onclick="skfToggleNotifications()">🔕</button><a class="auth-link" onclick="sbSignOut().then(()=>location.reload())">Salir</a>`;
       if (typeof skfUpdateBellIcon === 'function') skfUpdateBellIcon();
