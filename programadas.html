@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Inspecciones programadas — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="supabase-config.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 28px; line-height: 1.6; max-width: 640px; }
+    .card { background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 22px 22px 20px; margin-bottom: 28px; }
+    .card h2 { font-size: 1rem; font-weight: 800; margin-bottom: 16px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 620px){ .grid2 { grid-template-columns: 1fr; } }
+    .fg { margin-bottom: 14px; }
+    .fg label { display: block; font-size: .8rem; font-weight: 700; color: var(--mut); margin-bottom: 7px; }
+    .fg input, .fg select { width: 100%; background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 8px; padding: 10px 12px; font-size: .9rem; font-family: inherit; outline: none; transition: border-color .15s; }
+    .fg input:focus, .fg select:focus { border-color: var(--pri); }
+
+    .ins-row { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--bor); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; border-left: 4px solid var(--bor); }
+    .ins-row.venc { border-left-color: var(--err); }
+    .ins-row.pronto { border-left-color: var(--warn); }
+    .ins-row.aldia { border-left-color: var(--ok); }
+    .ins-info { flex: 1; min-width: 0; }
+    .ins-nombre { font-weight: 700; font-size: .95rem; }
+    .ins-meta { font-size: .78rem; color: var(--mut); margin-top: 3px; }
+    .ins-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .ins-pill { font-size: .74rem; font-weight: 800; border-radius: 20px; padding: 4px 11px; white-space: nowrap; }
+    .ins-pill.venc { background: rgba(239,68,68,.15); color: var(--err); }
+    .ins-pill.pronto { background: var(--warn-dim); color: var(--warn); }
+    .ins-pill.aldia { background: var(--ok-dim); color: var(--ok); }
+    .mini { background: transparent; border: 1px solid var(--bor); color: var(--mut); border-radius: 7px; padding: 6px 11px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
+    .mini:hover { color: var(--txt); border-color: var(--mut); }
+    .mini.done { border-color: rgba(26,188,156,.4); color: var(--ok); }
+    .mini.done:hover { background: var(--ok-dim); }
+    .mini.del:hover { color: var(--err); border-color: rgba(239,68,68,.5); }
+
+    .grp-h { font-size: .78rem; font-weight: 800; color: var(--mut); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 10px; }
+    .empty-state { text-align: center; padding: 56px 20px; color: var(--mut); }
+    .es-ico { font-size: 3.2rem; display: block; margin-bottom: 14px; }
+    .empty-state h2 { font-size: 1.05rem; margin-bottom: 8px; color: var(--txt); }
+    .empty-state p { font-size: .85rem; line-height: 1.55; max-width: 360px; margin: 0 auto; }
+
+    .setup-banner { background: rgba(37,99,235,.1); border: 1px solid rgba(37,99,235,.3); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: none; }
+    .setup-banner.on { display: flex; align-items: flex-start; gap: 14px; }
+    .setup-banner-ico { font-size: 1.5rem; flex-shrink: 0; }
+    .setup-banner h3 { font-size: .9rem; font-weight: 700; margin-bottom: 4px; }
+    .setup-banner p { font-size: .82rem; color: var(--mut); line-height: 1.55; }
+    .setup-banner a { color: var(--pri); }
+    .toast { position: fixed; bottom: 24px; right: 16px; background: var(--card); border: 1px solid var(--bor); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 9px; font-size: .85rem; font-weight: 600; z-index: 2000; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+    .toast.ok { border-color: var(--ok); } .toast.er { border-color: var(--err); }
+  </style>
+</head>
+<body>
+
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <h1 class="pg-h">Inspecciones programadas<button class="skf-help" data-help-t="¿Qué es una inspección programada?" data-help="Es un recordatorio de que un formulario debe llenarse cada cierto tiempo — por ejemplo, revisar los extintores cada mes.
+
+Defines cada cuánto se repite y la próxima fecha. La lista te avisa cuáles están al día, cuáles vencen pronto y cuáles ya se vencieron.
+
+Cuando la completes, toca «Marcar hecha» y la fecha avanza sola al siguiente periodo.">?</button></h1>
+  <p class="pg-sub">Recordatorios de formularios que se repiten — extintores cada mes, fumigación cada trimestre. La app te avisa qué vence pronto y qué está vencido, y al completarlas la fecha avanza sola.</p>
+
+  <div class="setup-banner" id="setupBanner">
+    <div class="setup-banner-ico">☁</div>
+    <div>
+      <h3>Inicia sesión para compartir tus inspecciones</h3>
+      <p>Sin sesión se guardan solo en <strong>este dispositivo</strong>. Con una cuenta las ve todo tu equipo. <a href="login.html">Crear cuenta gratuita →</a></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>+ Nueva inspección programada</h2>
+    <div class="fg">
+      <label>Formulario a repetir</label>
+      <select id="inPlantilla"></select>
+    </div>
+    <div class="grid2">
+      <div class="fg">
+        <label>Nombre / referencia</label>
+        <input type="text" id="inNombre" placeholder="Ej. Inspección de extintores" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Unidad — sede / área (opcional)</label>
+        <select id="inUnidad"></select>
+      </div>
+      <div class="fg">
+        <label>Frecuencia</label>
+        <select id="inFrecuencia">
+          <option value="diaria">Diaria</option>
+          <option value="semanal">Semanal</option>
+          <option value="quincenal">Quincenal</option>
+          <option value="mensual" selected>Mensual</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="semestral">Semestral</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Próximo vencimiento</label>
+        <input type="date" id="inProximo">
+      </div>
+      <div class="fg">
+        <label>Responsable (opcional)</label>
+        <input type="text" id="inResp" placeholder="Nombre del responsable" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Correo del responsable (opcional)</label>
+        <input type="email" id="inCorreo" placeholder="correo@empresa.com" autocomplete="off">
+      </div>
+    </div>
+    <button class="btn btn-pri" id="btnCrear" onclick="crearInspeccion()">Programar →</button>
+  </div>
+
+  <div id="lista"></div>
+</div>
+
+<script>
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+const FREQ_LBL = { diaria:'Diaria', semanal:'Semanal', quincenal:'Quincenal', mensual:'Mensual', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' };
+const U_ICO = { sede:'🏢', area:'🗂️', contratista:'🤝', otro:'📍' };
+
+function getPlantillas(){ try { return JSON.parse(localStorage.getItem('skf_plantillas')||'[]'); } catch { return []; } }
+function getUnidades(){ try { return JSON.parse(localStorage.getItem('skf_unidades')||'[]'); } catch { return []; } }
+function getInspecciones(){ try { return JSON.parse(localStorage.getItem('skf_inspecciones')||'[]'); } catch { return []; } }
+function setInspecciones(l){ localStorage.setItem('skf_inspecciones', JSON.stringify(l)); }
+
+function normalizePlantillaFromCloud(p){ return { id:p.id, nombre:p.nombre, codigo:p.codigo||'', campos:p.campos||[] }; }
+function normalizeUnidadFromCloud(u){ return { id:u.id, nombre:u.nombre, tipo:u.tipo||'sede', creadoEn:u.creado_en||u.creadoEn }; }
+function normalizeInspeccionFromCloud(i){
+  return { id:i.id, plantillaId:i.plantilla_id||i.plantillaId, unidadId:i.unidad_id||i.unidadId||null,
+    nombre:i.nombre, frecuencia:i.frecuencia||'mensual', proximoEn:i.proximo_en||i.proximoEn,
+    responsable:i.responsable||null, correo:i.correo||null, activa:i.activa!==false,
+    ultimoCompletado:i.ultimo_completado||i.ultimoCompletado||null, creadoEn:i.creado_en||i.creadoEn };
+}
+
+async function syncFromCloud(){
+  if (!navigator.onLine) return false;
+  let fromCloud = false;
+  try {
+    await skfProcessQueue();
+    const [cp, cu, ci] = await Promise.all([sbLoadPlantillas(), sbLoadUnidades(), sbLoadInspecciones()]);
+    if (ci !== null) fromCloud = true;
+    skfReconcile('skf_plantillas', cp, normalizePlantillaFromCloud);
+    skfReconcile('skf_unidades', cu, normalizeUnidadFromCloud);
+    skfReconcile('skf_inspecciones', ci, normalizeInspeccionFromCloud);
+  } catch(e) { /* offline-first */ }
+  return fromCloud;
+}
+
+function toast(msg, type='ok'){
+  const d = document.createElement('div'); d.className='toast '+type;
+  d.innerHTML = `<span>${type==='ok'?'✓':'✕'}</span> ${esc(msg)}`;
+  document.body.appendChild(d);
+  setTimeout(()=>{ d.style.opacity='0'; d.style.transition='opacity .3s'; setTimeout(()=>d.remove(),300); }, 2600);
+}
+
+function avanzarFecha(fecha, frecuencia){
+  const d = new Date(fecha + 'T00:00:00');
+  if (isNaN(d)) return fecha;
+  switch(frecuencia){
+    case 'diaria':     d.setDate(d.getDate()+1); break;
+    case 'semanal':    d.setDate(d.getDate()+7); break;
+    case 'quincenal':  d.setDate(d.getDate()+14); break;
+    case 'mensual':    d.setMonth(d.getMonth()+1); break;
+    case 'trimestral': d.setMonth(d.getMonth()+3); break;
+    case 'semestral':  d.setMonth(d.getMonth()+6); break;
+    case 'anual':      d.setFullYear(d.getFullYear()+1); break;
+  }
+  return d.toISOString().slice(0,10);
+}
+
+function diasRestantes(fecha){
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const d = new Date(fecha + 'T00:00:00');
+  return Math.round((d - hoy) / 864e5);
+}
+
+function populateSelects(){
+  const selP = document.getElementById('inPlantilla');
+  const list = getPlantillas();
+  const btn = document.getElementById('btnCrear');
+  if (!list.length){ selP.innerHTML = '<option value="">No tienes formularios todavía</option>'; if(btn) btn.disabled = true; }
+  else { if(btn) btn.disabled = false; selP.innerHTML = list.map(t => `<option value="${esc(t.id)}">${esc(t.nombre)}${t.codigo?' — '+esc(t.codigo):''}</option>`).join(''); }
+
+  const selU = document.getElementById('inUnidad');
+  let uh = '<option value="">Sin especificar</option>';
+  ['sede','area','contratista','otro'].forEach(t => getUnidades().filter(u=>(u.tipo||'sede')===t).forEach(u => { uh += `<option value="${esc(u.id)}">${U_ICO[t]} ${esc(u.nombre)}</option>`; }));
+  selU.innerHTML = uh;
+}
+
+function unidadNombre(id){ const u = getUnidades().find(x=>x.id===id); return u ? `${U_ICO[u.tipo||'sede']||'📍'} ${u.nombre}` : ''; }
+
+function crearInspeccion(){
+  const plantillaId = document.getElementById('inPlantilla').value;
+  const t = getPlantillas().find(p=>p.id===plantillaId);
+  if (!t){ toast('Elige un formulario','er'); return; }
+  const nombre = document.getElementById('inNombre').value.trim() || t.nombre;
+  const proximoEn = document.getElementById('inProximo').value;
+  if (!proximoEn){ toast('Elige la próxima fecha de vencimiento','er'); return; }
+  const ins = {
+    id: `ins_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    plantillaId, plantillaNombre: t.nombre, nombre,
+    unidadId: document.getElementById('inUnidad').value || null,
+    frecuencia: document.getElementById('inFrecuencia').value,
+    proximoEn,
+    responsable: document.getElementById('inResp').value.trim() || null,
+    correo: document.getElementById('inCorreo').value.trim() || null,
+    activa: true, ultimoCompletado: null, creadoEn: new Date().toISOString()
+  };
+  const list = getInspecciones(); list.push(ins); setInspecciones(list);
+  skfSyncOrQueue('inspeccion', ins);
+  document.getElementById('inNombre').value = '';
+  document.getElementById('inResp').value = '';
+  document.getElementById('inCorreo').value = '';
+  render();
+  toast('Inspección programada');
+}
+
+function marcarHecha(id){
+  const list = getInspecciones();
+  const ins = list.find(x=>x.id===id);
+  if (!ins) return;
+  ins.ultimoCompletado = new Date().toISOString();
+  ins.proximoEn = avanzarFecha(ins.proximoEn, ins.frecuencia);
+  setInspecciones(list);
+  skfSyncOrQueue('inspeccion', ins);
+  render();
+  toast(`Hecha ✓ — próxima: ${new Date(ins.proximoEn+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'})}`);
+}
+
+function borrarInspeccion(id){
+  const ins = getInspecciones().find(x=>x.id===id);
+  if (!ins) return;
+  if (!confirm(`¿Borrar la inspección programada "${ins.nombre}"?`)) return;
+  setInspecciones(getInspecciones().filter(x=>x.id!==id));
+  skfSyncOrQueue('deleteInspeccion', { id });
+  render();
+  toast('Inspección borrada');
+}
+
+function insRowHtml(ins){
+  const dias = diasRestantes(ins.proximoEn);
+  let cls, pill, pillTxt;
+  if (dias < 0)      { cls='venc';   pill='venc';   pillTxt=`Vencida hace ${Math.abs(dias)} día${Math.abs(dias)!==1?'s':''}`; }
+  else if (dias<=7)  { cls='pronto'; pill='pronto'; pillTxt = dias===0 ? 'Vence hoy' : `Vence en ${dias} día${dias!==1?'s':''}`; }
+  else               { cls='aldia';  pill='aldia';  pillTxt=`Al día`; }
+  const fechaTxt = new Date(ins.proximoEn+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'});
+  const uni = ins.unidadId ? unidadNombre(ins.unidadId) : '';
+  const meta = [`🔁 ${FREQ_LBL[ins.frecuencia]||ins.frecuencia}`, `📅 ${fechaTxt}`, uni, ins.responsable?`👤 ${esc(ins.responsable)}`:''].filter(Boolean).join(' · ');
+  return `<div class="ins-row ${cls}">
+    <div class="ins-info">
+      <div class="ins-nombre">${esc(ins.nombre)}</div>
+      <div class="ins-meta">${meta}</div>
+    </div>
+    <div class="ins-right">
+      <span class="ins-pill ${pill}">${pillTxt}</span>
+      <button class="mini done" onclick="marcarHecha('${ins.id}')">✓ Hecha</button>
+      <button class="mini del" onclick="borrarInspeccion('${ins.id}')">Borrar</button>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const el = document.getElementById('lista');
+  const list = getInspecciones().slice().sort((a,b) => new Date(a.proximoEn) - new Date(b.proximoEn));
+  if (!list.length){
+    el.innerHTML = `<div class="empty-state">
+      <span class="es-ico">📅</span>
+      <h2>Aún no tienes inspecciones programadas</h2>
+      <p>Crea una arriba para no olvidar los formularios que se repiten — extintores cada mes, fumigación cada trimestre. La app te avisará cuando venzan.</p>
+    </div>`;
+    return;
+  }
+  const vencidas = list.filter(i => diasRestantes(i.proximoEn) < 0);
+  const pronto   = list.filter(i => { const d=diasRestantes(i.proximoEn); return d>=0 && d<=7; });
+  const aldia    = list.filter(i => diasRestantes(i.proximoEn) > 7);
+  let html = '';
+  if (vencidas.length) html += `<div class="grp-h" style="color:var(--err)">⚠️ Vencidas (${vencidas.length})</div>` + vencidas.map(insRowHtml).join('');
+  if (pronto.length)   html += `<div class="grp-h" style="color:var(--warn)">Vencen pronto (${pronto.length})</div>` + pronto.map(insRowHtml).join('');
+  if (aldia.length)    html += `<div class="grp-h">Al día (${aldia.length})</div>` + aldia.map(insRowHtml).join('');
+  el.innerHTML = html;
+}
+
+async function init(){
+  const fromCloud = await syncFromCloud();
+  if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
+  populateSelects();
+  render();
+}
+init();
+</script>
+</body>
+</html>

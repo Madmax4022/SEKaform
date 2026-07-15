@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Organización — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="supabase-config.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 28px; line-height: 1.6; max-width: 600px; }
+    .card { background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 24px; }
+    .fg { margin-bottom: 20px; }
+    .fg label { display: block; font-size: .82rem; font-weight: 700; color: var(--mut); margin-bottom: 8px; }
+    .fg input[type=text] { width: 100%; background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 8px; padding: 11px 12px; font-size: .95rem; font-family: inherit; outline: none; transition: border-color .15s; }
+    .fg input[type=text]:focus { border-color: var(--pri); }
+    .logo-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .logo-preview { width: 84px; height: 84px; border-radius: 12px; border: 1px solid var(--bor); background: var(--inp); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .logo-preview .ph { font-size: 1.9rem; color: var(--mut); }
+    .logo-acts { display: flex; flex-direction: column; gap: 8px; }
+    .logo-hint { font-size: .76rem; color: var(--mut); margin-top: 6px; line-height: 1.5; }
+    .btn-file { display: inline-flex; align-items: center; gap: 7px; background: var(--bor); color: var(--txt); border: none; border-radius: 8px; padding: 9px 15px; font-size: .84rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-file:hover { background: #475569; }
+    .btn-link { background: none; border: none; color: var(--mut); font-size: .8rem; cursor: pointer; font-family: inherit; text-decoration: underline; padding: 0; text-align: left; }
+    .btn-link:hover { color: var(--err); }
+    .rep-note { margin-top: 22px; background: rgba(37,99,235,.08); border: 1px solid rgba(37,99,235,.22); border-radius: 10px; padding: 13px 15px; font-size: .82rem; color: var(--mut); line-height: 1.55; }
+    .setup-banner { background: rgba(37,99,235,.1); border: 1px solid rgba(37,99,235,.3); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: none; }
+    .setup-banner.on { display: flex; align-items: flex-start; gap: 14px; }
+    .setup-banner-ico { font-size: 1.5rem; flex-shrink: 0; }
+    .setup-banner h3 { font-size: .9rem; font-weight: 700; margin-bottom: 4px; }
+    .setup-banner p { font-size: .82rem; color: var(--mut); line-height: 1.55; }
+    .setup-banner a { color: var(--pri); }
+    .toast { position: fixed; bottom: 24px; right: 16px; background: var(--card); border: 1px solid var(--bor); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 9px; font-size: .85rem; font-weight: 600; z-index: 2000; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+    .toast.ok { border-color: var(--ok); } .toast.er { border-color: var(--err); }
+  </style>
+</head>
+<body>
+
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <h1 class="pg-h">Organización<button class="skf-help" data-help-t="¿Para qué sirve esto?" data-help="Aquí defines el nombre y el logo de tu empresa.
+
+Ese nombre y logo aparecen como marca en los reportes en PDF que descargas del panel — por ejemplo el que le entregas a un cliente como comprobante del servicio.">?</button></h1>
+  <p class="pg-sub">El nombre y el logo de tu empresa. Aparecen como marca en los reportes en PDF que descargas del panel.</p>
+
+  <div class="setup-banner" id="setupBanner">
+    <div class="setup-banner-ico">☁</div>
+    <div>
+      <h3>Inicia sesión para editar tu organización</h3>
+      <p>Los datos de la organización viven en la nube y se comparten con tu equipo. <a href="login.html">Iniciar sesión →</a></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="fg">
+      <label for="orgNombre">Nombre de la empresa</label>
+      <input type="text" id="orgNombre" placeholder="Ej. Aseo Brillante S.A.S." autocomplete="off">
+    </div>
+    <div class="fg">
+      <label>Logo</label>
+      <div class="logo-row">
+        <div class="logo-preview" id="logoPreview"><span class="ph">🏢</span></div>
+        <div class="logo-acts">
+          <button class="btn-file" onclick="document.getElementById('logoInput').click()">📁 Subir logo</button>
+          <button class="btn-link" id="logoRemove" onclick="quitarLogo()" style="display:none">Quitar logo</button>
+          <input type="file" id="logoInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" style="display:none" onchange="onLogoFile(event)">
+        </div>
+      </div>
+      <div class="logo-hint">PNG, JPG, SVG o WEBP. Ideal cuadrado y con fondo transparente. Máx. 500 KB.</div>
+    </div>
+    <button class="btn btn-pri" onclick="guardarOrg()">Guardar cambios</button>
+  </div>
+
+  <div class="rep-note">📄 <strong>Vista previa:</strong> cuando descargues un «Reporte (PDF)» desde el Dashboard, verás este nombre y logo en el encabezado.</div>
+</div>
+
+<script>
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+let orgLogo = null;
+
+function getOrgCache(){ try { return JSON.parse(localStorage.getItem('skf_org')||'null'); } catch { return null; } }
+function setOrgCache(o){ localStorage.setItem('skf_org', JSON.stringify(o)); }
+
+function toast(msg, type='ok'){
+  const d = document.createElement('div'); d.className='toast '+type;
+  d.innerHTML = `<span>${type==='ok'?'✓':'✕'}</span> ${esc(msg)}`;
+  document.body.appendChild(d);
+  setTimeout(()=>{ d.style.opacity='0'; d.style.transition='opacity .3s'; setTimeout(()=>d.remove(),300); }, 2600);
+}
+
+function renderLogo(){
+  const prev = document.getElementById('logoPreview');
+  const rm = document.getElementById('logoRemove');
+  if (orgLogo) { prev.innerHTML = `<img src="${orgLogo}" alt="logo">`; rm.style.display='block'; }
+  else { prev.innerHTML = '<span class="ph">🏢</span>'; rm.style.display='none'; }
+}
+
+function onLogoFile(e){
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (file.size > 500*1024) { toast('El logo supera 500 KB — usa una imagen más liviana','er'); e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = () => { orgLogo = reader.result; renderLogo(); };
+  reader.onerror = () => toast('No se pudo leer la imagen','er');
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function quitarLogo(){ orgLogo = null; renderLogo(); }
+
+function guardarOrg(){
+  const nombre = document.getElementById('orgNombre').value.trim();
+  if (!nombre) { toast('Escribe el nombre de la empresa','er'); return; }
+  const o = { nombre, logo: orgLogo || null };
+  setOrgCache(o);
+  skfSyncOrQueue('org', o);
+  toast('Organización guardada');
+}
+
+async function init(){
+  let cloud = null;
+  try { cloud = await sbLoadOrg(); } catch {}
+  const cache = getOrgCache();
+  const o = cloud || cache;
+  if (cloud) setOrgCache({ nombre: cloud.nombre, logo: cloud.logo||null });
+  if (!cloud && !cache) document.getElementById('setupBanner').classList.add('on');
+  if (o) {
+    document.getElementById('orgNombre').value = o.nombre || '';
+    orgLogo = o.logo || null;
+  }
+  renderLogo();
+}
+init();
+</script>
+</body>
+</html>
