@@ -909,7 +909,10 @@ async function init() {
   // Comparativo por unidad + datos para reportes
   _biEnvios = envios; _biHallazgos = hallazgos; _biUnidades = unidades;
   _bi = { plantillas, envios, hallazgos, acciones, asignaciones, unidades };
-  sbLoadOrg().then(o => { _biOrg = o; }).catch(()=>{});
+  // Marca para los reportes: caché local primero (disponible al instante y sin
+  // conexión), luego se refresca desde la nube.
+  try { _biOrg = JSON.parse(localStorage.getItem('skf_org')||'null'); } catch { _biOrg = null; }
+  sbLoadOrg().then(o => { if (o) { _biOrg = o; localStorage.setItem('skf_org', JSON.stringify({nombre:o.nombre, logo:o.logo||null})); } }).catch(()=>{});
   renderComparativo();
   // Populate form filter dropdown (una opción por código de formulario, no por nombre)
   const groups = new Map(); // key -> label

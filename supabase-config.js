@@ -427,6 +427,74 @@ async function sbLoadUnidades() {
   } catch { return null; }
 }
 
+// ── Organización: nombre + logo (para la marca de los reportes) ─────────
+async function sbUpdateOrg(patch) {
+  try {
+    const sb = await getSB();
+    if (!sb) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
+    const payload = {};
+    if (patch.nombre !== undefined) payload.nombre = patch.nombre;
+    if (patch.logo   !== undefined) payload.logo   = patch.logo;
+    if (!Object.keys(payload).length) return true;
+    const { error } = await sb.from('organizaciones').update(payload).eq('id', org.orgId);
+    if (error) { console.warn('[SEKaform] Update organización:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Update organización error:', e.message); return false; }
+}
+
+// ── Inspecciones programadas (recurrencia) ──────────────────────────────
+async function sbSyncInspeccion(i) {
+  try {
+    const sb = await getSB();
+    if (!sb) return false;
+    const org = await skfGetOrg();
+    if (!org) return false;
+    const payload = {
+      id: i.id,
+      org_id: org.orgId,
+      plantilla_id: i.plantillaId || null,
+      unidad_id: i.unidadId || null,
+      nombre: i.nombre,
+      frecuencia: i.frecuencia || 'mensual',
+      proximo_en: i.proximoEn,
+      responsable: i.responsable || null,
+      correo: i.correo || null,
+      activa: i.activa !== false,
+      ultimo_completado: i.ultimoCompletado || null,
+      creado_en: i.creadoEn || new Date().toISOString()
+    };
+    const { error } = await sb.from('inspecciones_programadas').upsert(payload);
+    if (error) { console.warn('[SEKaform] Sync programada:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Sync programada error:', e.message); return false; }
+}
+
+async function sbDeleteInspeccion(id) {
+  try {
+    const sb = await getSB();
+    if (!sb) return false;
+    if (!(await skfGetOrg())) return false;
+    const { error } = await sb.from('inspecciones_programadas').delete().eq('id', id);
+    if (error) { console.warn('[SEKaform] Delete programada:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('[SEKaform] Delete programada error:', e.message); return false; }
+}
+
+async function sbLoadInspecciones() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const org = await skfGetOrg();
+    if (!org) return null;
+    const { data, error } = await sb.from('inspecciones_programadas')
+      .select('*').eq('org_id', org.orgId).order('proximo_en', { ascending: true });
+    if (error) return null;
+    return data;
+  } catch { return null; }
+}
+
 // ── Asignaciones (panel de administración: a quién se le pidió llenar
 // cada plantilla, para calcular cumplimiento) ──────────────────────────
 async function sbSyncAsignacion(a) {
@@ -639,6 +707,9 @@ const SKF_SYNC_FNS = {
   deleteAsignacion: (p) => sbDeleteAsignacion(p.id),
   unidad: sbSyncUnidad,
   deleteUnidad: (p) => sbDeleteUnidad(p.id),
+  org: (p) => sbUpdateOrg(p),
+  inspeccion: sbSyncInspeccion,
+  deleteInspeccion: (p) => sbDeleteInspeccion(p.id),
 };
 
 // Intenta sincronizar de inmediato; si falla o no hay conexión, encola

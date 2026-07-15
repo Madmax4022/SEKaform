@@ -17,9 +17,11 @@ const SKF_NAV_LINKS = [
   { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
   { href: 'llenar.html',        ico: '📝', label: 'Mis formularios' },
   { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
+  { href: 'programadas.html',   ico: '📅', label: 'Programadas' },
   { href: 'unidades.html',      ico: '🏢', label: 'Sedes y áreas' },
   { href: 'hallazgos.html',     ico: '⚠️', label: 'Hallazgos' },
-  { href: 'dashboard.html',     ico: '📊', label: 'Dashboard' }
+  { href: 'dashboard.html',     ico: '📊', label: 'Dashboard' },
+  { href: 'organizacion.html',  ico: '⚙️', label: 'Organización' }
 ];
 
 function _skfEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
@@ -197,7 +199,7 @@ function skfRenderSidebar() {
 
   // Si el cache del SW ya existe, mostrar que ya está lista para sin conexión
   if ('caches' in window) {
-    caches.has('skf-shell-v3').then(has => {
+    caches.has('skf-shell-v4').then(has => {
       if (has) {
         const btn = document.getElementById('bbOfflineBtn');
         if (btn) { btn.textContent = '✓ Lista sin conexión'; btn.classList.add('bb-offline-ready'); }
