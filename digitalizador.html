@@ -577,6 +577,19 @@ function stripLeadingNoise(s) {
   return String(s||'').replace(/^(?!¿|¡)[^\p{L}\p{N}]+/u, '').trim();
 }
 
+// Corta la basura de bordes de tabla que el OCR pega a las etiquetas
+// (p. ej. "CelularPrincipal — | — |Pee" → "CelularPrincipal"). La barra
+// vertical "|" y las rayas largas en fila son casi siempre líneas de la
+// tabla leídas como texto, no parte del nombre del campo.
+function cleanLabelJunk(s) {
+  let l = String(s||'').trim();
+  l = l.replace(/\s*\|.*$/, '');            // todo desde el primer "|" (borde de tabla)
+  l = l.replace(/\s+[—–]{1,3}\s*$/, '');    // raya larga suelta al final
+  l = l.replace(/[\s—–_·|]+$/, '');         // restos de bordes al final
+  l = l.replace(/^[\s—–_·|]+/, '');         // restos al inicio
+  return l.trim();
+}
+
 // Pone en mayúscula la primera letra de la etiqueta (el resto se deja igual,
 // para no destruir acrónimos o palabras que el OCR ya capturó en mayúscula).
 function capitalizeLabel(s) {
@@ -1325,6 +1338,17 @@ function labelQuality(label) {
   if (/[a-záéíóúüñ][0-9@#*%&][a-záéíóúüñ]/i.test(l)) return 'review'; // dígito/símbolo dentro de palabra ("Obs3rv@c")
   if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(noSp) && ratio < 0.75) return 'review'; // racha de consonantes
   if (ratio < 0.55) return 'review';                       // menos de la mitad son letras
+
+  // ── Fragmentos de letras sueltas ("EO EA MA", "U S Ae"): varios tokens
+  //    diminutos (1-2 letras) sin ninguna palabra real → ruido del OCR. Un
+  //    solo token corto (p. ej. "EPS", "ARL", "NIT") NO se toca: puede ser
+  //    un acrónimo válido. ──
+  const toks = l.split(/\s+/).filter(Boolean);
+  if (toks.length >= 2) {
+    const tiny = toks.filter(t => (t.match(/[a-záéíóúüñ]/gi)||[]).length <= 2).length;
+    const realWord = toks.some(t => (t.match(/[a-záéíóúüñ]/gi)||[]).length >= 4 && /[aeiouáéíóúü]/i.test(t));
+    if (tiny >= Math.ceil(toks.length * 0.6) && !realWord) return 'garbage';
+  }
   return 'ok';
 }
 
@@ -1481,8 +1505,15 @@ function analyzeText(rawText) {
   window._skfOmitidos = 0;
   const limpio = [];
   for (const f of fields) {
-    if (f._quality === 'garbage') { window._skfOmitidos++; continue; }
-    if (f._quality === 'review') { f._raw = f.etiqueta; f.etiqueta = ''; f._quality = 'ilegible'; }
+    if (f.tipo === 'separador') { limpio.push(f); continue; }  // los títulos no se filtran
+    const et = cleanLabelJunk(f.etiqueta);                     // quita bordes de tabla pegados
+    const q = et ? labelQuality(et) : 'garbage';
+    if (q === 'garbage') { window._skfOmitidos++; continue; }  // basura pura: se omite
+    if (q === 'review') {                                      // dudoso: "no legible" en blanco
+      f._raw = et || f.etiqueta; f.etiqueta = ''; f._quality = 'ilegible';
+    } else {                                                   // bueno: usar la etiqueta limpia
+      f.etiqueta = et; f._quality = 'ok';
+    }
     limpio.push(f);
   }
   return limpio;
