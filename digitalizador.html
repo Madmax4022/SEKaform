@@ -443,7 +443,8 @@ Nada se guarda hasta que toques el botón de continuar, así que puedes probar s
       <!-- Reference side -->
       <div class="ref-side">
         <div class="panel-lbl">Referencia</div>
-        <img id="refImg2" class="ref-side-img" alt="" style="display:none">
+        <button id="btnVerOriginal" onclick="abrirOriginal()" style="display:none;width:100%;margin-bottom:10px;background:var(--pri);color:#fff;border:none;border-radius:8px;padding:9px 12px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit">🔍 Abrir original a tamaño completo</button>
+        <img id="refImg2" class="ref-side-img" alt="" title="Clic para abrir a tamaño completo" style="display:none;cursor:zoom-in" onclick="abrirOriginal()">
         <div id="refUrl2" class="ref-side-url" style="display:none"></div>
         <div class="ref-side-empty" id="refEmpty2">Vista de referencia del documento original.</div>
       </div>
@@ -902,6 +903,7 @@ async function analyze() {
       requerido: (f.tipo||'texto')!=='separador',
       opciones: f.opciones && f.opciones.length ? f.opciones : (needsOptions(f.tipo) ? (sugerirOpciones(f.etiqueta).length ? sugerirOpciones(f.etiqueta) : ['']) : undefined),
       _quality: f._quality,
+      _raw: f._raw || null,
       _auto: true
     }));
 
@@ -916,6 +918,8 @@ async function analyze() {
     if (imgData) { refImg2El.src=imgData; refImg2El.style.display='block'; refEmpty2El.style.display='none'; }
     else if (pdfThumb) { refImg2El.src=pdfThumb; refImg2El.style.display='block'; refEmpty2El.style.display='none'; }
     if (tmpl.sourceUrl) { refUrl2El.textContent=tmpl.sourceUrl; refUrl2El.style.display='block'; refEmpty2El.style.display='none'; }
+    const btnVer = document.getElementById('btnVerOriginal');
+    if (btnVer) btnVer.style.display = (imgData || pdfFile || tmpl.sourceUrl) ? 'block' : 'none';
 
     // Detection summary
     const sumEl = document.getElementById('detectSummary');
@@ -924,12 +928,17 @@ async function analyze() {
       const autoCount = tmpl.campos.filter(c=>['fecha_auto','hora_auto','ubicacion'].includes(c.tipo)).length;
       const sigCount = tmpl.campos.filter(c=>c.tipo==='firma').length;
       const selCount = tmpl.campos.filter(c=>['select','radio','si_no','escala_1_5','checkbox_multi'].includes(c.tipo)).length;
-      const badCount = tmpl.campos.filter(c=>c._quality==='review').length;
-      const garbageCount = tmpl.campos.filter(c=>c._quality==='garbage').length;
+      const badCount = tmpl.campos.filter(c=>c._quality==='ilegible' || c._quality==='review').length;
+      const omitidos = window._skfOmitidos || 0;
+      const hayOriginal = !!(imgData || pdfFile || tmpl.sourceUrl);
+      const btnStyle = 'margin-left:8px;background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.4);color:var(--pri);border-radius:6px;padding:3px 10px;font-size:.75rem;cursor:pointer;font-family:inherit';
       msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} de selección`
-        + (badCount ? ` · <span style="color:var(--warn)">⚠️ ${badCount} a revisar</span>` : '')
-        + (garbageCount ? ` · <span style="color:var(--err)">🗑️ ${garbageCount} probablemente inválido${garbageCount!==1?'s':''}</span>` : '')
-        + (garbageCount > 1 ? ` <button onclick="removeAllGarbage()" style="margin-left:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:var(--err);border-radius:6px;padding:3px 10px;font-size:.75rem;cursor:pointer;font-family:inherit">🗑 Eliminar inválidos</button>` : '');
+        + (badCount ? ` · <span style="color:var(--warn)">✏️ ${badCount} no legible${badCount!==1?'s':''} (escríbelo${badCount!==1?'s':''})</span>` : '')
+        + (omitidos ? ` · <span style="color:var(--mut)">🗑️ ${omitidos} fragmento${omitidos!==1?'s':''} ilegible${omitidos!==1?'s':''} omitido${omitidos!==1?'s':''}</span>` : '')
+        + `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`
+        + (hayOriginal ? `<button onclick="abrirOriginal()" style="${btnStyle}">🔍 Abrir original</button>` : '')
+        + (badCount ? `<button onclick="revisarDudosos()" style="${btnStyle}">✏️ Revisar no legibles (${badCount})</button>` : '')
+        + `</div>`;
       sumEl.style.display='flex';
     } else {
       sumEl.style.display='none';
@@ -1270,7 +1279,7 @@ async function analyzePDF(file) {
   if (cleanText.length < 150) {
     setProc('PDF escaneado detectado','Activando reconocimiento OCR...',52);
     await loadScript('https://unpkg.com/tesseract.js@4/dist/tesseract.min.js');
-    const ocrPageCount = Math.min(pdf.numPages, 3);
+    const ocrPageCount = Math.min(pdf.numPages, 15);
     const ocrParts = [];
     for (let i=1; i<=ocrPageCount; i++) {
       setProc('Reconociendo texto (OCR)...',`Procesando página ${i} de ${ocrPageCount}...`, 52 + Math.round((i/ocrPageCount)*30));
@@ -1295,14 +1304,27 @@ async function analyzePDF(file) {
 function labelQuality(label) {
   const l = label.trim();
   if (l.length < 3) return 'garbage';
-  if (/^\d[\d\s.,/-]*$/.test(l)) return 'garbage';
+  if (/^\d[\d\s.,/-]*$/.test(l)) return 'garbage';                       // solo números/símbolos
   if (/^(pag|pagina|page|tabla|table|fig|figura)\s*\d/.test(_norm(l))) return 'garbage';
   if (/^[_.\s-]+$/.test(l)) return 'garbage';
   const noSp = l.replace(/\s+/g,'');
   const letters = (noSp.match(/[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]/g)||[]).length;
+  const vowels  = (noSp.match(/[aeiouáéíóúüAEIOUÁÉÍÓÚÜ]/g)||[]).length;
+  const digits  = (noSp.match(/[0-9]/g)||[]).length;
   const ratio = letters / Math.max(noSp.length,1);
-  if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(noSp) && ratio < 0.7) return 'review';
-  if (ratio < 0.35 && noSp.length > 4) return 'review';
+
+  // ── Basura pura (se OMITE): no es rescatable como palabra ──
+  if (letters < 2) return 'garbage';                       // 0-1 letras
+  if (vowels === 0 && digits === 0) return 'garbage';      // consonante-sopa (xzqwrtp)
+  if (ratio < 0.3 && digits === 0) return 'garbage';       // dominado por símbolos
+
+  // ── No legible (se deja EN BLANCO para reescribir): parece una palabra
+  //    real que el OCR corrompió — vocales convertidas en dígitos (e→3,
+  //    o→0, i→1, a→@), símbolos metidos dentro de palabras, etc. ──
+  if (vowels === 0 && digits > 0) return 'review';         // "N#mbr3 d3l cl13nt3"
+  if (/[a-záéíóúüñ][0-9@#*%&][a-záéíóúüñ]/i.test(l)) return 'review'; // dígito/símbolo dentro de palabra ("Obs3rv@c")
+  if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(noSp) && ratio < 0.75) return 'review'; // racha de consonantes
+  if (ratio < 0.55) return 'review';                       // menos de la mitad son letras
   return 'ok';
 }
 
@@ -1450,7 +1472,20 @@ function analyzeText(rawText) {
     i++;
   }
 
-  return fields;
+  // ── Filtro de legibilidad (regla acordada, "híbrido") ──────────────
+  // La basura pura (sin letras entendibles) NO se sugiere: se omite y se
+  // cuenta. Los dudosos NO meten texto basura: quedan como campo "no
+  // legible" con la etiqueta EN BLANCO (el intento del OCR se guarda en
+  // _raw como pista), para que el usuario solo escriba lo que ve en el
+  // original. Así la lista queda limpia sin perder posiciones.
+  window._skfOmitidos = 0;
+  const limpio = [];
+  for (const f of fields) {
+    if (f._quality === 'garbage') { window._skfOmitidos++; continue; }
+    if (f._quality === 'review') { f._raw = f.etiqueta; f.etiqueta = ''; f._quality = 'ilegible'; }
+    limpio.push(f);
+  }
+  return limpio;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1467,6 +1502,47 @@ function goPg(n) {
   if (n===1) { document.getElementById('ws1').classList.add('active'); }
   if (n===3) { renderPreview(); }
   window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// REVISIÓN CONTRA EL ORIGINAL
+// ══════════════════════════════════════════════════════════════════
+// Abre el documento original a tamaño completo para leerlo y copiar texto:
+// el PDF tal cual (con texto seleccionable si lo tiene) o la imagen ampliada.
+// Funciona en escritorio y en móvil (donde el panel de referencia se oculta).
+function abrirOriginal() {
+  try {
+    if (pdfFile) {
+      const url = URL.createObjectURL(pdfFile);
+      const w = window.open(url, '_blank');
+      if (!w) toast('Permite las ventanas emergentes para ver el original', 'er');
+      return;
+    }
+    if (imgData) {
+      const w = window.open('', '_blank');
+      if (!w) { toast('Permite las ventanas emergentes para ver el original', 'er'); return; }
+      w.document.write('<!DOCTYPE html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Original</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="' + imgData + '" style="max-width:100%;height:auto"></body>');
+      w.document.close();
+      return;
+    }
+    if (tmpl.sourceUrl) { window.open(tmpl.sourceUrl, '_blank'); return; }
+    toast('No hay un original para abrir', 'er');
+  } catch (e) { toast('No se pudo abrir el original', 'er'); }
+}
+
+// Salta al siguiente campo "no legible" y enfoca su nombre, para corregirlos
+// uno por uno sin buscarlos entre decenas de campos.
+let _revIdx = -1;
+function revisarDudosos() {
+  const dudosos = tmpl.campos.filter(c => c._quality === 'ilegible' || c._quality === 'review');
+  if (!dudosos.length) { toast('No quedan campos por revisar ✓', 'ok'); return; }
+  _revIdx = (_revIdx + 1) % dudosos.length;
+  const card = document.getElementById('sc_' + dudosos[_revIdx].id);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const inp = card.querySelector('.sugg-lbl input');
+    if (inp) setTimeout(() => inp.focus(), 320);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1529,26 +1605,27 @@ function buildCard(c,i) {
     </select>
   </div>` : '';
 
-  const qualWarn = c._quality === 'garbage' ? `<div class="qual-warn qual-bad">
-    🗑️ Esto probablemente no es un campo real — revisa antes de guardar
+  const qualWarn = (c._quality === 'ilegible' || c._quality === 'review') ? `<div class="qual-warn">
+    ✏️ El escaneo no se leyó bien aquí${c._raw ? ` — decía algo como «<em>${esc(c._raw)}</em>»` : ''}. Escribe el nombre real mirando el original.
+    <div class="qual-btns">
+      <button class="btn btn-sm btn-ok" onclick="focusLabel('${c.id}')">✏️ Escribir</button>
+      <button class="btn btn-sm btn-sec" onclick="abrirOriginal()">🔍 Ver original</button>
+      <button class="btn btn-sm btn-danger" onclick="delC('${c.id}')">🗑 Quitar</button>
+    </div>
+  </div>` : c._quality === 'garbage' ? `<div class="qual-warn qual-bad">
+    🗑️ Esto probablemente no es un campo real.
     <div class="qual-btns">
       <button class="btn btn-sm btn-ok" onclick="approveLabel('${c.id}')">✓ Sí es válido</button>
-      <button class="btn btn-sm btn-sec" onclick="focusLabel('${c.id}')">✏️ Editar</button>
       <button class="btn btn-sm btn-danger" onclick="delC('${c.id}')">🗑 Eliminar</button>
     </div>
-  </div>` : c._quality === 'review' ? `<div class="qual-warn">
-    ⚠️ Etiqueta posiblemente ilegible — revisa y confirma
-    <div class="qual-btns">
-      <button class="btn btn-sm btn-ok" onclick="approveLabel('${c.id}')">✓ Aprobar</button>
-      <button class="btn btn-sm btn-sec" onclick="focusLabel('${c.id}')">✏️ Editar</button>
-    </div>
   </div>` : '';
-  const cardWarnCls = c._quality==='garbage' ? ' card-warn card-bad' : c._quality==='review' ? ' card-warn' : '';
+  const cardWarnCls = c._quality==='garbage' ? ' card-warn card-bad' : (c._quality==='ilegible'||c._quality==='review') ? ' card-warn' : '';
+  const lblPlaceholder = (c._quality==='ilegible'||c._quality==='review') ? '✏️ Escríbelo mirando el original' : 'Nombre del campo';
   return `<div class="sugg-card${cardWarnCls}" id="sc_${c.id}">
     <div class="sugg-top">
       <div class="sugg-ico ${T.chip}">${T.ico}</div>
       <div class="sugg-info">
-        <div class="sugg-lbl"><input type="text" value="${esc(c.etiqueta)}" placeholder="Nombre del campo" oninput="setLbl('${c.id}',this.value)"></div>
+        <div class="sugg-lbl"><input type="text" value="${esc(c.etiqueta)}" placeholder="${esc(lblPlaceholder)}" oninput="setLbl('${c.id}',this.value)"></div>
         <button class="type-chip ${T.chip}" onclick="openMenu('${c.id}',this)">${T.ico} ${T.lbl} <span style="opacity:.6;font-size:.65rem">▾</span></button>
       </div>
       ${c.requerido?'<span class="sugg-req">*</span>':''}
