@@ -70,6 +70,22 @@ Ese nombre y logo aparecen como marca en los reportes en PDF que descargas del p
       <input type="text" id="orgNombre" placeholder="Ej. Aseo Brillante S.A.S." autocomplete="off">
     </div>
     <div class="fg">
+      <label for="orgPais">País / región <span style="color:var(--mut);font-weight:400">(opcional)</span></label>
+      <select id="orgPais" style="width:100%;background:var(--inp);border:1px solid var(--bor);color:var(--txt);border-radius:8px;padding:11px 12px;font-size:.95rem;font-family:inherit;outline:none">
+        <option value="">No especificar</option>
+        <option value="CO">🇨🇴 Colombia</option>
+        <option value="PA">🇵🇦 Panamá</option>
+        <option value="SV">🇸🇻 El Salvador</option>
+        <option value="EC">🇪🇨 Ecuador</option>
+        <option value="MX">🇲🇽 México</option>
+        <option value="CR">🇨🇷 Costa Rica</option>
+        <option value="GT">🇬🇹 Guatemala</option>
+        <option value="PE">🇵🇪 Perú</option>
+        <option value="OTRO">🌎 Otro</option>
+      </select>
+      <div class="logo-hint">Ayuda a mostrar las plantillas y normas adecuadas a tu país. Las referencias normativas son opcionales por plantilla, así que si operas en otro país no verás normas que no aplican.</div>
+    </div>
+    <div class="fg">
       <label>Logo</label>
       <div class="logo-row">
         <div class="logo-preview" id="logoPreview"><span class="ph">🏢</span></div>
@@ -124,7 +140,8 @@ function quitarLogo(){ orgLogo = null; renderLogo(); }
 function guardarOrg(){
   const nombre = document.getElementById('orgNombre').value.trim();
   if (!nombre) { toast('Escribe el nombre de la empresa','er'); return; }
-  const o = { nombre, logo: orgLogo || null };
+  const pais = document.getElementById('orgPais').value || null;
+  const o = { nombre, logo: orgLogo || null, pais };
   setOrgCache(o);
   skfSyncOrQueue('org', o);
   toast('Organización guardada');
@@ -135,10 +152,11 @@ async function init(){
   try { cloud = await sbLoadOrg(); } catch {}
   const cache = getOrgCache();
   const o = cloud || cache;
-  if (cloud) setOrgCache({ nombre: cloud.nombre, logo: cloud.logo||null });
+  if (cloud) setOrgCache({ nombre: cloud.nombre, logo: cloud.logo||null, pais: cloud.pais||null });
   if (!cloud && !cache) document.getElementById('setupBanner').classList.add('on');
   if (o) {
     document.getElementById('orgNombre').value = o.nombre || '';
+    document.getElementById('orgPais').value = o.pais || '';
     orgLogo = o.logo || null;
   }
   renderLogo();

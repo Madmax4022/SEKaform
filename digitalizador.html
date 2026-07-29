@@ -383,6 +383,11 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
           <div class="cod-hint">Se genera automáticamente. Puedes dejarlo así.</div>
         </div>
       </div>
+      <div class="fg">
+        <label>Norma / referencia <span style="color:var(--mut);font-weight:400">(opcional)</span></label>
+        <input type="text" id="fNorma" placeholder="Ej: Res. 2674/2013 · o déjalo vacío" maxlength="120">
+        <div class="cod-hint">Si aplica una norma, se mostrará al llenar y en la Carpeta de evidencia. Déjalo vacío si el formulario no cita ninguna (por ejemplo, en otro país).</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="fg">
           <label class="chk-row" style="font-weight:600">
@@ -859,6 +864,7 @@ async function analyze() {
   if (!nom) { toast('Escribe el nombre del formulario','er'); document.getElementById('fNom').focus(); return; }
   tmpl.nombre = nom;
   tmpl.descripcion = document.getElementById('fDesc').value.trim();
+  tmpl.norma = document.getElementById('fNorma').value.trim();
   tmpl.publica = document.getElementById('fPublica').checked;
   tmpl.correoNotificacion = document.getElementById('fCorreoNotif').value.trim();
   if (tmpl.publica && !tmpl.shareToken) tmpl.shareToken = genShareToken();
@@ -1774,7 +1780,8 @@ function renderPreview(){
   let h=tmpl.logo?`<img src="${tmpl.logo}" class="prev-logo" alt="Logo">`:'';
   h+=`<h2 class="prev-title">${esc(tmpl.nombre)}</h2>`;
   if(tmpl.descripcion)h+=`<p class="prev-desc">${esc(tmpl.descripcion)}</p>`;
-  if(tmpl.codigo)h+=`<p style="color:var(--mut);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px">${esc(tmpl.codigo)}</p>`;
+  if(tmpl.codigo)h+=`<p style="color:var(--mut);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:${tmpl.norma?'6px':'16px'}">${esc(tmpl.codigo)}</p>`;
+  if(tmpl.norma)h+=`<p style="color:var(--pri);font-size:.72rem;font-weight:600;margin-bottom:16px">📋 ${esc(tmpl.norma)}</p>`;
   tmpl.campos.forEach(c=>{h+=prevField(c,ds,ts);});
   document.getElementById('prevForm').innerHTML=h;
 }
@@ -2040,6 +2047,9 @@ async function loadPreset(presetId, editMode, archiveOnly) {
   }));
   const fNomEl = document.getElementById('fNom');
   if (fNomEl) fNomEl.value = t.nombre;
+  tmpl.norma = t.norma || '';
+  const fNormaEl = document.getElementById('fNorma');
+  if (fNormaEl) fNormaEl.value = tmpl.norma;
 
   if (!editMode) {
     tmpl.publica = true;

@@ -34,6 +34,7 @@ CREATE TABLE organizaciones (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre     TEXT NOT NULL DEFAULT 'Mi empresa',
   logo       TEXT,                                   -- para reportes con marca
+  pais       TEXT,                                   -- país/región (opcional, base multi-país)
   plan       TEXT NOT NULL DEFAULT 'emprende'
              CHECK (plan IN ('emprende','pyme','negocio','vertical')),
   creado_por UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -169,6 +170,7 @@ CREATE TABLE plantillas (
   publica             BOOLEAN NOT NULL DEFAULT false,
   share_token         TEXT,
   correo_notificacion TEXT,
+  norma               TEXT,
   creado_en           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   actualizado_en      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -187,7 +189,7 @@ CREATE POLICY "Anónimos ven plantillas públicas"
 -- nunca recibe org_id, autor_id ni correo_notificacion (datos privados del
 -- dueño). PostgREST respeta los privilegios de columna automáticamente.
 REVOKE SELECT ON plantillas FROM anon;
-GRANT  SELECT (id, nombre, campos, codigo, descripcion, logo, publica, share_token) ON plantillas TO anon;
+GRANT  SELECT (id, nombre, campos, codigo, descripcion, logo, publica, share_token, norma) ON plantillas TO anon;
 
 CREATE INDEX plantillas_org_idx ON plantillas (org_id, actualizado_en DESC);
 CREATE UNIQUE INDEX plantillas_share_token_idx ON plantillas (share_token) WHERE share_token IS NOT NULL;
@@ -459,3 +461,11 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE hallazgos;
   END IF;
 END $$;
+
+-- ── 14 · Migración incremental (norma opcional + país) ───────────────────────
+-- Seguro re-ejecutar. Si ya corriste el esquema antes, ESTO es lo único nuevo
+-- que necesitas correr para habilitar la norma por plantilla y el país por
+-- organización:
+ALTER TABLE plantillas     ADD COLUMN IF NOT EXISTS norma TEXT;
+ALTER TABLE organizaciones ADD COLUMN IF NOT EXISTS pais  TEXT;
+GRANT SELECT (id, nombre, campos, codigo, descripcion, logo, publica, share_token, norma) ON plantillas TO anon;

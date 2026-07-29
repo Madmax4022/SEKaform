@@ -845,6 +845,7 @@ function printEnvioReport(i) {
   const meta = `<div class="kv">
     <div class="k">Formulario</div><div class="v">${escD(e.plantilla_nombre||e.plantillaNombre||'')}</div>
     <div class="k">Código</div><div class="v">${escD(e.plantilla_codigo||e.plantillaCodigo||'—')}</div>
+    ${plant && plant.norma ? `<div class="k">Norma / referencia</div><div class="v">${escD(plant.norma)}</div>` : ''}
     <div class="k">Unidad</div><div class="v">${escD(unidad||'—')}</div>
     <div class="k">Llenado por</div><div class="v">${escD(e.llenado_por||e.llenadoPor||'—')}</div>
     <div class="k">Fecha</div><div class="v">${new Date(fEnvCreado(e)).toLocaleString('es-CO')}</div>

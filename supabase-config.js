@@ -156,6 +156,7 @@ async function sbSyncPlantilla(tmpl) {
       publica: tmpl.publica || false,
       share_token: tmpl.shareToken || null,
       correo_notificacion: tmpl.correoNotificacion || null,
+      norma: tmpl.norma || null,
       creado_en: tmpl.creadoEn || new Date().toISOString(),
       actualizado_en: new Date().toISOString()
     };
@@ -215,7 +216,7 @@ async function sbLoadPublicPlantilla(token) {
     const sb = await getSB();
     if (!sb || !token) return null;
     const { data, error } = await sb.from('plantillas')
-      .select('id, nombre, campos, codigo, descripcion, logo, publica, share_token')
+      .select('id, nombre, campos, codigo, descripcion, logo, publica, share_token, norma')
       .eq('share_token', token).eq('publica', true).maybeSingle();
     if (error || !data) return null;
     return data;
@@ -437,6 +438,7 @@ async function sbUpdateOrg(patch) {
     const payload = {};
     if (patch.nombre !== undefined) payload.nombre = patch.nombre;
     if (patch.logo   !== undefined) payload.logo   = patch.logo;
+    if (patch.pais   !== undefined) payload.pais   = patch.pais;
     if (!Object.keys(payload).length) return true;
     const { error } = await sb.from('organizaciones').update(payload).eq('id', org.orgId);
     if (error) { console.warn('[SEKaform] Update organización:', error.message); return false; }
@@ -538,7 +540,7 @@ async function sbLoadOrg() {
     const org = await skfGetOrg();
     if (!org) return null;
     const { data, error } = await sb.from('organizaciones')
-      .select('id, nombre, logo').eq('id', org.orgId).maybeSingle();
+      .select('id, nombre, logo, pais').eq('id', org.orgId).maybeSingle();
     if (error) return null;
     return data || null;
   } catch { return null; }

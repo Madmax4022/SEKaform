@@ -1,7 +1,7 @@
 // Catálogo compartido de plantillas — consumido por digitalizador.html (sugerencias matchTemplate) y plantillas.html (índice navegable)
 const FORM_LIBRARY = [
   // ── Calidad / SGC Verticales (ISO 9001:2015) ──────────────────
-  {id:'auditoria_interna_iso',vertical:'calidad',nombre:'Checklist de Auditoría Interna (ISO 9001 — Cl. 9.2)',
+  {id:'auditoria_interna_iso',vertical:'calidad',nombre:'Checklist de Auditoría Interna (ISO 9001 — Cl. 9.2)',norma:'ISO 9001:2015 — Cl. 9.2',
    keywords:['auditoria interna','iso 9001','no conformidad','hallazgo de auditoria','criterio de auditoria','plan de auditoria','evidencia objetiva','auditor lider'],
    campos_clave:[
     {etiqueta:'Proceso / área auditada',tipo:'texto'},{etiqueta:'Fecha de auditoría',tipo:'fecha_auto'},
@@ -12,7 +12,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Fecha de seguimiento',tipo:'fecha'},{etiqueta:'Firma del auditor',tipo:'firma'},
     {etiqueta:'Firma del auditado',tipo:'firma'},
   ]},
-  {id:'no_conformidad_iso',vertical:'calidad',nombre:'Informe de No Conformidad (ISO 9001 — Cl. 8.7/10.2)',
+  {id:'no_conformidad_iso',vertical:'calidad',nombre:'Informe de No Conformidad (ISO 9001 — Cl. 8.7/10.2)',norma:'ISO 9001:2015 — Cl. 8.7 / 10.2',
    keywords:['no conformidad','salida no conforme','correccion inmediata','causa raiz','clasificacion mayor menor','contencion'],
    campos_clave:[
     {etiqueta:'Número de no conformidad',tipo:'numero'},{etiqueta:'Fecha de detección',tipo:'fecha_auto'},
@@ -24,7 +24,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Fecha límite de cierre',tipo:'fecha'},
     {etiqueta:'Firma del responsable de calidad',tipo:'firma'},
   ]},
-  {id:'capa_iso',vertical:'calidad',nombre:'Plan de Acción Correctiva y Preventiva — CAPA (ISO 9001 — Cl. 10.2)',
+  {id:'capa_iso',vertical:'calidad',nombre:'Plan de Acción Correctiva y Preventiva — CAPA (ISO 9001 — Cl. 10.2)',norma:'ISO 9001:2015 — Cl. 10.2',
    keywords:['accion correctiva','accion preventiva','capa','causa raiz','5 porques','ishikawa','verificacion de eficacia','plan de accion'],
    campos_clave:[
     {etiqueta:'Número de CAPA',tipo:'numero'},{etiqueta:'Origen / NC asociada',tipo:'texto'},
@@ -115,7 +115,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del participante',tipo:'firma'},
     {etiqueta:'¿Completó la capacitación?',tipo:'si_no'},
   ]},
-  {id:'matriz_peligros',vertical:'sst',nombre:'Matriz de Identificación de Peligros y Valoración de Riesgos (GTC-45)',
+  {id:'matriz_peligros',vertical:'sst',nombre:'Matriz de Identificación de Peligros y Valoración de Riesgos (GTC-45)',norma:'GTC 45 · Decreto 1072/2015',
    keywords:['matriz','peligro','riesgo','gtc','valoracion','control','consecuencia','probabilidad','nivel de riesgo','intervencion'],
    campos_clave:[
     {etiqueta:'Proceso / Actividad',tipo:'texto'},{etiqueta:'Área / Lugar',tipo:'select',opciones:['Producción','Almacén','Oficinas','Mantenimiento','Exteriores','Otro']},
@@ -154,7 +154,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del jefe inmediato',tipo:'firma'},
   ]},
 
-  {id:'autoevaluacion_res0312',vertical:'sst',nombre:'Autoevaluación de Estándares Mínimos SG-SST (Res. 0312/2019)',
+  {id:'autoevaluacion_res0312',vertical:'sst',nombre:'Autoevaluación de Estándares Mínimos SG-SST (Res. 0312/2019)',norma:'Resolución 0312 de 2019',
    keywords:['estandares minimos','resolucion 0312','autoevaluacion','sgsst','plan de mejora','calificacion del sistema'],
    campos_clave:[
     {etiqueta:'Fecha de autoevaluación',tipo:'fecha_auto'},{etiqueta:'Número de trabajadores',tipo:'numero'},
@@ -217,7 +217,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del responsable de entrega',tipo:'firma'},
   ]},
 
-  {id:'investigacion_at',vertical:'sst',nombre:'Investigación de Accidente de Trabajo (Res. 1401/2007)',
+  {id:'investigacion_at',vertical:'sst',nombre:'Investigación de Accidente de Trabajo (Res. 1401/2007)',norma:'Resolución 1401 de 2007',
    keywords:['causas basicas','causas inmediatas','accion correctiva','plan de accion','factores contribuyentes','causas raiz','resolucion 1401','investigacion de accidente'],
    campos_clave:[
     {etiqueta:'Fecha del accidente',tipo:'fecha_auto'},{etiqueta:'Hora del accidente',tipo:'hora_auto'},
@@ -286,7 +286,7 @@ const FORM_LIBRARY = [
   ]},
 
   // ── Inmuebles / NFPA Verticales (seguridad contra incendios y facilidades) ──
-  {id:'inspeccion_extintores',vertical:'inmuebles',nombre:'Inspección de Extintores (NFPA 10)',
+  {id:'inspeccion_extintores',vertical:'inmuebles',nombre:'Inspección de Extintores (NFPA 10)',norma:'NFPA 10',
    keywords:['extintor','extintores','nfpa 10','recarga','presion extintor','sello de seguridad'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Ubicación del extintor',tipo:'texto'},
@@ -297,7 +297,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'inspeccion_bomba_incendio',vertical:'inmuebles',nombre:'Inspección de Bomba Contra Incendio (NFPA 20/25)',
+  {id:'inspeccion_bomba_incendio',vertical:'inmuebles',nombre:'Inspección de Bomba Contra Incendio (NFPA 20/25)',norma:'NFPA 20 / 25',
    keywords:['bomba contra incendio','nfpa 20','nfpa 25','presion de succion','presion de descarga','jockey pump'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Identificación de la bomba',tipo:'texto'},
@@ -307,7 +307,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Observaciones',tipo:'textarea'},{etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'inspeccion_rociadores',vertical:'inmuebles',nombre:'Inspección de Sistema de Rociadores Automáticos (NFPA 13)',
+  {id:'inspeccion_rociadores',vertical:'inmuebles',nombre:'Inspección de Sistema de Rociadores Automáticos (NFPA 13)',norma:'NFPA 13 / 25',
    keywords:['rociadores','sprinklers','nfpa 13','valvula de control','red humeda','red seca'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Área / Zona evaluada',tipo:'texto'},
@@ -317,7 +317,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'inspeccion_alarma_incendio',vertical:'inmuebles',nombre:'Inspección de Sistema de Detección y Alarma de Incendio (NFPA 72)',
+  {id:'inspeccion_alarma_incendio',vertical:'inmuebles',nombre:'Inspección de Sistema de Detección y Alarma de Incendio (NFPA 72)',norma:'NFPA 72',
    keywords:['alarma de incendio','deteccion','nfpa 72','sensor de humo','panel de alarma','estacion manual'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Zona / Área evaluada',tipo:'texto'},
@@ -327,7 +327,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'inspeccion_salidas_emergencia',vertical:'inmuebles',nombre:'Inspección de Salidas de Emergencia y Señalización (NFPA 101)',
+  {id:'inspeccion_salidas_emergencia',vertical:'inmuebles',nombre:'Inspección de Salidas de Emergencia y Señalización (NFPA 101)',norma:'NFPA 101',
    keywords:['salida de emergencia','nfpa 101','senalizacion','ruta de evacuacion','iluminacion de emergencia','medios de egreso'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Ubicación / piso',tipo:'texto'},
@@ -455,7 +455,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma de ingreso',tipo:'firma'},
   ]},
 
-  {id:'permiso_altura_obra',vertical:'construccion',nombre:'Permiso de Trabajo en Alturas (Obra)',
+  {id:'permiso_altura_obra',vertical:'construccion',nombre:'Permiso de Trabajo en Alturas (Obra)',norma:'Resolución 4272 de 2021 (trabajo en alturas)',
    keywords:['trabajo en alturas','andamio','arnes','linea de vida','punto de anclaje','permiso de altura','resolucion 4272'],
    campos_clave:[
     {etiqueta:'Número de permiso',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
@@ -546,7 +546,7 @@ const FORM_LIBRARY = [
   ]},
 
   // ── Alimentos Verticales (INVIMA · HACCP · BPM) ───────────────
-  {id:'inspeccion_sanitaria',vertical:'alimentos',nombre:'Inspección Sanitaria / Higiene',
+  {id:'inspeccion_sanitaria',vertical:'alimentos',nombre:'Inspección Sanitaria / Higiene',norma:'Resolución 2674 de 2013 (INVIMA)',
    keywords:['sanitaria','higiene','alimento','limpieza','desinfeccion','plagas','temperatura','inocuidad','establecimiento','bpm'],
    campos_clave:[
     {etiqueta:'Nombre del establecimiento',tipo:'texto'},{etiqueta:'Fecha de inspección',tipo:'fecha_auto'},
@@ -556,7 +556,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Fotografía de evidencia',tipo:'foto'},{etiqueta:'Firma del inspector',tipo:'firma'},
     {etiqueta:'Ubicación GPS',tipo:'ubicacion'},
   ]},
-  {id:'control_temperatura_haccp',vertical:'alimentos',nombre:'Control de Temperatura HACCP (Refrigeración/Congelación)',
+  {id:'control_temperatura_haccp',vertical:'alimentos',nombre:'Control de Temperatura HACCP (Refrigeración/Congelación)',norma:'Resolución 2674/2013 · HACCP',
    keywords:['temperatura','refrigeracion','congelacion','haccp','nevera','cuarto frio','punto critico de control'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de registro',tipo:'hora_auto'},
@@ -568,7 +568,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable del registro',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'limpieza_desinfeccion',vertical:'alimentos',nombre:'Registro de Limpieza y Desinfección',
+  {id:'limpieza_desinfeccion',vertical:'alimentos',nombre:'Registro de Limpieza y Desinfección',norma:'Resolución 2674 de 2013 (BPM)',
    keywords:['limpieza','desinfeccion','sanitizacion','superficie','utensilios','area de produccion','quimico utilizado'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},
@@ -578,7 +578,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'control_plagas',vertical:'alimentos',nombre:'Control de Plagas (MIP)',
+  {id:'control_plagas',vertical:'alimentos',nombre:'Control de Plagas (MIP)',norma:'Resolución 2674 de 2013 (Plan de saneamiento)',
    keywords:['plagas','roedores','insectos','mip','manejo integrado de plagas','trampa','cebo','fumigacion'],
    campos_clave:[
     {etiqueta:'Fecha de inspección',tipo:'fecha_auto'},{etiqueta:'Empresa de control de plagas',tipo:'texto'},
@@ -671,7 +671,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Médico responsable',tipo:'texto'},{etiqueta:'Firma del médico',tipo:'firma'},
   ]},
 
-  {id:'esterilizacion_equipos',vertical:'salud',nombre:'Control de Esterilización de Equipos e Instrumental',
+  {id:'esterilizacion_equipos',vertical:'salud',nombre:'Control de Esterilización de Equipos e Instrumental',norma:'Resolución 3100 de 2019',
    keywords:['esterilizacion','autoclave','instrumental','indicador biologico','indicador quimico','lote de esterilizacion'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Equipo / Autoclave',tipo:'texto'},
@@ -682,7 +682,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'manejo_residuos_hospitalarios',vertical:'salud',nombre:'Manejo de Residuos Hospitalarios (PGIRASA)',
+  {id:'manejo_residuos_hospitalarios',vertical:'salud',nombre:'Manejo de Residuos Hospitalarios (PGIRASA)',norma:'Decreto 351 de 2014 (PGIRASA)',
    keywords:['residuos hospitalarios','pgirasa','peligrosos','cortopunzante','anatomopatologico','recoleccion','segregacion'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},
@@ -703,7 +703,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma de quien dispensa',tipo:'firma'},{etiqueta:'Firma de quien recibe',tipo:'firma'},
   ]},
 
-  {id:'inspeccion_habilitacion',vertical:'salud',nombre:'Lista de Verificación de Habilitación de Servicios de Salud',
+  {id:'inspeccion_habilitacion',vertical:'salud',nombre:'Lista de Verificación de Habilitación de Servicios de Salud',norma:'Resolución 3100 de 2019',
    keywords:['habilitacion','estandares','infraestructura','dotacion','autoevaluacion','servicio de salud','calidad'],
    campos_clave:[
     {etiqueta:'Servicio evaluado',tipo:'texto'},{etiqueta:'Fecha de autoevaluación',tipo:'fecha_auto'},
