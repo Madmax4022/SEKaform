@@ -54,6 +54,26 @@
     .flt-custom{display:inline-flex;align-items:center;gap:8px;}
     .flt-count{margin-left:auto;font-size:.76rem;color:var(--mut);font-family:var(--mono,monospace);}
     .flt-bar .filter-sel{max-width:none;}
+    /* modo auditoría */
+    .audit-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--pri);}
+    .audit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+    .audit-intro h2{font-size:1.05rem;font-weight:800;margin:0 0 4px;}
+    .audit-sub{font-size:.83rem;color:var(--mut);margin:0;max-width:52ch;line-height:1.5;}
+    .audit-btns{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;}
+    .audit-title{font-size:.78rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 10px;}
+    .audit-title .mut{font-weight:600;text-transform:none;letter-spacing:0;}
+    .hz-au-row,.hz-au-head{display:grid;grid-template-columns:1.4fr 90px 1fr 96px 96px;gap:10px;align-items:center;}
+    @media(max-width:700px){.hz-au-row,.hz-au-head{grid-template-columns:1.2fr 78px 1fr;} .hz-au-lim,.hz-au-cer{display:none;}}
+    .hz-au-head{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700;padding-bottom:8px;border-bottom:1px solid var(--bor);}
+    .hz-au-row{padding:11px 0;border-bottom:1px solid var(--bor);font-size:.85rem;}
+    .hz-au-form{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .hz-au-form small{display:block;color:var(--mut);font-weight:400;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .sev-pill{font-size:.7rem;font-weight:800;border-radius:20px;padding:2px 9px;white-space:nowrap;display:inline-block;}
+    .sev-pill.critico{background:rgba(239,68,68,.15);color:var(--err);}
+    .sev-pill.mayor{background:var(--warn-dim);color:var(--warn);}
+    .sev-pill.menor{background:var(--card2);color:var(--mut);}
+    .cer-si{color:var(--ok);font-weight:700;} .cer-no{color:var(--warn);font-weight:700;}
+    .audit-empty{color:var(--mut);font-size:.85rem;padding:22px 4px;text-align:center;}
     .table-wrap{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
     thead th{padding:11px 16px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);background:var(--card2);}
@@ -295,6 +315,26 @@
     <div class="chart-card" style="margin-bottom:32px">
       <div class="chart-title">📈 Tendencia mensual — envíos y hallazgos (últimos 6 meses)</div>
       <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
+    </div>
+
+    <!-- modo auditoría -->
+    <div class="audit-card">
+      <div class="audit-head">
+        <div class="audit-intro">
+          <h2>🔎 Modo auditoría<button class="skf-help" data-help-t="¿Cómo entrego una auditoría?" data-help="1. Arriba, elige el periodo y la unidad que te piden.
+2. Descarga la «Carpeta de evidencia» (PDF) — trae el resumen, el comparativo, los registros del periodo y el estado de cada hallazgo (si se corrigió o no).
+3. Entrégala o muéstrala en la inspección.
+
+La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se cerró — que es lo que un auditor revisa.">?</button></h2>
+          <p class="audit-sub">Para una inspección o auditoría: elige arriba el periodo y la unidad, y descarga la evidencia lista para entregar.</p>
+        </div>
+        <div class="audit-btns">
+          <button class="btn-export" onclick="reporteConsolidado()">📄 Carpeta de evidencia (PDF)</button>
+          <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla (CSV)</button>
+        </div>
+      </div>
+      <div class="audit-title">Hallazgos y su cierre <span class="mut" id="auditCount"></span></div>
+      <div id="auditHallazgos"></div>
     </div>
 
     <!-- recent submissions table -->
@@ -711,6 +751,33 @@ function printReport(title, bodyHtml, opts) {
   setTimeout(go, 500);
 }
 
+// ── Modo auditoría: hallazgo + su acción correctiva (¿se cerró?) ────────
+const ESTADO_LBL = { abierto:'Abierto', en_proceso:'En atención', cerrado:'Cerrado' };
+function _auditRows(ds) {
+  const acc = _bi.acciones || [];
+  return ds.hallazgos.map(h => {
+    const ac = acc.find(a => (a.hallazgo_id||a.hallazgoId) === h.id);
+    const cerrado = (h.estado === 'cerrado') || (ac && ac.estado === 'completada');
+    const lim = ac && fAcFechaLimite(ac) ? new Date(fAcFechaLimite(ac)+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '—';
+    return { form: fHzPlantillaNom(h), campo: fHzCampo(h), sev: h.severidad||'menor',
+             estado: h.estado||'abierto', resp: ac ? fAcResponsable(ac) : '—', limite: lim, cerrado };
+  });
+}
+function renderAuditoria(ds) {
+  const rows = _auditRows(ds);
+  document.getElementById('auditCount').textContent = rows.length ? `· ${rows.length} en el filtro` : '';
+  const el = document.getElementById('auditHallazgos');
+  if (!rows.length) { el.innerHTML = '<div class="audit-empty">Sin hallazgos en este periodo — nada por corregir. 👍</div>'; return; }
+  el.innerHTML = `<div class="hz-au-head"><span>Hallazgo</span><span>Severidad</span><span>Responsable</span><span class="hz-au-lim">Límite</span><span class="hz-au-cer">Cierre</span></div>`
+    + rows.map(r => `<div class="hz-au-row">
+        <span class="hz-au-form">${escD(r.form)}<small>${escD(r.campo||'Reportado a mano')} · ${ESTADO_LBL[r.estado]||r.estado}</small></span>
+        <span><span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span></span>
+        <span class="hz-au-form">${escD(r.resp)}</span>
+        <span class="hz-au-lim">${escD(r.limite)}</span>
+        <span class="hz-au-cer ${r.cerrado?'cer-si':'cer-no'}">${r.cerrado?'✓ Cerrado':'Pendiente'}</span>
+      </div>`).join('');
+}
+
 function reporteConsolidado() {
   const ds = datosFiltrados();
   const st = computeStats(ds.envios);
@@ -750,7 +817,13 @@ function reporteConsolidado() {
     ? `<table><thead><tr><th style="text-align:left">Formulario</th><th style="text-align:left">Fecha</th><th style="text-align:left">Unidad</th><th style="text-align:left">Llenado por</th></tr></thead><tbody>${detalle}</tbody></table>${ds.envios.length>60?`<p style="color:#9ca3af;font-size:11px;margin-top:8px">Mostrando 60 de ${ds.envios.length} registros — usa "Descargar tabla" (CSV) para el detalle completo.</p>`:''}`
     : `<p style="color:#9ca3af">Sin registros en este periodo.</p>`;
 
-  printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Registros del periodo</h2>${tablaDet}`);
+  // Hallazgos y su cierre (lo que audita un inspector)
+  const auRows = _auditRows(ds);
+  const tablaHz = auRows.length
+    ? `<table><thead><tr><th style="text-align:left">Hallazgo</th><th style="text-align:left">Severidad</th><th style="text-align:left">Estado</th><th style="text-align:left">Responsable</th><th style="text-align:left">Límite</th><th style="text-align:left">Cierre</th></tr></thead><tbody>${auRows.map(r=>`<tr><td style="text-align:left">${escD(r.form)} — ${escD(r.campo||'manual')}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${ESTADO_LBL[r.estado]||r.estado}</td><td style="text-align:left">${escD(r.resp)}</td><td style="text-align:left">${escD(r.limite)}</td><td style="text-align:left">${r.cerrado?'Cerrado':'Pendiente'}</td></tr>`).join('')}</tbody></table>`
+    : `<p style="color:#9ca3af">Sin hallazgos en este periodo.</p>`;
+
+  printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Hallazgos y su cierre</h2>${tablaHz}<h2>Registros del periodo</h2>${tablaDet}`);
 }
 
 let _reportEnvios = [];
@@ -980,6 +1053,7 @@ function pintar() {
   _biEnvios = ds.envios; _biHallazgos = ds.hallazgos; _biUnidades = ds.unidades;
   renderComparativo();
   buildCompliance(ds.hallazgos, ds.acciones, ds.asignaciones, ds.envios);
+  renderAuditoria(ds);
   buildTable(ds.envios, ds.plantillas);
 
   const n = ds.envios.length;
