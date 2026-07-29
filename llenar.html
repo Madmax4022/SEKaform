@@ -322,6 +322,7 @@
       </div>
       <h1 class="form-title-h" id="fTitle"></h1>
       <p class="form-desc-p" id="fDesc"></p>
+      <p id="fNorma" style="display:none;color:var(--pri);font-size:.76rem;font-weight:600;margin-top:6px"></p>
     </div>
     <div class="fg hidden" id="fg_fillerName">
       <label><span class="fg-ico">👤</span>¿Quién llena este formulario?<span class="req">*</span></label>
@@ -467,10 +468,18 @@ function normalizePlantillaFromCloud(p) {
   return {
     id: p.id, nombre: p.nombre, descripcion: p.descripcion||'', codigo: p.codigo||'',
     campos: p.campos||[], version: '1.0', logo: p.logo||null, favorito: p.favorito||false,
+    norma: p.norma||p.norma||'',
     publica: p.publica||false, shareToken: p.share_token||p.shareToken||null,
     correoNotificacion: p.correo_notificacion||p.correoNotificacion||'',
     creadoEn: p.creado_en||p.creadoEn, actualizadoEn: p.actualizado_en||p.actualizadoEn
   };
+}
+// Muestra la norma/referencia bajo el título — solo si la plantilla la tiene.
+function _mostrarNorma(norma) {
+  const el = document.getElementById('fNorma');
+  if (!el) return;
+  if (norma) { el.textContent = '📋 ' + norma; el.style.display = ''; }
+  else { el.textContent = ''; el.style.display = 'none'; }
 }
 function normalizeEnvioFromCloud(e) {
   return {
@@ -570,6 +579,7 @@ async function openPublicTemplate(token) {
   document.getElementById('fCod').textContent = activeTmpl.codigo||'';
   document.getElementById('fTitle').textContent = activeTmpl.nombre;
   document.getElementById('fDesc').textContent = activeTmpl.descripcion||'';
+  _mostrarNorma(activeTmpl.norma);
   document.getElementById('histBtn').style.display='none';
   const fLogo = document.getElementById('fLogo');
   if (activeTmpl.logo) { fLogo.src = activeTmpl.logo; fLogo.classList.remove('hidden'); }
@@ -801,6 +811,7 @@ function openTemplate(id) {
   document.getElementById('fCod').textContent = t.codigo||'';
   document.getElementById('fTitle').textContent = t.nombre;
   document.getElementById('fDesc').textContent = t.descripcion||'';
+  _mostrarNorma(t.norma);
   document.getElementById('histBtn').style.display='block';
   const fLogo = document.getElementById('fLogo');
   if (t.logo) { fLogo.src = t.logo; fLogo.classList.remove('hidden'); }
