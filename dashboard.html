@@ -48,6 +48,12 @@
     .filter-sel:focus{border-color:var(--pri);}
     .btn-export{background:var(--ok-dim);border:1px solid rgba(26,188,156,.3);color:var(--ok);border-radius:7px;padding:6px 13px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;}
     .btn-export:hover{background:rgba(26,188,156,.22);}
+    /* barra de filtros global */
+    .flt-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--bor);border-radius:12px;padding:12px 16px;margin-bottom:24px;}
+    .flt-lbl{font-size:.8rem;color:var(--mut);font-weight:600;}
+    .flt-custom{display:inline-flex;align-items:center;gap:8px;}
+    .flt-count{margin-left:auto;font-size:.76rem;color:var(--mut);font-family:var(--mono,monospace);}
+    .flt-bar .filter-sel{max-width:none;}
     .table-wrap{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
     thead th{padding:11px 16px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);background:var(--card2);}
@@ -166,6 +172,26 @@
 
   <div id="mainContent" style="display:none">
 
+    <!-- barra de filtros global: recalcula todo el panel y los reportes -->
+    <div class="flt-bar" id="fltBar">
+      <span class="flt-lbl">Ver:</span>
+      <select class="filter-sel" id="fltPeriodo" onchange="onFiltroChange()">
+        <option value="todo">Todo el histórico</option>
+        <option value="mes">Este mes</option>
+        <option value="trim">Este trimestre</option>
+        <option value="anio">Este año</option>
+        <option value="custom">Rango personalizado…</option>
+      </select>
+      <span class="flt-custom" id="fltCustom" style="display:none">
+        <input type="date" id="fltDesde" class="filter-sel" onchange="onFiltroChange()">
+        <span class="flt-lbl">a</span>
+        <input type="date" id="fltHasta" class="filter-sel" onchange="onFiltroChange()">
+      </span>
+      <select class="filter-sel" id="fltUnidad" onchange="onFiltroChange()"><option value="">Todas las unidades</option></select>
+      <select class="filter-sel" id="fltFormulario" onchange="onFiltroChange()"><option value="">Todos los formularios</option></select>
+      <span class="flt-count" id="fltCount"></span>
+    </div>
+
     <!-- stat cards -->
     <div class="stats-grid">
       <div class="stat-card c-pri">
@@ -279,10 +305,7 @@
           <span style="font-size:.75rem;color:var(--mut)" id="tableCount"></span>
         </div>
         <div class="table-actions">
-          <select class="filter-sel" id="formFilter" onchange="applyFilter()">
-            <option value="">Todos los formularios</option>
-          </select>
-          <button class="btn-export" onclick="reporteConsolidado()">📄 Reporte (PDF)</button>
+          <button class="btn-export" onclick="reporteConsolidado()">📄 Carpeta de evidencia (PDF)</button>
           <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla</button>
         </div>
       </div>
@@ -297,6 +320,65 @@
 const CHART_GRID  = 'rgba(51,65,85,.6)';
 const CHART_TEXT  = '#94a3b8';
 const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// ── Filtros globales del panel ──────────────────────────────────────
+// Recalculan TODO el BI y también los reportes (la "Carpeta de evidencia"
+// no es más que este panel filtrado por periodo + unidad + formulario).
+let _chDaily = null, _chForms = null, _chTrend = null;   // instancias de gráfica (para destruir al recalcular)
+const _filtros = { periodo: 'todo', desde: null, hasta: null, unidadId: '', codigo: '' };
+let _formLabels = new Map();   // codigo → nombre de formulario (para el selector y las etiquetas)
+
+function _rangoPeriodo() {
+  const now = new Date(); const y = now.getFullYear(), m = now.getMonth();
+  if (_filtros.periodo === 'mes')   return [new Date(y, m, 1), new Date(y, m+1, 1)];
+  if (_filtros.periodo === 'trim')  { const q = Math.floor(m/3)*3; return [new Date(y, q, 1), new Date(y, q+3, 1)]; }
+  if (_filtros.periodo === 'anio')  return [new Date(y, 0, 1), new Date(y+1, 0, 1)];
+  if (_filtros.periodo === 'custom') {
+    const d = _filtros.desde ? new Date(_filtros.desde+'T00:00:00') : null;
+    const h = _filtros.hasta ? new Date(_filtros.hasta+'T23:59:59') : null;
+    return [d, h];
+  }
+  return [null, null]; // "todo"
+}
+const _fecha = x => new Date(x.enviado_en||x.enviadoEn||x.creado_en||x.creadoEn||0);
+const _unidadDe = x => x.unidad_id||x.unidadId||null;
+
+function _enRango(x) {
+  const [d, h] = _rangoPeriodo();
+  if (!d && !h) return true;
+  const f = _fecha(x);
+  if (d && f < d) return false;
+  if (h && f >= h) return false;
+  return true;
+}
+function _pasaUnidad(x) { return !_filtros.unidadId || _unidadDe(x) === _filtros.unidadId; }
+function _pasaFormEnvio(e) { return !_filtros.codigo || envioGroupKey(e) === _filtros.codigo; }
+function _pasaFormHz(h) {
+  if (!_filtros.codigo) return true;
+  const pid = h.plantilla_id||h.plantillaId;
+  const p = (_bi.plantillas||[]).find(x=>x.id===pid);
+  return p ? envioGroupKey({plantilla_codigo:p.codigo, plantilla_id:p.id, plantilla_nombre:p.nombre}) === _filtros.codigo
+           : (h.plantilla_nombre||h.plantillaNombre) && `n:${h.plantilla_nombre||h.plantillaNombre}` === _filtros.codigo;
+}
+
+// Devuelve el dataset filtrado por periodo + unidad + formulario.
+function datosFiltrados() {
+  const envios      = (_bi.envios||[]).filter(e => _enRango(e) && _pasaUnidad(e) && _pasaFormEnvio(e));
+  const hallazgos   = (_bi.hallazgos||[]).filter(h => _enRango(h) && _pasaUnidad(h) && _pasaFormHz(h));
+  const hzIds       = new Set(hallazgos.map(h=>h.id));
+  const acciones    = (_bi.acciones||[]).filter(a => hzIds.has(a.hallazgo_id||a.hallazgoId) || (!_filtros.codigo && !_filtros.unidadId && _filtros.periodo==='todo'));
+  const asignaciones= (_bi.asignaciones||[]).filter(a => _enRango(a) && _pasaUnidad(a) && (!_filtros.codigo || (a.plantilla_id||a.plantillaId) && envioGroupKey({plantilla_codigo:'', plantilla_id:a.plantilla_id||a.plantillaId, plantilla_nombre:a.plantilla_nombre||a.plantillaNombre})===_filtros.codigo));
+  return { plantillas:_bi.plantillas||[], unidades:_bi.unidades||[], envios, hallazgos, acciones, asignaciones };
+}
+
+function _etiquetaFiltro() {
+  const per = {todo:'Todo el histórico', mes:'Este mes', trim:'Este trimestre', anio:'Este año', custom:'Rango personalizado'}[_filtros.periodo] || 'Todo';
+  let s = per;
+  if (_filtros.periodo==='custom' && (_filtros.desde||_filtros.hasta)) s += ` (${_filtros.desde||'…'} a ${_filtros.hasta||'…'})`;
+  if (_filtros.unidadId) { const u=(_bi.unidades||[]).find(x=>x.id===_filtros.unidadId); if(u) s += ` · ${u.nombre}`; }
+  if (_filtros.codigo) { const lbl=_formLabels.get(_filtros.codigo); if(lbl) s += ` · ${lbl}`; }
+  return s;
+}
 
 // ── Data loading ─────────────────────────────────────────────────
 function mergeByCloudId(cloud, local) {
@@ -367,7 +449,8 @@ function buildDailyChart(envios) {
     }).length);
   }
 
-  new Chart(document.getElementById('chartDaily'), {
+  if (_chDaily) _chDaily.destroy();
+  _chDaily = new Chart(document.getElementById('chartDaily'), {
     type: 'line',
     data: {
       labels,
@@ -415,14 +498,11 @@ function buildFormChart(envios, plantillas) {
   });
 
   const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
-  if (!sorted.length) {
-    document.getElementById('chartForms').parentNode.innerHTML =
-      '<p style="color:var(--mut);text-align:center;padding:60px 0;font-size:.85rem">Sin envíos todavía</p>';
-    return;
-  }
+  if (_chForms) { _chForms.destroy(); _chForms = null; }
+  if (!sorted.length) return;   // sin datos en el filtro: canvas en blanco (se recalcula al cambiar filtro)
 
   const COLORS = ['#2563eb','#1abc9c','#8b5cf6','#f59e0b','#ec4899','#f97316','#06b6d4'];
-  new Chart(document.getElementById('chartForms'), {
+  _chForms = new Chart(document.getElementById('chartForms'), {
     type: 'bar',
     data: {
       labels: sorted.map(([k]) => { const l=labelMap[k]; return l.length>22 ? l.slice(0,20)+'…' : l; }),
@@ -632,35 +712,45 @@ function printReport(title, bodyHtml, opts) {
 }
 
 function reporteConsolidado() {
-  const st = computeStats(_bi.envios||[]);
-  const { done, total, pct } = computeCumplimiento(_bi.asignaciones||[], _bi.envios||[]);
-  const abiertos = (_bi.hallazgos||[]).filter(h => (h.estado||'abierto') !== 'cerrado');
+  const ds = datosFiltrados();
+  const st = computeStats(ds.envios);
+  const { done, total, pct } = computeCumplimiento(ds.asignaciones, ds.envios);
+  const abiertos = ds.hallazgos.filter(h => (h.estado||'abierto') !== 'cerrado');
   const criticos = abiertos.filter(h => h.severidad === 'critico').length;
   const resumen = `<div class="kv">
-    <div class="k">Formularios</div><div class="v">${(_bi.plantillas||[]).length}</div>
-    <div class="k">Envíos totales</div><div class="v">${st.total}</div>
-    <div class="k">Envíos este mes</div><div class="v">${st.month}</div>
+    <div class="k">Periodo / filtro</div><div class="v">${escD(_etiquetaFiltro())}</div>
+    <div class="k">Envíos</div><div class="v">${st.total}</div>
     <div class="k">Cumplimiento de asignaciones</div><div class="v">${pct===null?'—':pct+'% ('+done+'/'+total+')'}</div>
-    <div class="k">Hallazgos abiertos</div><div class="v">${abiertos.length} de ${(_bi.hallazgos||[]).length}</div>
+    <div class="k">Hallazgos abiertos</div><div class="v">${abiertos.length} de ${ds.hallazgos.length}</div>
     <div class="k">Críticos sin resolver</div><div class="v">${criticos}</div>
   </div>`;
 
   const tipo = document.getElementById('unidadTipoSel').value;
-  const unidadesTipo = (_bi.unidades||[]).filter(u => (u.tipo||'sede') === tipo);
+  const unidadesTipo = ds.unidades.filter(u => (u.tipo||'sede') === tipo);
   const idset = new Set(unidadesTipo.map(u=>u.id));
   const filas = unidadesTipo.map(u => {
-    const env = (_bi.envios||[]).filter(e => fEnvUnidad(e) === u.id).length;
-    const ab = (_bi.hallazgos||[]).filter(h => fHzUnidad(h) === u.id && (h.estado||'abierto') !== 'cerrado');
+    const env = ds.envios.filter(e => fEnvUnidad(e) === u.id).length;
+    const ab = ds.hallazgos.filter(h => fHzUnidad(h) === u.id && (h.estado||'abierto') !== 'cerrado');
     return { n:u.nombre, e:env, a:ab.length, c:ab.filter(h=>h.severidad==='critico').length };
   }).sort((a,b)=>b.e-a.e);
-  const envSin = (_bi.envios||[]).filter(e => !idset.has(fEnvUnidad(e))).length;
-  const hzSin  = (_bi.hallazgos||[]).filter(h => !idset.has(fHzUnidad(h)) && (h.estado||'abierto') !== 'cerrado');
+  const envSin = ds.envios.filter(e => !idset.has(fEnvUnidad(e))).length;
+  const hzSin  = ds.hallazgos.filter(h => !idset.has(fHzUnidad(h)) && (h.estado||'abierto') !== 'cerrado');
   if (envSin || hzSin.length) filas.push({ n:'Sin asignar', e:envSin, a:hzSin.length, c:hzSin.filter(h=>h.severidad==='critico').length });
   const cmp = unidadesTipo.length
     ? `<table><thead><tr><th>Unidad</th><th>Envíos</th><th>Abiertos</th><th>Críticos</th></tr></thead><tbody>${filas.map(f=>`<tr><td>${escD(f.n)}</td><td>${f.e}</td><td>${f.a}</td><td>${f.c}</td></tr>`).join('')}</tbody></table>`
     : `<p style="color:#9ca3af">No hay ${U_TIPO_LBL[tipo]||'unidades'} registradas.</p>`;
 
-  printReport('Reporte del panel', `<h2>Resumen</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}`);
+  // Detalle de registros del periodo (evidencia)
+  const detalle = ds.envios.slice(0, 60).map(e => {
+    const d = new Date(fEnvCreado(e)).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
+    const uni = unidadNombreDash(fEnvUnidad(e));
+    return `<tr><td style="text-align:left">${escD(e.plantilla_nombre||e.plantillaNombre||'')}</td><td style="text-align:left">${d}</td><td style="text-align:left">${escD(uni||'—')}</td><td style="text-align:left">${escD(e.llenado_por||e.llenadoPor||'—')}</td></tr>`;
+  }).join('');
+  const tablaDet = ds.envios.length
+    ? `<table><thead><tr><th style="text-align:left">Formulario</th><th style="text-align:left">Fecha</th><th style="text-align:left">Unidad</th><th style="text-align:left">Llenado por</th></tr></thead><tbody>${detalle}</tbody></table>${ds.envios.length>60?`<p style="color:#9ca3af;font-size:11px;margin-top:8px">Mostrando 60 de ${ds.envios.length} registros — usa "Descargar tabla" (CSV) para el detalle completo.</p>`:''}`
+    : `<p style="color:#9ca3af">Sin registros en este periodo.</p>`;
+
+  printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Registros del periodo</h2>${tablaDet}`);
 }
 
 let _reportEnvios = [];
@@ -743,7 +833,8 @@ function buildTrendChart(envios, hallazgos) {
     envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
     hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
   }
-  new Chart(document.getElementById('chartTrend'), {
+  if (_chTrend) _chTrend.destroy();
+  _chTrend = new Chart(document.getElementById('chartTrend'), {
     type: 'bar',
     data: { labels, datasets: [
       { label: 'Envíos',    data: envCounts, backgroundColor: 'rgba(37,99,235,.75)',  borderRadius: 5 },
@@ -774,7 +865,7 @@ function buildCampoMap(plantillas) {
 
 function buildTable(envios, plantillas) {
   _allEnvios = envios; _allPlantillas = plantillas;
-  const filtered = _activeFilter ? envios.filter(e=>envioGroupKey(e)===_activeFilter) : envios;
+  const filtered = envios;   // ya viene filtrado por la barra global
   const count = filtered.length;
   document.getElementById('tableCount').textContent = `${count} registro${count!==1?'s':''}`;
 
@@ -830,13 +921,8 @@ function toggleDetail(id) {
   el.style.display = el.style.display==='none' ? 'table-row' : 'none';
 }
 
-function applyFilter() {
-  _activeFilter = document.getElementById('formFilter').value;
-  buildTable(_allEnvios, _allPlantillas);
-}
-
 function exportCSV() {
-  const envios = _activeFilter ? _allEnvios.filter(e=>envioGroupKey(e)===_activeFilter) : _allEnvios;
+  const envios = datosFiltrados().envios;
   if (!envios.length) { alert('No hay registros para exportar.'); return; }
   const campoMap = buildCampoMap(_allPlantillas);
   const colKeys = []; const colLabels = {};
@@ -874,62 +960,85 @@ function exportCSV() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
+const U_ICO_FLT = { sede:'🏢', area:'🗂️', contratista:'🤝', otro:'📍' };
+
+// Aplica los filtros globales y repinta TODO el panel con el dataset filtrado.
+function pintar() {
+  const ds = datosFiltrados();
+  const stats = computeStats(ds.envios);
+  document.getElementById('sForms').textContent = ds.plantillas.length;
+  document.getElementById('sTotal').textContent = stats.total;
+  document.getElementById('sMonth').textContent = stats.month;
+  document.getElementById('sWeek').textContent  = stats.week;
+
+  if (typeof Chart !== 'undefined') {
+    buildDailyChart(ds.envios);
+    buildFormChart(ds.envios, ds.plantillas);
+    buildTrendChart(ds.envios, ds.hallazgos);
+  }
+
+  _biEnvios = ds.envios; _biHallazgos = ds.hallazgos; _biUnidades = ds.unidades;
+  renderComparativo();
+  buildCompliance(ds.hallazgos, ds.acciones, ds.asignaciones, ds.envios);
+  buildTable(ds.envios, ds.plantillas);
+
+  const n = ds.envios.length;
+  document.getElementById('fltCount').textContent = `${n} envío${n!==1?'s':''} · ${_etiquetaFiltro()}`;
+}
+
+function onFiltroChange() {
+  _filtros.periodo  = document.getElementById('fltPeriodo').value;
+  document.getElementById('fltCustom').style.display = _filtros.periodo === 'custom' ? 'inline-flex' : 'none';
+  _filtros.desde    = document.getElementById('fltDesde').value || null;
+  _filtros.hasta    = document.getElementById('fltHasta').value || null;
+  _filtros.unidadId = document.getElementById('fltUnidad').value;
+  _filtros.codigo   = document.getElementById('fltFormulario').value;
+  pintar();
+}
+
 async function init() {
   const now = new Date();
   document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
 
   const { plantillas, envios, hallazgos, acciones, asignaciones, unidades, fromCloud } = await loadData();
 
-  // Source badge
   const badge = document.getElementById('srcBadge');
   badge.textContent = fromCloud ? '☁ Datos en la nube (Supabase)' : '💾 Solo en este dispositivo';
   badge.className   = 'src-badge' + (fromCloud ? ' cloud' : '');
   badge.style.display = 'inline-flex';
-
   if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
 
-  // Stats
-  const stats = computeStats(envios);
-  document.getElementById('sForms').textContent = plantillas.length;
-  document.getElementById('sTotal').textContent = stats.total;
-  document.getElementById('sMonth').textContent = stats.month;
-  document.getElementById('sWeek').textContent  = stats.week;
-
-  // Charts (guard against Chart.js not loaded)
-  if (typeof Chart !== 'undefined') {
-    buildDailyChart(envios);
-    buildFormChart(envios, plantillas);
-    buildTrendChart(envios, hallazgos);
-  } else {
-    document.getElementById('chartDaily').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:60px 0">Gráficas no disponibles sin conexión</p>';
-    document.getElementById('chartForms').parentNode.innerHTML = '';
-    document.getElementById('chartTrend').parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:40px 0">Gráfica no disponible sin conexión</p>';
-  }
-
-  // Comparativo por unidad + datos para reportes
-  _biEnvios = envios; _biHallazgos = hallazgos; _biUnidades = unidades;
   _bi = { plantillas, envios, hallazgos, acciones, asignaciones, unidades };
-  // Marca para los reportes: caché local primero (disponible al instante y sin
-  // conexión), luego se refresca desde la nube.
+  // Marca para los reportes: caché local primero, luego se refresca de la nube.
   try { _biOrg = JSON.parse(localStorage.getItem('skf_org')||'null'); } catch { _biOrg = null; }
   sbLoadOrg().then(o => { if (o) { _biOrg = o; localStorage.setItem('skf_org', JSON.stringify({nombre:o.nombre, logo:o.logo||null})); } }).catch(()=>{});
-  renderComparativo();
-  // Populate form filter dropdown (una opción por código de formulario, no por nombre)
-  const groups = new Map(); // key -> label
-  envios.forEach(e => {
-    const key = envioGroupKey(e);
-    if (!groups.has(key)) groups.set(key, e.plantilla_nombre || e.plantillaNombre || '(sin nombre)');
+
+  // Si Chart.js no cargó (offline), avisa una sola vez
+  if (typeof Chart === 'undefined') {
+    ['chartDaily','chartForms','chartTrend'].forEach(id => {
+      const c = document.getElementById(id); if (c) c.parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:50px 0;font-size:.85rem">Gráfica no disponible sin conexión</p>';
+    });
+  }
+
+  // Poblar filtro de unidades (agrupadas por tipo)
+  const uSel = document.getElementById('fltUnidad');
+  ['sede','area','contratista','otro'].forEach(t => {
+    unidades.filter(u => (u.tipo||'sede') === t).forEach(u => {
+      const o = document.createElement('option'); o.value = u.id; o.textContent = `${U_ICO_FLT[t]} ${u.nombre}`; uSel.appendChild(o);
+    });
   });
-  const sel = document.getElementById('formFilter');
-  [...groups.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([key,label]) => {
-    const o=document.createElement('option'); o.value=key; o.textContent=label; sel.appendChild(o);
+  // Poblar filtro de formularios (por código, no por nombre)
+  _formLabels = new Map();
+  envios.forEach(e => { const k = envioGroupKey(e); if (!_formLabels.has(k)) _formLabels.set(k, e.plantilla_nombre || e.plantillaNombre || '(sin nombre)'); });
+  const fSel = document.getElementById('fltFormulario');
+  [..._formLabels.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([k,l]) => {
+    const o = document.createElement('option'); o.value = k; o.textContent = l; fSel.appendChild(o);
   });
 
-  buildCompliance(hallazgos, acciones, asignaciones, envios);
-  buildTable(envios, plantillas);
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('mainContent').style.display  = 'block';
 
-  document.getElementById('loadingState').style.display  = 'none';
-  document.getElementById('mainContent').style.display   = 'block';
+  pintar();
 }
 
 init().catch(err => {
