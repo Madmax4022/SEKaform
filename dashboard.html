@@ -74,6 +74,28 @@
     .sev-pill.menor{background:var(--card2);color:var(--mut);}
     .cer-si{color:var(--ok);font-weight:700;} .cer-no{color:var(--warn);font-weight:700;}
     .audit-empty{color:var(--mut);font-size:.85rem;padding:22px 4px;text-align:center;}
+    /* explorador de datos por campo */
+    .expl-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+    .expl-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+    @media(max-width:640px){.expl-tiles{grid-template-columns:1fr 1fr;}}
+    .expl-tile{background:var(--card2);border:1px solid var(--bor);border-radius:10px;padding:14px 16px;}
+    .expl-tile .l{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);}
+    .expl-tile .n{font-size:1.6rem;font-weight:900;margin-top:4px;line-height:1;}
+    .expl-tile .n small{font-size:.8rem;font-weight:600;color:var(--mut);}
+    .expl-tile.warn .n{color:var(--warn);}
+    .expl-range{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--card2);border:1px solid var(--bor);border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:.84rem;color:var(--mut);}
+    .expl-range input{width:90px;background:var(--inp);border:1px solid var(--bor);color:var(--txt);border-radius:7px;padding:7px 9px;font-family:inherit;outline:none;}
+    .expl-dist-row{display:grid;grid-template-columns:1fr 44% 60px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bor);font-size:.86rem;}
+    .expl-dist-row:last-child{border-bottom:none;}
+    .expl-dist-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .expl-dist-track{height:9px;background:var(--card2);border-radius:5px;overflow:hidden;}
+    .expl-dist-fill{height:100%;border-radius:5px;background:var(--pri);}
+    .expl-dist-fill.mala{background:var(--err);}
+    .expl-dist-n{font-size:.82rem;font-weight:800;color:var(--mut);text-align:right;}
+    .expl-empty{color:var(--mut);font-size:.85rem;padding:30px 4px;text-align:center;line-height:1.5;}
+    .expl-uni-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--bor);font-size:.85rem;}
+    .expl-uni-row:last-child{border-bottom:none;}
+    .expl-sub{font-size:.78rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 10px;}
     .table-wrap{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
     thead th{padding:11px 16px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);background:var(--card2);}
@@ -317,6 +339,22 @@
       <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
     </div>
 
+    <!-- explorador de datos por campo -->
+    <h2 class="section-title">🔬 Análisis de datos<button class="skf-help" data-help-t="¿Qué es esto?" data-help="Aquí no ves cuántas veces se llenó un formulario, sino QUÉ se llenó.
+
+Elige un formulario y un campo, y la app grafica sus valores: promedio y tendencia de un número (por ejemplo la temperatura de la nevera), o la distribución de una respuesta (por ejemplo cuántas veces salió «No»).
+
+Respeta el periodo y la unidad que elijas arriba.">?</button></h2>
+    <div class="chart-card" style="margin-bottom:32px">
+      <div class="expl-controls">
+        <span class="flt-lbl">Formulario:</span>
+        <select class="filter-sel" id="explForm" onchange="onExplForm()"></select>
+        <span class="flt-lbl">Campo:</span>
+        <select class="filter-sel" id="explCampo" onchange="renderExplorador()"></select>
+      </div>
+      <div id="explBody"></div>
+    </div>
+
     <!-- modo auditoría -->
     <div class="audit-card">
       <div class="audit-head">
@@ -364,7 +402,9 @@ const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct'
 // ── Filtros globales del panel ──────────────────────────────────────
 // Recalculan TODO el BI y también los reportes (la "Carpeta de evidencia"
 // no es más que este panel filtrado por periodo + unidad + formulario).
-let _chDaily = null, _chForms = null, _chTrend = null;   // instancias de gráfica (para destruir al recalcular)
+let _chDaily = null, _chForms = null, _chTrend = null, _chExpl = null;   // instancias de gráfica (para destruir al recalcular)
+let _explForms = [];                    // formularios con campos analizables
+const _explRango = { min: null, max: null };  // rango válido opcional para campos número
 const _filtros = { periodo: 'todo', desde: null, hasta: null, unidadId: '', codigo: '' };
 let _formLabels = new Map();   // codigo → nombre de formulario (para el selector y las etiquetas)
 
@@ -751,6 +791,126 @@ function printReport(title, bodyHtml, opts) {
   setTimeout(go, 500);
 }
 
+// ══════════════════════════════════════════════════════════════════
+// EXPLORADOR DE DATOS POR CAMPO — analiza los VALORES que se llenan,
+// no cuántas veces se llenó. Respeta el periodo y la unidad del filtro
+// global (no el filtro de formulario: el explorador elige su propio).
+// ══════════════════════════════════════════════════════════════════
+const EXPL_ANALIZABLES = ['numero','si_no','escala_1_5','select','radio','checkbox','checkbox_multi'];
+const EXPL_TIPO_ICO = { numero:'#', si_no:'✓✗', escala_1_5:'⭐', select:'▼', radio:'◉', checkbox:'☑', checkbox_multi:'📋' };
+const EXPL_BAD_RE = /^no$|no conforme|no cumple|incumple|deficiente|rechazad|inadecuad|insuficiente|vencid|da[ñn]ad|fuera de servicio|^[12]\b/i;
+function _plantKey(p){ return p.codigo || p.id || ('n:'+(p.nombre||'')); }
+
+function populateExplorador() {
+  const selF = document.getElementById('explForm');
+  const seen = new Set(); _explForms = [];
+  (_bi.plantillas||[]).forEach(p => {
+    const key = _plantKey(p);
+    const campos = (p.campos||[]).filter(c => EXPL_ANALIZABLES.includes(c.tipo));
+    if (campos.length && !seen.has(key)) { seen.add(key); _explForms.push({ key, nombre: p.nombre, campos }); }
+  });
+  selF.innerHTML = _explForms.length
+    ? _explForms.map(f => `<option value="${escD(f.key)}">${escD(f.nombre)}</option>`).join('')
+    : '<option value="">— sin formularios con campos analizables —</option>';
+  onExplForm();
+}
+function onExplForm() {
+  const key = document.getElementById('explForm').value;
+  const f = _explForms.find(x => x.key === key);
+  const selC = document.getElementById('explCampo');
+  selC.innerHTML = f && f.campos.length
+    ? f.campos.map(c => `<option value="${escD(c.id)}">${EXPL_TIPO_ICO[c.tipo]||''} ${escD(c.etiqueta||c.id)}</option>`).join('')
+    : '<option value="">—</option>';
+  _explRango.min = null; _explRango.max = null;
+  renderExplorador();
+}
+function onExplRango() {
+  const mn = document.getElementById('explMin').value, mx = document.getElementById('explMax').value;
+  _explRango.min = mn === '' ? null : parseFloat(mn);
+  _explRango.max = mx === '' ? null : parseFloat(mx);
+  renderExplorador();
+}
+function renderExplorador() {
+  const el = document.getElementById('explBody');
+  if (!el) return;
+  if (_chExpl) { _chExpl.destroy(); _chExpl = null; }
+  const key = document.getElementById('explForm').value;
+  const campoId = document.getElementById('explCampo').value;
+  const f = _explForms.find(x => x.key === key);
+  const campo = f && f.campos.find(c => c.id === campoId);
+  if (!f || !campo) { el.innerHTML = '<div class="expl-empty">Crea o llena un formulario con campos de número, sí/no o selección para analizar su data aquí.</div>'; return; }
+  const envios = (_bi.envios||[]).filter(e => _enRango(e) && _pasaUnidad(e) && envioGroupKey(e) === key);
+  const rows = envios.map(e => ({ v:(e.datos||{})[campoId], u:fEnvUnidad(e), fe:fEnvCreado(e) }))
+    .filter(r => r.v !== undefined && r.v !== null && r.v !== '' && !(Array.isArray(r.v) && !r.v.length));
+  if (!rows.length) { el.innerHTML = `<div class="expl-empty">Aún no hay respuestas para «${escD(campo.etiqueta||campo.id)}» en el periodo/unidad elegidos.</div>`; return; }
+  if (campo.tipo === 'numero') renderExplNumero(el, campo, rows);
+  else renderExplCategorico(el, campo, rows);
+}
+function renderExplNumero(el, campo, rows) {
+  const nums = rows.map(r => ({ n: parseFloat(String(r.v).replace(',', '.')), u:r.u, fe:r.fe })).filter(x => !isNaN(x.n));
+  if (!nums.length) { el.innerHTML = '<div class="expl-empty">Este campo no tiene valores numéricos para promediar.</div>'; return; }
+  const vals = nums.map(x => x.n);
+  const prom = vals.reduce((a,b)=>a+b,0) / vals.length;
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const fmt = n => Number.isInteger(n) ? String(n) : n.toFixed(2);
+  const rmin = _explRango.min, rmax = _explRango.max;
+  let fueraTxt = '<span style="margin-left:auto;color:var(--mut)">escribe un rango para ver el % fuera</span>';
+  if (rmin !== null || rmax !== null) {
+    const fuera = vals.filter(v => (rmin !== null && v < rmin) || (rmax !== null && v > rmax)).length;
+    fueraTxt = `<span style="margin-left:auto;font-weight:700;color:${fuera ? 'var(--err)' : 'var(--ok)'}">${fuera} fuera de rango · ${Math.round(fuera/vals.length*100)}%</span>`;
+  }
+  el.innerHTML = `
+    <div class="expl-tiles">
+      <div class="expl-tile"><div class="l">Promedio</div><div class="n">${fmt(prom)}</div></div>
+      <div class="expl-tile"><div class="l">Mínimo</div><div class="n">${fmt(mn)}</div></div>
+      <div class="expl-tile"><div class="l">Máximo</div><div class="n">${fmt(mx)}</div></div>
+      <div class="expl-tile"><div class="l">Registros</div><div class="n">${vals.length}</div></div>
+    </div>
+    <div class="expl-range">
+      <span>Rango válido (opcional):</span> mín <input type="number" step="any" id="explMin" value="${rmin ?? ''}" onchange="onExplRango()"> máx <input type="number" step="any" id="explMax" value="${rmax ?? ''}" onchange="onExplRango()">
+      ${fueraTxt}
+    </div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chartExpl"></canvas></div>
+    <div class="expl-sub">Promedio por unidad</div>
+    <div id="explUni"></div>`;
+  const byMonth = {};
+  nums.forEach(x => { const d=new Date(x.fe); const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; (byMonth[k]=byMonth[k]||[]).push(x.n); });
+  const keys = Object.keys(byMonth).sort();
+  const labels = keys.map(k => { const [y,m]=k.split('-'); return `${MONTHS_ES[+m-1]} ${y.slice(2)}`; });
+  const data = keys.map(k => { const a=byMonth[k]; return a.reduce((s,v)=>s+v,0)/a.length; });
+  if (typeof Chart !== 'undefined') {
+    _chExpl = new Chart(document.getElementById('chartExpl'), {
+      type:'line', data:{ labels, datasets:[{ label:'Promedio', data, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.14)', fill:true, tension:.3, pointRadius:3, pointBackgroundColor:'#2563eb' }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:CHART_TEXT,font:{size:11}},grid:{color:CHART_GRID}}, y:{ticks:{color:CHART_TEXT,font:{size:11}},grid:{color:CHART_GRID}} } }
+    });
+  }
+  const byUni = {};
+  nums.forEach(x => { const k=x.u||'__none'; (byUni[k]=byUni[k]||[]).push(x.n); });
+  document.getElementById('explUni').innerHTML = Object.entries(byUni).map(([k,arr]) => {
+    const nom = k==='__none' ? 'Sin unidad' : (unidadNombreDash(k) || k);
+    const avg = arr.reduce((s,v)=>s+v,0)/arr.length;
+    return `<div class="expl-uni-row"><span>${escD(nom)}</span><span style="font-weight:800">${fmt(avg)} <span style="color:var(--mut);font-weight:600">(${arr.length})</span></span></div>`;
+  }).join('');
+}
+function renderExplCategorico(el, campo, rows) {
+  const counts = {}; let total = 0;
+  rows.forEach(r => {
+    if (Array.isArray(r.v)) r.v.forEach(o => { counts[o]=(counts[o]||0)+1; total++; });
+    else { const k = r.v===true?'Sí (marcado)':r.v===false?'No marcado':String(r.v); counts[k]=(counts[k]||0)+1; total++; }
+  });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(...entries.map(e=>e[1]), 1);
+  el.innerHTML = `
+    <div class="expl-tiles">
+      <div class="expl-tile"><div class="l">Respuestas</div><div class="n">${rows.length}</div></div>
+      <div class="expl-tile"><div class="l">Opciones</div><div class="n">${entries.length}</div></div>
+      <div class="expl-tile"><div class="l">Más frecuente</div><div class="n" style="font-size:1.05rem">${escD(entries[0][0])}</div></div>
+      <div class="expl-tile"><div class="l">% del más frecuente</div><div class="n">${Math.round(entries[0][1]/rows.length*100)}<small>%</small></div></div>
+    </div>
+    <div class="expl-sub">Distribución de respuestas</div>
+    <div>${entries.map(([k,n]) => `<div class="expl-dist-row"><span class="expl-dist-name" title="${escD(k)}">${escD(k)}</span><span class="expl-dist-track"><span class="expl-dist-fill ${EXPL_BAD_RE.test(k)?'mala':''}" style="width:${Math.round(n/max*100)}%"></span></span><span class="expl-dist-n">${n} · ${Math.round(n/total*100)}%</span></div>`).join('')}</div>`;
+}
+
 // ── Modo auditoría: hallazgo + su acción correctiva (¿se cerró?) ────────
 const ESTADO_LBL = { abierto:'Abierto', en_proceso:'En atención', cerrado:'Cerrado' };
 function _auditRows(ds) {
@@ -1055,6 +1215,7 @@ function pintar() {
   renderComparativo();
   buildCompliance(ds.hallazgos, ds.acciones, ds.asignaciones, ds.envios);
   renderAuditoria(ds);
+  renderExplorador();
   buildTable(ds.envios, ds.plantillas);
 
   const n = ds.envios.length;
@@ -1109,6 +1270,8 @@ async function init() {
   [..._formLabels.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([k,l]) => {
     const o = document.createElement('option'); o.value = k; o.textContent = l; fSel.appendChild(o);
   });
+
+  populateExplorador();
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('mainContent').style.display  = 'block';
