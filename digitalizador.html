@@ -1632,8 +1632,17 @@ function buildCard(c,i) {
     <input type="checkbox" id="req_${c.id}" ${c.requerido?'checked':''} onchange="setReq('${c.id}',this.checked)">
     <label for="req_${c.id}">Requerido</label></div>`:'';
 
+  const inpSt = 'width:100px;background:var(--inp);border:1px solid var(--bor);color:var(--txt);border-radius:7px;padding:8px 10px;font-family:inherit;outline:none';
+  const rangoHtml = fieldUsaRango(c.tipo) ? `<div class="rango-row" style="margin-top:8px">
+    <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px">📊 Rango válido (opcional) — si el valor queda fuera, se marca como hallazgo</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="number" step="any" placeholder="mín" value="${c.rangoMin ?? ''}" oninput="setRangoMin('${c.id}',this.value)" style="${inpSt}">
+      <span style="color:var(--mut)">a</span>
+      <input type="number" step="any" placeholder="máx" value="${c.rangoMax ?? ''}" oninput="setRangoMax('${c.id}',this.value)" style="${inpSt}">
+    </div>
+  </div>` : '';
   const sevHtml = fieldCanHaveSeveridad(c.tipo) ? `<div class="sev-row" style="margin-top:8px">
-    <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px">⚠️ Si la respuesta indica incumplimiento, repórtalo como</label>
+    <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px">⚠️ ${fieldUsaRango(c.tipo) ? 'Si el valor queda fuera del rango, márcalo como' : 'Si la respuesta indica incumplimiento, repórtalo como'}</label>
     <select onchange="setSeveridad('${c.id}',this.value)" style="width:100%">
       <option value="" ${!c.severidad?'selected':''}>No marcar (campo informativo)</option>
       <option value="critico" ${c.severidad==='critico'?'selected':''}>🔴 Hallazgo crítico — alerta inmediata</option>
@@ -1672,7 +1681,7 @@ function buildCard(c,i) {
         <button class="fi-btn del" onclick="delC('${c.id}')">✕</button>
       </div>
     </div>
-    ${qualWarn}${optHtml}${reqChk}${sevHtml}
+    ${qualWarn}${optHtml}${reqChk}${rangoHtml}${sevHtml}
   </div>`;
 }
 
@@ -1702,6 +1711,8 @@ function addMissingField(f){
 }
 function setReq(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c)c.requerido=v;}
 function setSeveridad(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v)c.severidad=v;else delete c.severidad;}}
+function setRangoMin(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v==='')delete c.rangoMin;else c.rangoMin=v;}}
+function setRangoMax(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v==='')delete c.rangoMax;else c.rangoMax=v;}}
 function setOpt(id,j,v){const c=tmpl.campos.find(x=>x.id===id);if(c&&c.opciones)c.opciones[j]=v;}
 function mvC(id,dir){const i=tmpl.campos.findIndex(c=>c.id===id),j=i+dir;if(j<0||j>=tmpl.campos.length)return;[tmpl.campos[i],tmpl.campos[j]]=[tmpl.campos[j],tmpl.campos[i]];renderSuggList();}
 function delC(id){tmpl.campos=tmpl.campos.filter(c=>c.id!==id);renderSuggList();}
