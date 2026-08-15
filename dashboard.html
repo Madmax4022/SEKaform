@@ -350,7 +350,7 @@ Respeta el periodo y la unidad que elijas arriba.">?</button></h2>
         <span class="flt-lbl">Formulario:</span>
         <select class="filter-sel" id="explForm" onchange="onExplForm()"></select>
         <span class="flt-lbl">Campo:</span>
-        <select class="filter-sel" id="explCampo" onchange="renderExplorador()"></select>
+        <select class="filter-sel" id="explCampo" onchange="onExplCampo()"></select>
       </div>
       <div id="explBody"></div>
     </div>
@@ -821,7 +821,19 @@ function onExplForm() {
   selC.innerHTML = f && f.campos.length
     ? f.campos.map(c => `<option value="${escD(c.id)}">${EXPL_TIPO_ICO[c.tipo]||''} ${escD(c.etiqueta||c.id)}</option>`).join('')
     : '<option value="">—</option>';
-  _explRango.min = null; _explRango.max = null;
+  onExplCampo();
+}
+// Al elegir un campo, si es número y tiene un rango definido en el formulario,
+// el explorador lo usa por defecto (muestra el % fuera de una vez).
+function onExplCampo() {
+  const key = document.getElementById('explForm').value;
+  const campoId = document.getElementById('explCampo').value;
+  const f = _explForms.find(x => x.key === key);
+  const campo = f && f.campos.find(c => c.id === campoId);
+  if (campo && campo.tipo === 'numero') {
+    _explRango.min = (campo.rangoMin == null || campo.rangoMin === '') ? null : parseFloat(campo.rangoMin);
+    _explRango.max = (campo.rangoMax == null || campo.rangoMax === '') ? null : parseFloat(campo.rangoMax);
+  } else { _explRango.min = null; _explRango.max = null; }
   renderExplorador();
 }
 function onExplRango() {
