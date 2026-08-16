@@ -96,6 +96,8 @@
     .expl-uni-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--bor);font-size:.85rem;}
     .expl-uni-row:last-child{border-bottom:none;}
     .expl-sub{font-size:.78rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 10px;}
+    .pbi-note{margin-top:18px;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:13px 15px;font-size:.82rem;color:var(--mut);line-height:1.55;}
+    .pbi-note code{background:var(--card2);border:1px solid var(--bor);border-radius:5px;padding:1px 6px;font-size:.8rem;color:var(--txt);}
     .table-wrap{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
     thead th{padding:11px 16px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);background:var(--card2);}
@@ -351,8 +353,10 @@ Respeta el periodo y la unidad que elijas arriba.">?</button></h2>
         <select class="filter-sel" id="explForm" onchange="onExplForm()"></select>
         <span class="flt-lbl">Campo:</span>
         <select class="filter-sel" id="explCampo" onchange="onExplCampo()"></select>
+        <button class="btn-export" style="margin-left:auto" onclick="exportCSVLargo()">⬇ Datos para Power BI / Excel</button>
       </div>
       <div id="explBody"></div>
+      <div class="pbi-note">💡 <strong>Conecta Power BI, Excel o Google Data Studio.</strong> El botón de arriba descarga <strong>todos</strong> los datos filtrados en «formato largo» (una fila por respuesta) — se importa y grafica sin arreglar nada. Para conexión <strong>en vivo</strong>, tus datos viven en una base de datos real (Supabase/Postgres) y hay una vista lista, <code>vista_respuestas</code> — ver «Conectar Power BI» en Organización.</div>
     </div>
 
     <!-- modo auditoría -->
@@ -1202,6 +1206,56 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href=url; a.download=`SEKaform-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Exportación en «formato largo» (tall): una fila por cada respuesta, no por
+// registro. Es el formato que Power BI / Excel / Google Data Studio importan y
+// grafican sin necesidad de despivotar nada — cada campo llenado es una fila con
+// su Valor y, cuando aplica, su Valor numérico ya convertido para las medidas.
+// Refleja la misma forma que la vista SQL `vista_respuestas` para que migrar de
+// la descarga a la conexión en vivo no cambie el modelo de datos.
+function exportCSVLargo() {
+  const ds = datosFiltrados();
+  const envios = ds.envios;
+  if (!envios.length) { alert('No hay registros para exportar.'); return; }
+  const campoMap = buildCampoMap(ds.plantillas.length ? ds.plantillas : (_allPlantillas||[]));
+  // Tipos que no aportan un dato analizable en formato largo (estructura o binarios).
+  const OMITIR = new Set(['separador','firma','foto']);
+  const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const header = ['Formulario','Código','N°','Fecha','Unidad','Llenado por','Campo','Tipo','Valor','Valor numérico'].map(esc).join(',');
+  const rows = [];
+  envios.forEach(e => {
+    const pId   = e.plantilla_id||e.plantillaId||'';
+    const raw   = e.enviado_en||e.enviadoEn||e.creadoEn;
+    const fecha = raw ? new Date(raw).toLocaleString('es-CO') : '';
+    const uni   = (_bi.unidades||[]).find(x => x.id === (e.unidad_id||e.unidadId));
+    const form  = e.plantilla_nombre||e.plantillaNombre||'';
+    const cod   = e.plantilla_codigo||e.plantillaCodigo||'';
+    const num   = e.numero||(e.id||'').slice(-12);
+    const quien = e.llenado_por||e.llenadoPor||'';
+    Object.entries(e.datos||{}).forEach(([k,v]) => {
+      const meta = campoMap[pId]?.[k];
+      const tipo = meta?.tipo || '';
+      if (OMITIR.has(tipo)) return;
+      let valTxt;
+      if (Array.isArray(v)) valTxt = v.join('; ');
+      else if (typeof v==='string' && v.startsWith('data:image')) return; // imagen embebida, no es un dato
+      else valTxt = v;
+      if (valTxt === undefined || valTxt === null || String(valTxt).trim() === '') return;
+      // Valor numérico: solo cuando el campo es numérico o el texto es un número limpio.
+      let valNum = '';
+      const n = parseFloat(String(valTxt).replace(',', '.'));
+      if (!isNaN(n) && (tipo === 'numero' || /^-?\d+([.,]\d+)?$/.test(String(valTxt).trim()))) valNum = n;
+      rows.push([form, cod, num, fecha, uni?uni.nombre:'', quien, meta?.etiqueta||k, tipo, valTxt, valNum].map(esc).join(','));
+    });
+  });
+  if (!rows.length) { alert('No hay respuestas para exportar.'); return; }
+  const csv = [header,...rows].join('\r\n');
+  const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`SEKaform-datos-largo-${new Date().toISOString().slice(0,10)}.csv`; a.click();
   URL.revokeObjectURL(url);
 }
 
