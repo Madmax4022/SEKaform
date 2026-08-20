@@ -469,3 +469,38 @@ END $$;
 ALTER TABLE plantillas     ADD COLUMN IF NOT EXISTS norma TEXT;
 ALTER TABLE organizaciones ADD COLUMN IF NOT EXISTS pais  TEXT;
 GRANT SELECT (id, nombre, campos, codigo, descripcion, logo, publica, share_token, norma) ON plantillas TO anon;
+
+-- ── 15 · Paneles compartidos de solo lectura (dashboard sin cuenta) ──────────
+-- Permite entregar el dashboard a un cliente/jefe SIN cuenta, con un link no
+-- listado (dashboard.html?panel=<token>). Se publica una FOTO inmutable de los
+-- datos ya filtrados (snapshot), no acceso en vivo: el visitante anónimo nunca
+-- toca las tablas reales (envios/hallazgos/…), solo lee el snapshot que el dueño
+-- decidió publicar. La lectura anónima va por una función SECURITY DEFINER que
+-- devuelve UNA sola fila por su token exacto — no se puede enumerar la tabla.
+-- Seguro re-ejecutar.
+CREATE TABLE IF NOT EXISTS paneles_publicos (
+  token      TEXT PRIMARY KEY,
+  org_id     UUID NOT NULL REFERENCES organizaciones(id) ON DELETE CASCADE,
+  titulo     TEXT,
+  snapshot   JSONB NOT NULL,
+  creado_en  TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS paneles_publicos_org_idx ON paneles_publicos (org_id, creado_en DESC);
+ALTER TABLE paneles_publicos ENABLE ROW LEVEL SECURITY;
+
+-- Solo los miembros de la org ven/crean/borran sus propios paneles. El anónimo
+-- NO tiene acceso directo a la tabla (sin GRANT a anon): entra por la función.
+DROP POLICY IF EXISTS "Miembros ven paneles"   ON paneles_publicos;
+DROP POLICY IF EXISTS "Editores crean paneles" ON paneles_publicos;
+DROP POLICY IF EXISTS "Editores borran paneles" ON paneles_publicos;
+CREATE POLICY "Miembros ven paneles"    ON paneles_publicos FOR SELECT USING (skf_es_miembro(org_id));
+CREATE POLICY "Editores crean paneles"  ON paneles_publicos FOR INSERT WITH CHECK (skf_puede_escribir(org_id));
+CREATE POLICY "Editores borran paneles" ON paneles_publicos FOR DELETE USING (skf_puede_escribir(org_id));
+GRANT SELECT, INSERT, DELETE ON paneles_publicos TO authenticated;
+
+-- Lectura pública por token exacto (no enumera): devuelve solo el snapshot.
+CREATE OR REPLACE FUNCTION skf_panel_publico(p_token TEXT)
+RETURNS JSONB SECURITY DEFINER SET search_path = public LANGUAGE sql AS $$
+  SELECT snapshot FROM paneles_publicos WHERE token = p_token LIMIT 1;
+$$;
+GRANT EXECUTE ON FUNCTION skf_panel_publico(TEXT) TO anon, authenticated;

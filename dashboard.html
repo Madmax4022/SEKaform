@@ -53,6 +53,27 @@
     .flt-lbl{font-size:.8rem;color:var(--mut);font-weight:600;}
     .flt-custom{display:inline-flex;align-items:center;gap:8px;}
     .flt-count{margin-left:auto;font-size:.76rem;color:var(--mut);font-family:var(--mono,monospace);}
+    /* Vista de solo lectura (panel compartido por link, sin cuenta) */
+    body.panel-readonly #sidebar,
+    body.panel-readonly #sidebarToggle,
+    body.panel-readonly #sidebarBackdrop,
+    body.panel-readonly #skfBottomBar,
+    body.panel-readonly #skfSyncBar{display:none!important;}
+    body.panel-readonly .wrap{max-width:1180px;}
+    .ro-banner{background:linear-gradient(135deg,var(--card),rgba(37,99,235,.1));border:1px solid rgba(37,99,235,.3);border-radius:10px;padding:11px 15px;font-size:.82rem;color:var(--txt);margin-bottom:18px;font-weight:600;}
+    /* modal compartir panel */
+    .share-over{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:700;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .share-over.hidden{display:none;}
+    .share-box{background:var(--card);border:1px solid var(--bor);border-radius:18px;padding:26px 22px;max-width:410px;width:100%;text-align:center;}
+    .share-box h3{font-size:1.05rem;font-weight:800;margin:0 0 4px;}
+    .share-box .sub{color:var(--mut);font-size:.82rem;margin-bottom:16px;line-height:1.5;}
+    .share-qr{background:#1e293b;border-radius:12px;padding:12px;display:inline-block;margin-bottom:14px;border:1px solid var(--bor);min-height:60px;}
+    .share-qr img{display:block;border-radius:6px;}
+    .share-url-row{display:flex;gap:8px;margin-bottom:14px;}
+    .share-url{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bor);border-radius:8px;color:var(--mut);font-size:.72rem;padding:8px 10px;font-family:monospace;word-break:break-all;outline:none;}
+    .share-copy{background:var(--pri,#2563eb);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    .share-note{font-size:.73rem;color:var(--mut);line-height:1.5;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:8px;padding:9px 12px;margin-bottom:14px;text-align:left;}
+    .share-close{background:none;border:1px solid var(--bor);color:var(--mut);border-radius:8px;padding:8px 16px;font-size:.82rem;cursor:pointer;font-family:inherit;}
     .flt-bar .filter-sel{max-width:none;}
     /* modo auditoría */
     .audit-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--pri);}
@@ -208,6 +229,7 @@
   </div>
 
   <div id="srcBadge" class="src-badge" style="display:none"></div>
+  <div class="ro-banner" id="roBanner" style="display:none"></div>
 
   <div id="loadingState" class="loading">
     <div class="spinner"></div>
@@ -239,6 +261,7 @@
     <!-- acciones del panel: entregar el dashboard sin que nadie baje datos -->
     <div class="panel-actions" id="panelActions" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px">
       <button class="btn-export" onclick="exportarPanelPDF()">🖨 Exportar panel (PDF)</button>
+      <button class="btn-export" onclick="abrirCompartirPanel()">📤 Compartir panel (solo lectura)</button>
     </div>
 
     <!-- stat cards -->
@@ -400,6 +423,21 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
     </div>
 
   </div><!-- /mainContent -->
+</div>
+
+<!-- modal: compartir panel de solo lectura -->
+<div class="share-over hidden" id="shareModal">
+  <div class="share-box">
+    <h3>📤 Compartir panel</h3>
+    <div class="sub">Cualquiera con este link ve una <strong>foto de solo lectura</strong> de lo que estás viendo ahora — sin cuenta y sin poder editar.</div>
+    <div class="share-qr" id="shareQr"></div>
+    <div class="share-url-row">
+      <input type="text" class="share-url" id="shareUrl" readonly>
+      <button class="share-copy" onclick="copyPanelLink()">Copiar</button>
+    </div>
+    <div class="share-note" id="shareNote"></div>
+    <button class="share-close" onclick="cerrarCompartirPanel()">Cerrar</button>
+  </div>
 </div>
 
 <script src="chart.min.js"></script>
@@ -1085,6 +1123,81 @@ function exportarPanelPDF() {
   printReport('Panel de control', body);
 }
 
+// ══════════════════════════════════════════════════════════════════
+// COMPARTIR PANEL DE SOLO LECTURA — entrega el dashboard por link/QR a
+// alguien SIN cuenta. Se publica una FOTO inmutable (snapshot) de lo que
+// se está viendo; el visitante nunca toca las tablas reales. Guardado
+// local (mismo equipo) + nube vía Supabase (cualquier equipo).
+// ══════════════════════════════════════════════════════════════════
+function _panelToken() {
+  return 'pnl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+function _construirSnapshot() {
+  const ds = datosFiltrados();
+  return {
+    v: 1,
+    generadoEn: new Date().toISOString(),
+    filtro: _etiquetaFiltro(),
+    org: _biOrg ? { nombre: _biOrg.nombre || 'SEKaform', logo: _biOrg.logo || null } : null,
+    plantillas: ds.plantillas, envios: ds.envios, hallazgos: ds.hallazgos,
+    acciones: ds.acciones, asignaciones: ds.asignaciones, unidades: ds.unidades,
+  };
+}
+async function abrirCompartirPanel() {
+  const snap = _construirSnapshot();
+  if (!snap.envios.length) { alert('No hay datos en este filtro para compartir.'); return; }
+  const token = _panelToken();
+  // Guarda local siempre (funciona offline y en el mismo equipo al instante).
+  try { localStorage.setItem('skf_panel_' + token, JSON.stringify(snap)); } catch {}
+  const url = location.origin + location.pathname + '?panel=' + token;
+  document.getElementById('shareUrl').value = url;
+  document.getElementById('shareQr').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}&bgcolor=1e293b&color=f8fafc&margin=6" width="180" height="180" alt="QR">`;
+  const note = document.getElementById('shareNote');
+  note.textContent = 'Publicando…';
+  document.getElementById('shareModal').classList.remove('hidden');
+  // Sube a la nube para que el link sirva en cualquier dispositivo.
+  let cloud = false;
+  if (typeof sbPublishPanel === 'function') { try { cloud = await sbPublishPanel(token, snap.filtro, snap); } catch {} }
+  note.innerHTML = cloud
+    ? '☁ <strong>Link en la nube:</strong> funciona en cualquier dispositivo. Es una foto de este momento — vuelve a compartir para actualizarla.'
+    : '💾 Guardado en <strong>este dispositivo</strong>. Para que el link abra en otros equipos, conecta tu organización a la nube (Supabase) y vuelve a compartir.';
+}
+function copyPanelLink() {
+  const inp = document.getElementById('shareUrl');
+  inp.select();
+  const done = () => { const b = document.querySelector('.share-copy'); if (b) { b.textContent = '✓ Copiado'; setTimeout(() => b.textContent = 'Copiar', 1600); } };
+  if (navigator.clipboard) navigator.clipboard.writeText(inp.value).then(done).catch(() => { try { document.execCommand('copy'); done(); } catch {} });
+  else { try { document.execCommand('copy'); done(); } catch {} }
+}
+function cerrarCompartirPanel() { document.getElementById('shareModal').classList.add('hidden'); }
+
+// Carga el panel en modo solo-lectura desde un snapshot publicado.
+async function initPanelReadonly(token) {
+  document.getElementById('monthName').textContent = MONTHS_ES[new Date().getMonth()];
+  let snap = null;
+  if (typeof sbLoadPanel === 'function') { try { snap = await sbLoadPanel(token); } catch {} }
+  if (!snap) { try { snap = JSON.parse(localStorage.getItem('skf_panel_' + token) || 'null'); } catch {} }
+  if (!snap) {
+    document.getElementById('loadingState').innerHTML = '<span style="color:var(--err)">Este panel compartido no está disponible o expiró. Pide a quien te lo envió que lo comparta de nuevo.</span>';
+    return;
+  }
+  document.body.classList.add('panel-readonly');
+  _bi = { plantillas: snap.plantillas || [], envios: snap.envios || [], hallazgos: snap.hallazgos || [], acciones: snap.acciones || [], asignaciones: snap.asignaciones || [], unidades: snap.unidades || [] };
+  _biOrg = snap.org || null;
+  _filtros.periodo = 'todo'; _filtros.unidadId = ''; _filtros.codigo = ''; _filtros.desde = null; _filtros.hasta = null;
+  // Oculta lo interactivo (menú, filtros, acciones) y muestra el aviso.
+  ['setupBanner', 'srcBadge', 'fltBar', 'panelActions'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  const b = document.getElementById('roBanner');
+  const fecha = snap.generadoEn ? new Date(snap.generadoEn).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }) : '';
+  b.textContent = `👁️ Vista de solo lectura · ${(snap.org && snap.org.nombre) || 'SEKaform'} · ${snap.filtro || ''} · generado ${fecha}`;
+  b.style.display = 'block';
+  document.title = `Panel — ${(snap.org && snap.org.nombre) || 'SEKaform'}`;
+  populateExplorador();
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  pintar();
+}
+
 let _reportEnvios = [];
 function printEnvioReport(i) {
   const e = _reportEnvios[i];
@@ -1382,6 +1495,11 @@ function onFiltroChange() {
 }
 
 async function init() {
+  // Panel compartido de solo lectura: si viene ?panel=<token>, se carga el
+  // snapshot publicado en vez de los datos del usuario y se oculta lo editable.
+  const _panelTok = new URLSearchParams(location.search).get('panel');
+  if (_panelTok) { await initPanelReadonly(_panelTok); return; }
+
   const now = new Date();
   document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
 
