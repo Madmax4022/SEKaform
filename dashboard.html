@@ -90,6 +90,8 @@
     .corr-done{font-size:.82rem;font-weight:700;color:var(--ok,#22c55e);white-space:nowrap;}
     .corr-undo{background:none;border:none;color:var(--mut);text-decoration:underline;cursor:pointer;font-size:.74rem;font-family:inherit;margin-left:4px;}
     .hz-au-cer.cer-campo{color:#38bdf8;font-weight:700;}
+    .cerrar-btn{display:inline-block;margin-left:8px;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);color:var(--ok,#22c55e);border-radius:7px;padding:4px 10px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;vertical-align:middle;}
+    .cerrar-btn:hover{background:rgba(34,197,94,.26);}
     .flt-bar .filter-sel{max-width:none;}
     /* modo auditoría */
     .audit-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--pri);}
@@ -1021,11 +1023,13 @@ function renderAuditoria(ds) {
   el.innerHTML = `<div class="hz-au-head"><span>Hallazgo</span><span>Severidad</span><span>Responsable</span><span class="hz-au-lim">Límite</span><span class="hz-au-cer">Cierre</span></div>`
     + rows.map(r => {
         const m = _marcasCampo[r.id];
+        const puedeCerrar = !document.body.classList.contains('panel-readonly');
+        const btnCerrar = puedeCerrar ? `<button class="cerrar-btn" onclick="cerrarHallazgo('${escJ(r.id)}')">✓ ${m ? 'Confirmar cierre' : 'Cerrar'}</button>` : '';
         const cer = r.cerrado
           ? '<span class="hz-au-cer cer-si">✓ Cerrado</span>'
           : m
-            ? `<span class="hz-au-cer cer-campo" title="${m.en ? 'Reportado ' + escD(new Date(m.en).toLocaleString('es-CO')) : ''}">🔧 Campo corrigió${m.por ? ' · ' + escD(m.por) : ''}</span>`
-            : '<span class="hz-au-cer cer-no">Pendiente</span>';
+            ? `<span class="hz-au-cer cer-campo" title="${m.en ? 'Reportado ' + escD(new Date(m.en).toLocaleString('es-CO')) : ''}">🔧 Campo corrigió${m.por ? ' · ' + escD(m.por) : ''}${btnCerrar}</span>`
+            : `<span class="hz-au-cer cer-no">Pendiente${btnCerrar}</span>`;
         return `<div class="hz-au-row">
         <span class="hz-au-form">${escD(r.form)}<small>${escD(r.campo||'Reportado a mano')} · ${ESTADO_LBL[r.estado]||r.estado}</small></span>
         <span><span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span></span>
@@ -1301,6 +1305,28 @@ async function desmarcarCampo(hzId) {
   _guardarMarcasToken(_roToken, o); _marcasCampo = o;
   if (typeof sbDesmarcarCorregido === 'function') { try { await sbDesmarcarCorregido(_roToken, hzId); } catch {} }
   renderOperativoReadonly(_roGroup);
+}
+
+// Cierre de un clic desde el panel (solo dueño, no en vista de solo lectura).
+// Confirma el cierre del hallazgo: lo pasa a 'cerrado' en memoria, en el caché
+// local y en la nube, y repinta todo (KPIs, brechas, auditoría).
+async function cerrarHallazgo(id) {
+  const m = _marcasCampo[id];
+  const msg = m ? `¿Confirmar el cierre de este hallazgo?\nEl campo lo reportó corregido${m.por ? ' (' + m.por + ')' : ''}.` : '¿Cerrar este hallazgo? Quedará marcado como resuelto.';
+  if (!confirm(msg)) return;
+  const ahora = new Date().toISOString();
+  // En memoria (repintado inmediato)
+  const h = (_bi.hallazgos || []).find(x => x.id === id);
+  if (h) { h.estado = 'cerrado'; h.actualizado_en = ahora; h.actualizadoEn = ahora; }
+  // Caché local (persiste offline / sin cuenta en este equipo)
+  try {
+    const arr = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');
+    const lh = arr.find(x => x.id === id);
+    if (lh) { lh.estado = 'cerrado'; lh.actualizadoEn = ahora; localStorage.setItem('skf_hallazgos', JSON.stringify(arr)); }
+  } catch {}
+  // Nube (para el resto del equipo)
+  if (typeof sbCerrarHallazgo === 'function') { try { await sbCerrarHallazgo(id); } catch {} }
+  pintar();
 }
 
 // Pantalla (vista de solo lectura operativa, tema oscuro del dashboard).

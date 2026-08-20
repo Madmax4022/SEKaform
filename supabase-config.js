@@ -295,6 +295,19 @@ async function sbLoadCorreccionesCampo() {
   } catch { return null; }
 }
 
+// Cierra un hallazgo desde el panel (un clic). Update mínimo: solo toca el
+// estado, así no se arriesga a pisar otros campos de una fila que vino de la
+// nube en snake_case. La RLS "Editores editan hallazgos" ya lo permite.
+async function sbCerrarHallazgo(id) {
+  try {
+    const sb = await getSB();
+    if (!sb || !id) return false;
+    const { error } = await sb.from('hallazgos')
+      .update({ estado: 'cerrado', actualizado_en: new Date().toISOString() }).eq('id', id);
+    return !error;
+  } catch { return false; }
+}
+
 // Envía un formulario sin sesión. No viaja org_id: el trigger envios_asignar_org
 // lo fija desde la organización dueña de la plantilla, así el dato cae en el
 // dataset correcto sin que un anónimo pueda inyectar en otra organización.
