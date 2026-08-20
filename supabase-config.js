@@ -253,6 +253,48 @@ async function sbLoadPanel(token) {
   } catch { return null; }
 }
 
+// ── Cierre del ciclo: el campo reporta corregido desde el link operativo ──
+// El anónimo marca/desmarca un hallazgo vía funciones RPC validadas por token.
+async function sbMarcarCorregido(token, hallazgoId, por, nota) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token || !hallazgoId) return false;
+    const { data, error } = await sb.rpc('skf_panel_marcar_corregido', { p_token: token, p_hallazgo_id: hallazgoId, p_por: por || '', p_nota: nota || '' });
+    return !error && data === true;
+  } catch { return false; }
+}
+async function sbDesmarcarCorregido(token, hallazgoId) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token || !hallazgoId) return false;
+    const { data, error } = await sb.rpc('skf_panel_desmarcar_corregido', { p_token: token, p_hallazgo_id: hallazgoId });
+    return !error && data === true;
+  } catch { return false; }
+}
+// Marcas ya hechas para un token (las lee el link operativo al abrir).
+async function sbPanelMarcas(token) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token) return null;
+    const { data, error } = await sb.rpc('skf_panel_marcas', { p_token: token });
+    if (error || !data) return null;
+    return data;
+  } catch { return null; }
+}
+// Todas las marcas de la org (las lee el dueño en su panel, RLS lo limita).
+async function sbLoadCorreccionesCampo() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const org = await skfGetOrg();
+    if (!org || !org.orgId) return null;
+    const { data, error } = await sb.from('correcciones_campo')
+      .select('hallazgo_id, marcado_por, nota, marcado_en').eq('org_id', org.orgId);
+    if (error) return null;
+    return data || [];
+  } catch { return null; }
+}
+
 // Envía un formulario sin sesión. No viaja org_id: el trigger envios_asignar_org
 // lo fija desde la organización dueña de la plantilla, así el dato cae en el
 // dataset correcto sin que un anónimo pueda inyectar en otra organización.

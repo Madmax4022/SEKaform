@@ -81,6 +81,15 @@
     .corr-group{margin-bottom:18px;}
     .corr-group-h{font-size:.85rem;font-weight:800;color:var(--txt);padding:9px 2px;border-bottom:1px solid var(--bor);margin-bottom:2px;}
     .corr-group-h small{color:var(--mut);font-weight:600;}
+    .corr-row{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--bor);flex-wrap:wrap;}
+    .corr-info{flex:1;min-width:180px;font-weight:700;font-size:.9rem;color:var(--txt);}
+    .corr-info small{display:block;color:var(--mut);font-weight:500;font-size:.76rem;margin-top:2px;}
+    .corr-act{margin-left:auto;}
+    .corr-mark{background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.45);color:var(--pri,#60a5fa);border-radius:8px;padding:7px 13px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    .corr-mark:hover{background:rgba(37,99,235,.28);}
+    .corr-done{font-size:.82rem;font-weight:700;color:var(--ok,#22c55e);white-space:nowrap;}
+    .corr-undo{background:none;border:none;color:var(--mut);text-decoration:underline;cursor:pointer;font-size:.74rem;font-family:inherit;margin-left:4px;}
+    .hz-au-cer.cer-campo{color:#38bdf8;font-weight:700;}
     .flt-bar .filter-sel{max-width:none;}
     /* modo auditoría */
     .audit-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--pri);}
@@ -997,23 +1006,33 @@ function _auditRows(ds) {
     const ac = acc.find(a => (a.hallazgo_id||a.hallazgoId) === h.id);
     const cerrado = (h.estado === 'cerrado') || (ac && ac.estado === 'completada');
     const lim = ac && fAcFechaLimite(ac) ? new Date(fAcFechaLimite(ac)+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '—';
-    return { form: fHzPlantillaNom(h), campo: fHzCampo(h), sev: h.severidad||'menor',
+    return { id: h.id, form: fHzPlantillaNom(h), campo: fHzCampo(h), sev: h.severidad||'menor',
              estado: h.estado||'abierto', resp: ac ? fAcResponsable(ac) : '—', limite: lim, cerrado };
   });
 }
 function renderAuditoria(ds) {
   const rows = _auditRows(ds);
-  document.getElementById('auditCount').textContent = rows.length ? `· ${rows.length} en el filtro` : '';
+  const nCampo = rows.filter(r => !r.cerrado && _marcasCampo[r.id]).length;
+  document.getElementById('auditCount').textContent = rows.length
+    ? `· ${rows.length} en el filtro${nCampo ? ` · 🔧 ${nCampo} reportada${nCampo !== 1 ? 's' : ''} corregida${nCampo !== 1 ? 's' : ''} por campo` : ''}`
+    : '';
   const el = document.getElementById('auditHallazgos');
   if (!rows.length) { el.innerHTML = '<div class="audit-empty">Sin hallazgos en este periodo — nada por corregir. 👍</div>'; return; }
   el.innerHTML = `<div class="hz-au-head"><span>Hallazgo</span><span>Severidad</span><span>Responsable</span><span class="hz-au-lim">Límite</span><span class="hz-au-cer">Cierre</span></div>`
-    + rows.map(r => `<div class="hz-au-row">
+    + rows.map(r => {
+        const m = _marcasCampo[r.id];
+        const cer = r.cerrado
+          ? '<span class="hz-au-cer cer-si">✓ Cerrado</span>'
+          : m
+            ? `<span class="hz-au-cer cer-campo" title="${m.en ? 'Reportado ' + escD(new Date(m.en).toLocaleString('es-CO')) : ''}">🔧 Campo corrigió${m.por ? ' · ' + escD(m.por) : ''}</span>`
+            : '<span class="hz-au-cer cer-no">Pendiente</span>';
+        return `<div class="hz-au-row">
         <span class="hz-au-form">${escD(r.form)}<small>${escD(r.campo||'Reportado a mano')} · ${ESTADO_LBL[r.estado]||r.estado}</small></span>
         <span><span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span></span>
         <span class="hz-au-form">${escD(r.resp)}</span>
         <span class="hz-au-lim">${escD(r.limite)}</span>
-        <span class="hz-au-cer ${r.cerrado?'cer-si':'cer-no'}">${r.cerrado?'✓ Cerrado':'Pendiente'}</span>
-      </div>`).join('');
+        ${cer}
+      </div>`; }).join('');
 }
 
 function reporteConsolidado() {
@@ -1208,6 +1227,7 @@ function _correccionRows(ds) {
       const ac = acc.find(a => (a.hallazgo_id || a.hallazgoId) === h.id);
       const cr = fHzCreado(h);
       return {
+        id: h.id,
         form: fHzPlantillaNom(h),
         campo: fHzCampo(h) || 'Reportado a mano',
         sev: h.severidad || 'menor',
@@ -1239,25 +1259,75 @@ function informeOperativo() {
     <tbody>${items.map(r => `<tr><td style="text-align:center;font-size:15px">☐</td><td style="text-align:left">${escD(r.form)}</td><td style="text-align:left">${escD(r.campo)}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${escD(otherVal(r))}</td><td style="text-align:left">${escD(r.fecha)}</td><td style="text-align:left">${escD(r.limite)}</td></tr>`).join('')}</tbody></table>`).join('');
   printReport('Lista de correcciones — lo que hay que corregir', `<p style="color:#6b7280;margin:0 0 4px">${escD(_etiquetaFiltro())} · ${rows.length} pendiente${rows.length !== 1 ? 's' : ''} · agrupado por ${groupBy === 'unidad' ? 'unidad' : 'responsable'}</p>${secciones}`);
 }
+// ── Cierre del ciclo: el campo marca "corregido" desde el link operativo ──
+// _marcasCampo: hallazgoId -> {por, nota, en}. Lo llena el campo (por token) o
+// el dueño (toda su org). Guardado local (mismo equipo/offline) + nube.
+let _marcasCampo = {};
+let _roToken = null;      // token del panel operativo abierto en solo lectura
+let _roGroup = 'unidad';  // agrupación de esa vista
+const escJ = s => String(s == null ? '' : s).replace(/[\\'"]/g, '\\$&');
+function _marcasKey(t) { return 'skf_marcas_' + t; }
+function _leerMarcasToken(t) { try { return JSON.parse(localStorage.getItem(_marcasKey(t)) || '{}'); } catch { return {}; } }
+function _guardarMarcasToken(t, o) { try { localStorage.setItem(_marcasKey(t), JSON.stringify(o)); } catch {} }
+function _todasMarcasLocales() {
+  const m = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.indexOf('skf_marcas_') === 0) { try { Object.assign(m, JSON.parse(localStorage.getItem(k) || '{}')); } catch {} }
+  }
+  return m;
+}
+async function _cargarMarcasToken(token) {
+  _marcasCampo = _leerMarcasToken(token);
+  if (typeof sbPanelMarcas === 'function') {
+    try { const arr = await sbPanelMarcas(token); if (Array.isArray(arr)) arr.forEach(x => { _marcasCampo[x.hallazgo_id] = { por: x.marcado_por, nota: x.nota, en: x.marcado_en }; }); } catch {}
+  }
+}
+async function _cargarMarcasDueno() {
+  _marcasCampo = _todasMarcasLocales();
+  if (typeof sbLoadCorreccionesCampo === 'function') {
+    try { const arr = await sbLoadCorreccionesCampo(); if (Array.isArray(arr)) arr.forEach(x => { _marcasCampo[x.hallazgo_id] = { por: x.marcado_por, nota: x.nota, en: x.marcado_en }; }); } catch {}
+  }
+}
+async function marcarCampo(hzId) {
+  const nombre = (prompt('¿Quién corrigió esto? (tu nombre — opcional)') || '').trim();
+  const o = _leerMarcasToken(_roToken); o[hzId] = { por: nombre, nota: '', en: new Date().toISOString() };
+  _guardarMarcasToken(_roToken, o); _marcasCampo = o;
+  if (typeof sbMarcarCorregido === 'function') { try { await sbMarcarCorregido(_roToken, hzId, nombre, ''); } catch {} }
+  renderOperativoReadonly(_roGroup);
+}
+async function desmarcarCampo(hzId) {
+  const o = _leerMarcasToken(_roToken); delete o[hzId];
+  _guardarMarcasToken(_roToken, o); _marcasCampo = o;
+  if (typeof sbDesmarcarCorregido === 'function') { try { await sbDesmarcarCorregido(_roToken, hzId); } catch {} }
+  renderOperativoReadonly(_roGroup);
+}
+
 // Pantalla (vista de solo lectura operativa, tema oscuro del dashboard).
 function _correccionesPantallaHTML(ds, groupBy) {
   const { rows, groups } = _correccionGrupos(ds, groupBy);
   if (!rows.length) return '<div class="audit-empty">✅ No hay correcciones pendientes. Todo al día. 👍</div>';
   const other = groupBy === 'unidad' ? (r => r.resp) : (r => r.unidad);
+  const accion = (r) => {
+    const m = _marcasCampo[r.id];
+    return m
+      ? `<span class="corr-done">✅ Reportado corregido${m.por ? ' · ' + escD(m.por) : ''} <button class="corr-undo" onclick="desmarcarCampo('${escJ(r.id)}')">deshacer</button></span>`
+      : `<button class="corr-mark" onclick="marcarCampo('${escJ(r.id)}')">✓ Marcar corregido</button>`;
+  };
   return Object.entries(groups).map(([g, items]) => `<div class="corr-group">
     <div class="corr-group-h">${escD(g)} <small>· ${items.length} pendiente${items.length !== 1 ? 's' : ''}</small></div>
-    ${items.map(r => `<div class="hz-au-row">
-      <span class="hz-au-form">${escD(r.form)}<small>${escD(r.campo)} · ${escD(other(r))}</small></span>
-      <span><span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span></span>
-      <span class="hz-au-lim">${escD(r.fecha)}</span>
-      <span class="hz-au-cer cer-no">Pendiente</span>
+    ${items.map(r => `<div class="corr-row">
+      <span class="corr-info">${escD(r.form)}<small>${escD(r.campo)} · ${escD(other(r))} · ${escD(r.fecha)}</small></span>
+      <span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span>
+      <span class="corr-act">${accion(r)}</span>
     </div>`).join('')}</div>`).join('');
 }
 function renderOperativoReadonly(groupBy) {
+  _roGroup = groupBy;
   const ds = datosFiltrados();
   const mc = document.getElementById('mainContent');
   mc.innerHTML = `<div class="audit-card"><div class="audit-head"><h2 style="margin:0">🔧 Correcciones pendientes</h2></div>
-    <p style="color:var(--mut);font-size:.82rem;margin:2px 0 14px">Lo que hay que ir a corregir — agrupado por ${groupBy === 'unidad' ? 'unidad' : 'responsable'}.</p>
+    <p style="color:var(--mut);font-size:.82rem;margin:2px 0 14px">Lo que hay que ir a corregir — agrupado por ${groupBy === 'unidad' ? 'unidad' : 'responsable'}. Marca lo que ya corregiste; queda reportado a la administración.</p>
     <div id="corrBody"></div></div>`;
   document.getElementById('corrBody').innerHTML = _correccionesPantallaHTML(ds, groupBy);
   mc.style.display = 'block';
@@ -1298,6 +1368,8 @@ async function initPanelReadonly(token) {
     const group = params.get('group') === 'responsable' ? 'responsable' : 'unidad';
     document.title = `Correcciones — ${(snap.org && snap.org.nombre) || 'SEKaform'}`;
     b.textContent = `🔧 Correcciones pendientes · ${(snap.org && snap.org.nombre) || 'SEKaform'} · ${snap.filtro || ''} · generado ${fecha}`;
+    _roToken = token;
+    await _cargarMarcasToken(token);
     renderOperativoReadonly(group);
   } else {
     // Vista ejecutiva: el dashboard graficado completo (hacia gerencia).
@@ -1649,6 +1721,9 @@ async function init() {
   });
 
   populateExplorador();
+
+  // Marcas de "corregido" que el campo reportó desde los links operativos.
+  await _cargarMarcasDueno();
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('mainContent').style.display  = 'block';

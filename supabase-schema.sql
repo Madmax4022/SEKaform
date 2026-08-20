@@ -504,3 +504,66 @@ RETURNS JSONB SECURITY DEFINER SET search_path = public LANGUAGE sql AS $$
   SELECT snapshot FROM paneles_publicos WHERE token = p_token LIMIT 1;
 $$;
 GRANT EXECUTE ON FUNCTION skf_panel_publico(TEXT) TO anon, authenticated;
+
+-- ── 16 · Cierre del ciclo: el campo REPORTA corregido desde el link ──────────
+-- Desde el link operativo (?panel=<token>&modo=operativo) el ejecutante marca un
+-- señalamiento como corregido. Es un REPORTE, no un cierre: el dueño lo ve en su
+-- panel y confirma. El anónimo nunca escribe directo en hallazgos; va por una
+-- función que valida que el token existe y que el hallazgo pertenece a la MISMA
+-- organización de ese panel (no puede tocar hallazgos de otra org ni inventar).
+-- Seguro re-ejecutar.
+CREATE TABLE IF NOT EXISTS correcciones_campo (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token        TEXT NOT NULL REFERENCES paneles_publicos(token) ON DELETE CASCADE,
+  org_id       UUID NOT NULL REFERENCES organizaciones(id) ON DELETE CASCADE,
+  hallazgo_id  TEXT NOT NULL REFERENCES hallazgos(id) ON DELETE CASCADE,
+  marcado_por  TEXT,
+  nota         TEXT,
+  marcado_en   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS correcciones_campo_org_idx ON correcciones_campo (org_id, marcado_en DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS correcciones_campo_uni ON correcciones_campo (token, hallazgo_id);
+ALTER TABLE correcciones_campo ENABLE ROW LEVEL SECURITY;
+-- El dueño (miembro) ve las marcas de su org. Nadie escribe directo: va por RPC.
+DROP POLICY IF EXISTS "Miembros ven correcciones campo" ON correcciones_campo;
+CREATE POLICY "Miembros ven correcciones campo" ON correcciones_campo FOR SELECT USING (skf_es_miembro(org_id));
+GRANT SELECT ON correcciones_campo TO authenticated;
+
+-- Marcar corregido (anónimo, validado por token + org del hallazgo).
+CREATE OR REPLACE FUNCTION skf_panel_marcar_corregido(p_token TEXT, p_hallazgo_id TEXT, p_por TEXT, p_nota TEXT)
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE v_org UUID; v_hz_org UUID;
+BEGIN
+  SELECT org_id INTO v_org FROM paneles_publicos WHERE token = p_token;
+  IF v_org IS NULL THEN RETURN false; END IF;
+  SELECT org_id INTO v_hz_org FROM hallazgos WHERE id = p_hallazgo_id;
+  IF v_hz_org IS NULL OR v_hz_org <> v_org THEN RETURN false; END IF;
+  INSERT INTO correcciones_campo (token, org_id, hallazgo_id, marcado_por, nota)
+    VALUES (p_token, v_org, p_hallazgo_id, NULLIF(p_por,''), NULLIF(p_nota,''))
+    ON CONFLICT (token, hallazgo_id)
+    DO UPDATE SET marcado_por = EXCLUDED.marcado_por, nota = EXCLUDED.nota, marcado_en = now();
+  RETURN true;
+END; $$;
+GRANT EXECUTE ON FUNCTION skf_panel_marcar_corregido(TEXT, TEXT, TEXT, TEXT) TO anon, authenticated;
+
+-- Deshacer la marca (anónimo, mismo token).
+CREATE OR REPLACE FUNCTION skf_panel_desmarcar_corregido(p_token TEXT, p_hallazgo_id TEXT)
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE v_org UUID;
+BEGIN
+  SELECT org_id INTO v_org FROM paneles_publicos WHERE token = p_token;
+  IF v_org IS NULL THEN RETURN false; END IF;
+  DELETE FROM correcciones_campo WHERE token = p_token AND hallazgo_id = p_hallazgo_id;
+  RETURN true;
+END; $$;
+GRANT EXECUTE ON FUNCTION skf_panel_desmarcar_corregido(TEXT, TEXT) TO anon, authenticated;
+
+-- Marcas ya hechas para un token (para que el link muestre lo ya reportado).
+CREATE OR REPLACE FUNCTION skf_panel_marcas(p_token TEXT)
+RETURNS JSONB SECURITY DEFINER SET search_path = public LANGUAGE sql AS $$
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'hallazgo_id', hallazgo_id, 'marcado_por', marcado_por,
+           'nota', nota, 'marcado_en', marcado_en)), '[]'::jsonb)
+  FROM correcciones_campo WHERE token = p_token;
+$$;
+GRANT EXECUTE ON FUNCTION skf_panel_marcas(TEXT) TO anon, authenticated;
