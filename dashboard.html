@@ -236,6 +236,11 @@
       <span class="flt-count" id="fltCount"></span>
     </div>
 
+    <!-- acciones del panel: entregar el dashboard sin que nadie baje datos -->
+    <div class="panel-actions" id="panelActions" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px">
+      <button class="btn-export" onclick="exportarPanelPDF()">🖨 Exportar panel (PDF)</button>
+    </div>
+
     <!-- stat cards -->
     <div class="stats-grid">
       <div class="stat-card c-pri">
@@ -1000,6 +1005,84 @@ function reporteConsolidado() {
     : `<p style="color:#9ca3af">Sin hallazgos en este periodo.</p>`;
 
   printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Hallazgos y su cierre</h2>${tablaHz}<h2>Registros del periodo</h2>${tablaDet}`);
+}
+
+// Exporta el PANEL COMPLETO a PDF: los KPIs, las gráficas (capturadas como
+// imagen desde el canvas de Chart.js), el análisis de datos y los hallazgos.
+// A diferencia de la "Carpeta de evidencia" (orientada a auditoría, solo
+// tablas), esto es el dashboard visual tal como se ve — para entregar por
+// correo o WhatsApp sin que nadie tenga que abrir la app ni bajar datos.
+function _canvasImg(id) {
+  const c = document.getElementById(id);
+  if (!c || typeof Chart === 'undefined') return '';
+  try {
+    // Fondo blanco detrás del canvas transparente para que imprima legible.
+    const w = c.width, h = c.height;
+    if (!w || !h) return '';
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    const ctx = tmp.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(c, 0, 0);
+    const png = tmp.toDataURL('image/png');
+    return (png && png.length > 200) ? `<img src="${png}" alt="" style="width:100%;max-width:660px;height:auto;border:1px solid #e5e7eb;border-radius:8px;margin:4px 0 2px">` : '';
+  } catch (e) { return ''; }
+}
+
+function exportarPanelPDF() {
+  const ds = datosFiltrados();
+  const st = computeStats(ds.envios);
+  const { done, total, pct } = computeCumplimiento(ds.asignaciones, ds.envios);
+  const abiertos = ds.hallazgos.filter(h => (h.estado||'abierto') !== 'cerrado');
+  const criticos = abiertos.filter(h => h.severidad === 'critico').length;
+
+  const kpis = `<div class="kv">
+    <div class="k">Periodo / filtro</div><div class="v">${escD(_etiquetaFiltro())}</div>
+    <div class="k">Formularios</div><div class="v">${ds.plantillas.length}</div>
+    <div class="k">Envíos totales</div><div class="v">${st.total}</div>
+    <div class="k">Este mes</div><div class="v">${st.month}</div>
+    <div class="k">Últimos 7 días</div><div class="v">${st.week}</div>
+  </div>`;
+
+  const cumpl = `<div class="kv">
+    <div class="k">Cumplimiento de asignaciones</div><div class="v">${pct===null?'—':pct+'% ('+done+'/'+total+')'}</div>
+    <div class="k">Hallazgos abiertos</div><div class="v">${abiertos.length} de ${ds.hallazgos.length}</div>
+    <div class="k">Críticos sin resolver</div><div class="v">${criticos}</div>
+  </div>`;
+
+  const imgDaily = _canvasImg('chartDaily');
+  const imgForms = _canvasImg('chartForms');
+  const imgTrend = _canvasImg('chartTrend');
+  const imgExpl  = _canvasImg('chartExpl');
+
+  const graficas = [
+    imgDaily && `<h2>Envíos por día — últimos 30 días</h2>${imgDaily}`,
+    imgForms && `<h2>Envíos por formulario</h2>${imgForms}`,
+    imgTrend && `<h2>Tendencia mensual — envíos y hallazgos</h2>${imgTrend}`,
+  ].filter(Boolean).join('');
+
+  // Análisis de datos: campo elegido en el explorador + sus tiles + gráfica.
+  let analisis = '';
+  const explSelF = document.getElementById('explForm');
+  const explSelC = document.getElementById('explCampo');
+  const tiles = [...document.querySelectorAll('#explBody .expl-tile')].map(t => {
+    const l = t.querySelector('.l'), n = t.querySelector('.n');
+    return (l && n) ? `<div class="k">${escD(l.textContent)}</div><div class="v">${escD(n.textContent)}</div>` : '';
+  }).join('');
+  if (tiles) {
+    const campoLbl = explSelC && explSelC.selectedOptions[0] ? explSelC.selectedOptions[0].textContent : '';
+    const formLbl  = explSelF && explSelF.selectedOptions[0] ? explSelF.selectedOptions[0].textContent : '';
+    analisis = `<h2>Análisis de datos — ${escD(formLbl)} · ${escD(campoLbl)}</h2><div class="kv">${tiles}</div>${imgExpl}`;
+  }
+
+  // Hallazgos y su cierre (mismo cuadro de la Carpeta de evidencia).
+  const auRows = _auditRows(ds);
+  const tablaHz = auRows.length
+    ? `<table><thead><tr><th style="text-align:left">Hallazgo</th><th style="text-align:left">Severidad</th><th style="text-align:left">Estado</th><th style="text-align:left">Responsable</th><th style="text-align:left">Cierre</th></tr></thead><tbody>${auRows.map(r=>`<tr><td style="text-align:left">${escD(r.form)} — ${escD(r.campo||'manual')}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${ESTADO_LBL[r.estado]||r.estado}</td><td style="text-align:left">${escD(r.resp)}</td><td style="text-align:left">${r.cerrado?'Cerrado':'Pendiente'}</td></tr>`).join('')}</tbody></table>`
+    : `<p style="color:#9ca3af">Sin hallazgos en este periodo. 👍</p>`;
+
+  const body = `<h2>Resumen del panel</h2>${kpis}${graficas}<h2>Cumplimiento y brechas</h2>${cumpl}${analisis}<h2>Hallazgos y su cierre</h2>${tablaHz}`;
+  printReport('Panel de control', body);
 }
 
 let _reportEnvios = [];
