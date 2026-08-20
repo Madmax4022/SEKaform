@@ -74,6 +74,13 @@
     .share-copy{background:var(--pri,#2563eb);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
     .share-note{font-size:.73rem;color:var(--mut);line-height:1.5;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:8px;padding:9px 12px;margin-bottom:14px;text-align:left;}
     .share-close{background:none;border:1px solid var(--bor);color:var(--mut);border-radius:8px;padding:8px 16px;font-size:.82rem;cursor:pointer;font-family:inherit;}
+    /* dos vías: estatus (gerencia) vs correcciones (campo) */
+    .panel-actions{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 22px;}
+    .pa-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--bor);border-radius:12px;padding:9px 12px;}
+    .pa-lbl{font-size:.72rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-right:2px;}
+    .corr-group{margin-bottom:18px;}
+    .corr-group-h{font-size:.85rem;font-weight:800;color:var(--txt);padding:9px 2px;border-bottom:1px solid var(--bor);margin-bottom:2px;}
+    .corr-group-h small{color:var(--mut);font-weight:600;}
     .flt-bar .filter-sel{max-width:none;}
     /* modo auditoría */
     .audit-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--pri);}
@@ -258,10 +265,22 @@
       <span class="flt-count" id="fltCount"></span>
     </div>
 
-    <!-- acciones del panel: entregar el dashboard sin que nadie baje datos -->
-    <div class="panel-actions" id="panelActions" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px">
-      <button class="btn-export" onclick="exportarPanelPDF()">🖨 Exportar panel (PDF)</button>
-      <button class="btn-export" onclick="abrirCompartirPanel()">📤 Compartir panel (solo lectura)</button>
+    <!-- acciones del panel: dos vías — estatus hacia gerencia, correcciones hacia campo -->
+    <div class="panel-actions" id="panelActions">
+      <div class="pa-group">
+        <span class="pa-lbl">📈 Para gerencia · estatus</span>
+        <button class="btn-export" onclick="exportarPanelPDF()">🖨 Panel (PDF)</button>
+        <button class="btn-export" onclick="abrirCompartirPanel()">📤 Compartir</button>
+      </div>
+      <div class="pa-group">
+        <span class="pa-lbl">🔧 Para campo · correcciones</span>
+        <select class="filter-sel" id="corrGroup" title="Cómo agrupar la lista de correcciones">
+          <option value="unidad">Por unidad</option>
+          <option value="responsable">Por responsable</option>
+        </select>
+        <button class="btn-export" onclick="informeOperativo()">📋 Correcciones (PDF)</button>
+        <button class="btn-export" onclick="abrirCompartirCorrecciones()">📤 Compartir</button>
+      </div>
     </div>
 
     <!-- stat cards -->
@@ -1143,24 +1162,105 @@ function _construirSnapshot() {
     acciones: ds.acciones, asignaciones: ds.asignaciones, unidades: ds.unidades,
   };
 }
-async function abrirCompartirPanel() {
+// Publica un snapshot y muestra el modal. modo 'estatus' = dashboard graficado
+// (hacia gerencia); modo 'operativo' = solo la lista de correcciones (hacia
+// campo). El snapshot es el mismo; el modo viaja en la URL.
+async function _compartir(modo) {
   const snap = _construirSnapshot();
   if (!snap.envios.length) { alert('No hay datos en este filtro para compartir.'); return; }
   const token = _panelToken();
-  // Guarda local siempre (funciona offline y en el mismo equipo al instante).
   try { localStorage.setItem('skf_panel_' + token, JSON.stringify(snap)); } catch {}
-  const url = location.origin + location.pathname + '?panel=' + token;
+  let extra = '';
+  if (modo === 'operativo') {
+    const g = (document.getElementById('corrGroup') && document.getElementById('corrGroup').value) || 'unidad';
+    extra = '&modo=operativo&group=' + g;
+  }
+  const url = location.origin + location.pathname + '?panel=' + token + extra;
+  document.querySelector('#shareModal h3').textContent = modo === 'operativo' ? '📤 Compartir correcciones' : '📤 Compartir panel';
+  document.querySelector('#shareModal .sub').innerHTML = modo === 'operativo'
+    ? 'Quien abra este link ve <strong>solo la lista de lo que hay que corregir</strong> — de solo lectura, sin cuenta. Ideal para mandar a campo.'
+    : 'Quien abra este link ve una <strong>foto de solo lectura</strong> del estatus graficado — sin cuenta y sin poder editar.';
   document.getElementById('shareUrl').value = url;
   document.getElementById('shareQr').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}&bgcolor=1e293b&color=f8fafc&margin=6" width="180" height="180" alt="QR">`;
   const note = document.getElementById('shareNote');
   note.textContent = 'Publicando…';
   document.getElementById('shareModal').classList.remove('hidden');
-  // Sube a la nube para que el link sirva en cualquier dispositivo.
   let cloud = false;
   if (typeof sbPublishPanel === 'function') { try { cloud = await sbPublishPanel(token, snap.filtro, snap); } catch {} }
   note.innerHTML = cloud
     ? '☁ <strong>Link en la nube:</strong> funciona en cualquier dispositivo. Es una foto de este momento — vuelve a compartir para actualizarla.'
     : '💾 Guardado en <strong>este dispositivo</strong>. Para que el link abra en otros equipos, conecta tu organización a la nube (Supabase) y vuelve a compartir.';
+}
+function abrirCompartirPanel() { _compartir('estatus'); }
+function abrirCompartirCorrecciones() { _compartir('operativo'); }
+
+// ══════════════════════════════════════════════════════════════════
+// INFORME OPERATIVO — lo que hay que ir a corregir (punch list). Solo los
+// hallazgos/señalamientos ABIERTOS, agrupados por unidad o por responsable.
+// Sin gráficas: es la lista accionable que se manda a campo. Respeta el filtro.
+// ══════════════════════════════════════════════════════════════════
+const SEV_ORDER = { critico: 0, mayor: 1, menor: 2 };
+function _correccionRows(ds) {
+  const acc = ds.acciones || [];
+  return ds.hallazgos
+    .filter(h => (h.estado || 'abierto') !== 'cerrado')
+    .map(h => {
+      const ac = acc.find(a => (a.hallazgo_id || a.hallazgoId) === h.id);
+      const cr = fHzCreado(h);
+      return {
+        form: fHzPlantillaNom(h),
+        campo: fHzCampo(h) || 'Reportado a mano',
+        sev: h.severidad || 'menor',
+        fecha: cr ? new Date(cr).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+        unidad: unidadNombreDash(fHzUnidad(h)) || 'Sin unidad',
+        resp: ac ? fAcResponsable(ac) : 'Sin responsable',
+        limite: (ac && fAcFechaLimite(ac)) ? new Date(fAcFechaLimite(ac) + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—',
+      };
+    })
+    .sort((a, b) => (SEV_ORDER[a.sev] ?? 9) - (SEV_ORDER[b.sev] ?? 9));
+}
+function _correccionGrupos(ds, groupBy) {
+  const rows = _correccionRows(ds);
+  const keyOf = groupBy === 'responsable' ? (r => r.resp) : (r => r.unidad);
+  const groups = {};
+  rows.forEach(r => { (groups[keyOf(r)] = groups[keyOf(r)] || []).push(r); });
+  return { rows, groups };
+}
+// PDF (impresión con marca): tablas con casilla "Hecho" para marcar en papel.
+function informeOperativo() {
+  const ds = datosFiltrados();
+  const groupBy = (document.getElementById('corrGroup') && document.getElementById('corrGroup').value) || 'unidad';
+  const { rows, groups } = _correccionGrupos(ds, groupBy);
+  if (!rows.length) { printReport('Lista de correcciones', `<p style="color:#16a34a;font-weight:700">✅ No hay correcciones pendientes en este filtro (${escD(_etiquetaFiltro())}). Todo al día.</p>`); return; }
+  const otherCol = groupBy === 'unidad' ? 'Responsable' : 'Unidad';
+  const otherVal = groupBy === 'unidad' ? (r => r.resp) : (r => r.unidad);
+  const secciones = Object.entries(groups).map(([g, items]) => `<h2>${escD(g)} — ${items.length} pendiente${items.length !== 1 ? 's' : ''}</h2>
+    <table><thead><tr><th style="text-align:center;width:44px">Hecho</th><th style="text-align:left">Formulario</th><th style="text-align:left">Señalamiento</th><th style="text-align:left">Gravedad</th><th style="text-align:left">${otherCol}</th><th style="text-align:left">Reportado</th><th style="text-align:left">Límite</th></tr></thead>
+    <tbody>${items.map(r => `<tr><td style="text-align:center;font-size:15px">☐</td><td style="text-align:left">${escD(r.form)}</td><td style="text-align:left">${escD(r.campo)}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${escD(otherVal(r))}</td><td style="text-align:left">${escD(r.fecha)}</td><td style="text-align:left">${escD(r.limite)}</td></tr>`).join('')}</tbody></table>`).join('');
+  printReport('Lista de correcciones — lo que hay que corregir', `<p style="color:#6b7280;margin:0 0 4px">${escD(_etiquetaFiltro())} · ${rows.length} pendiente${rows.length !== 1 ? 's' : ''} · agrupado por ${groupBy === 'unidad' ? 'unidad' : 'responsable'}</p>${secciones}`);
+}
+// Pantalla (vista de solo lectura operativa, tema oscuro del dashboard).
+function _correccionesPantallaHTML(ds, groupBy) {
+  const { rows, groups } = _correccionGrupos(ds, groupBy);
+  if (!rows.length) return '<div class="audit-empty">✅ No hay correcciones pendientes. Todo al día. 👍</div>';
+  const other = groupBy === 'unidad' ? (r => r.resp) : (r => r.unidad);
+  return Object.entries(groups).map(([g, items]) => `<div class="corr-group">
+    <div class="corr-group-h">${escD(g)} <small>· ${items.length} pendiente${items.length !== 1 ? 's' : ''}</small></div>
+    ${items.map(r => `<div class="hz-au-row">
+      <span class="hz-au-form">${escD(r.form)}<small>${escD(r.campo)} · ${escD(other(r))}</small></span>
+      <span><span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span></span>
+      <span class="hz-au-lim">${escD(r.fecha)}</span>
+      <span class="hz-au-cer cer-no">Pendiente</span>
+    </div>`).join('')}</div>`).join('');
+}
+function renderOperativoReadonly(groupBy) {
+  const ds = datosFiltrados();
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `<div class="audit-card"><div class="audit-head"><h2 style="margin:0">🔧 Correcciones pendientes</h2></div>
+    <p style="color:var(--mut);font-size:.82rem;margin:2px 0 14px">Lo que hay que ir a corregir — agrupado por ${groupBy === 'unidad' ? 'unidad' : 'responsable'}.</p>
+    <div id="corrBody"></div></div>`;
+  document.getElementById('corrBody').innerHTML = _correccionesPantallaHTML(ds, groupBy);
+  mc.style.display = 'block';
 }
 function copyPanelLink() {
   const inp = document.getElementById('shareUrl');
@@ -1191,11 +1291,21 @@ async function initPanelReadonly(token) {
   const fecha = snap.generadoEn ? new Date(snap.generadoEn).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }) : '';
   b.textContent = `👁️ Vista de solo lectura · ${(snap.org && snap.org.nombre) || 'SEKaform'} · ${snap.filtro || ''} · generado ${fecha}`;
   b.style.display = 'block';
-  document.title = `Panel — ${(snap.org && snap.org.nombre) || 'SEKaform'}`;
-  populateExplorador();
   document.getElementById('loadingState').style.display = 'none';
-  document.getElementById('mainContent').style.display = 'block';
-  pintar();
+  const params = new URLSearchParams(location.search);
+  if (params.get('modo') === 'operativo') {
+    // Vista operativa: solo la lista de correcciones (hacia campo).
+    const group = params.get('group') === 'responsable' ? 'responsable' : 'unidad';
+    document.title = `Correcciones — ${(snap.org && snap.org.nombre) || 'SEKaform'}`;
+    b.textContent = `🔧 Correcciones pendientes · ${(snap.org && snap.org.nombre) || 'SEKaform'} · ${snap.filtro || ''} · generado ${fecha}`;
+    renderOperativoReadonly(group);
+  } else {
+    // Vista ejecutiva: el dashboard graficado completo (hacia gerencia).
+    document.title = `Panel — ${(snap.org && snap.org.nombre) || 'SEKaform'}`;
+    populateExplorador();
+    document.getElementById('mainContent').style.display = 'block';
+    pintar();
+  }
 }
 
 let _reportEnvios = [];
