@@ -298,12 +298,24 @@ async function sbLoadCorreccionesCampo() {
 // Cierra un hallazgo desde el panel (un clic). Update mínimo: solo toca el
 // estado, así no se arriesga a pisar otros campos de una fila que vino de la
 // nube en snake_case. La RLS "Editores editan hallazgos" ya lo permite.
-async function sbCerrarHallazgo(id) {
+async function sbCerrarHallazgo(id, por) {
+  try {
+    const sb = await getSB();
+    if (!sb || !id) return false;
+    const now = new Date().toISOString();
+    const { error } = await sb.from('hallazgos')
+      .update({ estado: 'cerrado', cerrado_en: now, cerrado_por: por || null, actualizado_en: now }).eq('id', id);
+    return !error;
+  } catch { return false; }
+}
+// Reabre un hallazgo cerrado por error: vuelve a 'abierto' y limpia la
+// auditoría de cierre.
+async function sbReabrirHallazgo(id) {
   try {
     const sb = await getSB();
     if (!sb || !id) return false;
     const { error } = await sb.from('hallazgos')
-      .update({ estado: 'cerrado', actualizado_en: new Date().toISOString() }).eq('id', id);
+      .update({ estado: 'abierto', cerrado_en: null, cerrado_por: null, actualizado_en: new Date().toISOString() }).eq('id', id);
     return !error;
   } catch { return false; }
 }

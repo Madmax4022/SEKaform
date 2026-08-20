@@ -92,6 +92,9 @@
     .hz-au-cer.cer-campo{color:#38bdf8;font-weight:700;}
     .cerrar-btn{display:inline-block;margin-left:8px;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);color:var(--ok,#22c55e);border-radius:7px;padding:4px 10px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;vertical-align:middle;}
     .cerrar-btn:hover{background:rgba(34,197,94,.26);}
+    .reabrir-btn{display:inline-block;margin-left:8px;background:none;border:1px solid var(--bor);color:var(--mut);border-radius:7px;padding:3px 9px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;vertical-align:middle;}
+    .reabrir-btn:hover{color:var(--txt);border-color:var(--mut);}
+    .cer-audit{display:block;color:var(--mut);font-weight:500;font-size:.72rem;margin-top:2px;}
     .flt-bar .filter-sel{max-width:none;}
     /* modo auditoría */
     .audit-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--pri);}
@@ -691,6 +694,8 @@ const fHzPlantillaId = h => h.plantilla_id||h.plantillaId;
 const fHzPlantillaNom = h => h.plantilla_nombre||h.plantillaNombre||'Sin nombre';
 const fHzCampo = h => h.campo_etiqueta||h.campoEtiqueta||'';
 const fHzCreado = h => h.creado_en||h.creadoEn;
+const fHzCerradoEn = h => h.cerrado_en||h.cerradoEn||null;
+const fHzCerradoPor = h => h.cerrado_por||h.cerradoPor||null;
 const fAcResponsable = a => a.responsable||'Sin responsable';
 const fAcFechaLimite = a => a.fecha_limite||a.fechaLimite;
 const fAcCerrado = a => a.cerrado_en||a.cerradoEn;
@@ -1009,7 +1014,8 @@ function _auditRows(ds) {
     const cerrado = (h.estado === 'cerrado') || (ac && ac.estado === 'completada');
     const lim = ac && fAcFechaLimite(ac) ? new Date(fAcFechaLimite(ac)+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '—';
     return { id: h.id, form: fHzPlantillaNom(h), campo: fHzCampo(h), sev: h.severidad||'menor',
-             estado: h.estado||'abierto', resp: ac ? fAcResponsable(ac) : '—', limite: lim, cerrado };
+             estado: h.estado||'abierto', resp: ac ? fAcResponsable(ac) : '—', limite: lim, cerrado,
+             cerradoPor: fHzCerradoPor(h), cerradoEn: fHzCerradoEn(h) };
   });
 }
 function renderAuditoria(ds) {
@@ -1023,10 +1029,14 @@ function renderAuditoria(ds) {
   el.innerHTML = `<div class="hz-au-head"><span>Hallazgo</span><span>Severidad</span><span>Responsable</span><span class="hz-au-lim">Límite</span><span class="hz-au-cer">Cierre</span></div>`
     + rows.map(r => {
         const m = _marcasCampo[r.id];
-        const puedeCerrar = !document.body.classList.contains('panel-readonly');
-        const btnCerrar = puedeCerrar ? `<button class="cerrar-btn" onclick="cerrarHallazgo('${escJ(r.id)}')">✓ ${m ? 'Confirmar cierre' : 'Cerrar'}</button>` : '';
+        const editable = !document.body.classList.contains('panel-readonly');
+        const btnCerrar = editable ? `<button class="cerrar-btn" onclick="cerrarHallazgo('${escJ(r.id)}')">✓ ${m ? 'Confirmar cierre' : 'Cerrar'}</button>` : '';
+        const btnReabrir = editable ? `<button class="reabrir-btn" onclick="reabrirHallazgo('${escJ(r.id)}')">↩ Reabrir</button>` : '';
+        const cerradoInfo = (r.cerradoPor || r.cerradoEn)
+          ? `<small class="cer-audit">${r.cerradoPor ? 'por ' + escD(r.cerradoPor) : ''}${r.cerradoEn ? ' · ' + escD(new Date(r.cerradoEn).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })) : ''}</small>`
+          : '';
         const cer = r.cerrado
-          ? '<span class="hz-au-cer cer-si">✓ Cerrado</span>'
+          ? `<span class="hz-au-cer cer-si">✓ Cerrado${cerradoInfo}${btnReabrir}</span>`
           : m
             ? `<span class="hz-au-cer cer-campo" title="${m.en ? 'Reportado ' + escD(new Date(m.en).toLocaleString('es-CO')) : ''}">🔧 Campo corrigió${m.por ? ' · ' + escD(m.por) : ''}${btnCerrar}</span>`
             : `<span class="hz-au-cer cer-no">Pendiente${btnCerrar}</span>`;
@@ -1315,17 +1325,32 @@ async function cerrarHallazgo(id) {
   const msg = m ? `¿Confirmar el cierre de este hallazgo?\nEl campo lo reportó corregido${m.por ? ' (' + m.por + ')' : ''}.` : '¿Cerrar este hallazgo? Quedará marcado como resuelto.';
   if (!confirm(msg)) return;
   const ahora = new Date().toISOString();
-  // En memoria (repintado inmediato)
+  // Quién cierra: el correo de la sesión (o "Panel" si es local/sin cuenta).
+  let por = 'Panel';
+  if (typeof sbGetUser === 'function') { try { const u = await sbGetUser(); if (u && u.email) por = u.email; } catch {} }
   const h = (_bi.hallazgos || []).find(x => x.id === id);
-  if (h) { h.estado = 'cerrado'; h.actualizado_en = ahora; h.actualizadoEn = ahora; }
-  // Caché local (persiste offline / sin cuenta en este equipo)
+  if (h) { h.estado = 'cerrado'; h.cerrado_en = ahora; h.cerradoEn = ahora; h.cerrado_por = por; h.cerradoPor = por; h.actualizado_en = ahora; h.actualizadoEn = ahora; }
   try {
     const arr = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');
     const lh = arr.find(x => x.id === id);
-    if (lh) { lh.estado = 'cerrado'; lh.actualizadoEn = ahora; localStorage.setItem('skf_hallazgos', JSON.stringify(arr)); }
+    if (lh) { lh.estado = 'cerrado'; lh.cerradoEn = ahora; lh.cerradoPor = por; lh.actualizadoEn = ahora; localStorage.setItem('skf_hallazgos', JSON.stringify(arr)); }
   } catch {}
-  // Nube (para el resto del equipo)
-  if (typeof sbCerrarHallazgo === 'function') { try { await sbCerrarHallazgo(id); } catch {} }
+  if (typeof sbCerrarHallazgo === 'function') { try { await sbCerrarHallazgo(id, por); } catch {} }
+  pintar();
+}
+
+// Reabre un hallazgo cerrado por error: vuelve a 'abierto' y limpia el cierre.
+async function reabrirHallazgo(id) {
+  if (!confirm('¿Reabrir este hallazgo? Volverá a quedar pendiente.')) return;
+  const ahora = new Date().toISOString();
+  const h = (_bi.hallazgos || []).find(x => x.id === id);
+  if (h) { h.estado = 'abierto'; h.cerrado_en = null; h.cerradoEn = null; h.cerrado_por = null; h.cerradoPor = null; h.actualizado_en = ahora; h.actualizadoEn = ahora; }
+  try {
+    const arr = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');
+    const lh = arr.find(x => x.id === id);
+    if (lh) { lh.estado = 'abierto'; delete lh.cerradoEn; delete lh.cerradoPor; lh.actualizadoEn = ahora; localStorage.setItem('skf_hallazgos', JSON.stringify(arr)); }
+  } catch {}
+  if (typeof sbReabrirHallazgo === 'function') { try { await sbReabrirHallazgo(id); } catch {} }
   pintar();
 }
 

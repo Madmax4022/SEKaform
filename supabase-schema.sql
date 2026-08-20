@@ -567,3 +567,60 @@ RETURNS JSONB SECURITY DEFINER SET search_path = public LANGUAGE sql AS $$
   FROM correcciones_campo WHERE token = p_token;
 $$;
 GRANT EXECUTE ON FUNCTION skf_panel_marcas(TEXT) TO anon, authenticated;
+
+-- ── 17 · Auditoría de cierre (quién y cuándo cerró un hallazgo) ──────────────
+-- Guarda quién cerró cada hallazgo desde el panel y cuándo. Seguro re-ejecutar.
+ALTER TABLE hallazgos ADD COLUMN IF NOT EXISTS cerrado_en  TIMESTAMPTZ;
+ALTER TABLE hallazgos ADD COLUMN IF NOT EXISTS cerrado_por TEXT;
+
+-- ── 18 · Recordatorio automático de correcciones vencidas ───────────────────
+-- Una vez al día, a quien tenga una acción correctiva VENCIDA (pasó su fecha
+-- límite y el hallazgo sigue abierto) le llega un correo con su lista. Reusa el
+-- mismo Resend + vault del resto de avisos: si no hay 'resend_api_key' cargada,
+-- no hace nada. Requiere la extensión pg_cron habilitada para agendarse solo.
+CREATE OR REPLACE FUNCTION skf_recordar_vencidos()
+RETURNS void SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE api_key TEXT; rec RECORD;
+BEGIN
+  SELECT decrypted_secret INTO api_key FROM vault.decrypted_secrets WHERE name = 'resend_api_key' LIMIT 1;
+  IF api_key IS NULL OR api_key = '' THEN RETURN; END IF;
+  FOR rec IN
+    SELECT ac.correo AS correo, count(*) AS n,
+           string_agg('<li><strong>' || skf_html_escape(COALESCE(h.plantilla_nombre,'')) || '</strong> — ' ||
+             skf_html_escape(COALESCE(h.campo_etiqueta, h.descripcion, 'hallazgo')) ||
+             ' (venció el ' || to_char(ac.fecha_limite,'DD/MM/YYYY') || ')</li>', '') AS items
+    FROM acciones_correctivas ac
+    JOIN hallazgos h ON h.id = ac.hallazgo_id
+    WHERE ac.estado <> 'completada'
+      AND ac.fecha_limite IS NOT NULL AND ac.fecha_limite < current_date
+      AND h.estado <> 'cerrado'
+      AND ac.correo IS NOT NULL AND ac.correo <> ''
+    GROUP BY ac.correo
+  LOOP
+    PERFORM net.http_post(
+      url := 'https://api.resend.com/emails',
+      headers := jsonb_build_object('Authorization','Bearer '||api_key,'Content-Type','application/json'),
+      body := jsonb_build_object(
+        'from','SEKaform <onboarding@resend.dev>','to',ARRAY[rec.correo],
+        'subject','⏰ Tienes '||rec.n||' corrección(es) vencida(s)',
+        'html','<h2>Correcciones vencidas</h2><p>Estas acciones ya pasaron su fecha límite y siguen abiertas:</p><ul>'||rec.items||'</ul><p>Ingresa a SEKaform para atenderlas y cerrarlas.</p>'));
+  END LOOP;
+  -- deja el estado 'vencida' para que la app lo muestre igual
+  UPDATE acciones_correctivas ac SET estado = 'vencida'
+   FROM hallazgos h
+   WHERE ac.hallazgo_id = h.id AND ac.estado = 'pendiente'
+     AND ac.fecha_limite IS NOT NULL AND ac.fecha_limite < current_date AND h.estado <> 'cerrado';
+END; $$;
+
+-- Se agenda solo si pg_cron está habilitado (Dashboard → Database → Extensions).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'skf-recordar-vencidos') THEN
+      PERFORM cron.unschedule('skf-recordar-vencidos');
+    END IF;
+    PERFORM cron.schedule('skf-recordar-vencidos', '0 13 * * *', 'SELECT skf_recordar_vencidos();');
+  ELSE
+    RAISE NOTICE 'pg_cron no está habilitado: actívalo en Dashboard → Database → Extensions y re-ejecuta este bloque para el recordatorio diario.';
+  END IF;
+END $$;
