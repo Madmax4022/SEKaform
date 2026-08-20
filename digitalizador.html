@@ -132,6 +132,14 @@
     .chip-sep{color:var(--ok);border-color:var(--ok);background:var(--ok-dim);}
 
     /* starter fields */
+    /* opciones avanzadas colapsables — la pantalla de crear queda simple */
+    .adv-opts{margin-top:8px;border:1px solid var(--bor);border-radius:9px;background:var(--card);overflow:hidden;}
+    .adv-opts summary{cursor:pointer;padding:12px 14px;font-size:.86rem;font-weight:700;color:var(--txt);list-style:none;user-select:none;}
+    .adv-opts summary::-webkit-details-marker{display:none;}
+    .adv-opts summary .adv-sub{color:var(--mut);font-weight:400;font-size:.78rem;}
+    .adv-opts summary::before{content:'▸';color:var(--mut);margin-right:6px;display:inline-block;}
+    .adv-opts[open] summary::before{content:'▾';}
+    .adv-opts-body{padding:2px 14px 14px;}
     .starter-box{background:var(--card);border:1px solid var(--bor);border-radius:9px;padding:14px 16px;margin-top:14px;}
     .starter-box-h{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
     .starter-box-h strong{font-size:.86rem;}
@@ -369,39 +377,48 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
         <label>Nombre del formulario *</label>
         <input type="text" id="fNom" placeholder="Ej: Acta de Inspección Sanitaria" maxlength="100">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="fg">
-          <label>Descripción</label>
-          <input type="text" id="fDesc" placeholder="Para qué se usa">
-        </div>
-        <div class="fg">
-          <label>Código</label>
-          <div class="cod-row">
-            <input type="text" id="fCod" readonly>
-            <button type="button" class="cod-edit-btn" id="fCodBtn" onmousedown="event.preventDefault()" onclick="toggleCodEdit()" title="Editar código">✏️</button>
+
+      <!-- Todo lo opcional va aquí, colapsado, para no abrumar a quien crea su
+           primer formulario. Los valores por defecto (código automático, link
+           para compartir activado) funcionan sin abrir esto. -->
+      <details class="adv-opts">
+        <summary>Opciones avanzadas <span class="adv-sub">— descripción, código, norma, link para compartir, correo (opcional)</span></summary>
+        <div class="adv-opts-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fg">
+              <label>Descripción</label>
+              <input type="text" id="fDesc" placeholder="Para qué se usa">
+            </div>
+            <div class="fg">
+              <label>Código</label>
+              <div class="cod-row">
+                <input type="text" id="fCod" readonly>
+                <button type="button" class="cod-edit-btn" id="fCodBtn" onmousedown="event.preventDefault()" onclick="toggleCodEdit()" title="Editar código">✏️</button>
+              </div>
+              <div class="cod-hint">Se genera automáticamente. Puedes dejarlo así.</div>
+            </div>
           </div>
-          <div class="cod-hint">Se genera automáticamente. Puedes dejarlo así.</div>
+          <div class="fg">
+            <label>Norma / referencia <span style="color:var(--mut);font-weight:400">(opcional)</span></label>
+            <input type="text" id="fNorma" placeholder="Ej: Res. 2674/2013 · o déjalo vacío" maxlength="120">
+            <div class="cod-hint">Si aplica una norma, se mostrará al llenar y en la Carpeta de evidencia. Déjalo vacío si el formulario no cita ninguna (por ejemplo, en otro país).</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fg">
+              <label class="chk-row" style="font-weight:600">
+                <input type="checkbox" id="fPublica" checked>
+                🌐 Generar link para compartir
+              </label>
+              <div class="cod-hint">Cualquiera con el link podrá llenarlo sin necesitar cuenta — sus envíos caerán en tu mismo panel de inteligencia de negocio.</div>
+            </div>
+            <div class="fg">
+              <label>📧 Correo para avisos</label>
+              <input type="email" id="fCorreoNotif" placeholder="ej: supervisor@empresa.com">
+              <div class="cod-hint">Si lo configuras, se enviará un correo automático con un resumen cada vez que alguien complete este formulario.</div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="fg">
-        <label>Norma / referencia <span style="color:var(--mut);font-weight:400">(opcional)</span></label>
-        <input type="text" id="fNorma" placeholder="Ej: Res. 2674/2013 · o déjalo vacío" maxlength="120">
-        <div class="cod-hint">Si aplica una norma, se mostrará al llenar y en la Carpeta de evidencia. Déjalo vacío si el formulario no cita ninguna (por ejemplo, en otro país).</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="fg">
-          <label class="chk-row" style="font-weight:600">
-            <input type="checkbox" id="fPublica" checked>
-            🌐 Generar link para compartir
-          </label>
-          <div class="cod-hint">Cualquiera con el link podrá llenarlo sin necesitar cuenta — sus envíos caerán en tu mismo panel de inteligencia de negocio.</div>
-        </div>
-        <div class="fg">
-          <label>📧 Correo para avisos</label>
-          <input type="email" id="fCorreoNotif" placeholder="ej: supervisor@empresa.com">
-          <div class="cod-hint">Si lo configuras, se enviará un correo automático con un resumen cada vez que alguien complete este formulario.</div>
-        </div>
-      </div>
+      </details>
     </div>
 
     <div class="starter-box">
