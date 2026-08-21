@@ -96,6 +96,7 @@
 <script src="supabase-config.js"></script>
 <script>
 let mode = 'login'; // 'login' | 'signup'
+let recoveryMode = false; // true cuando se llega desde el link de "restablecer contraseña"
 
 function toggleMode() {
   mode = mode === 'login' ? 'signup' : 'login';
@@ -161,6 +162,50 @@ function skipLogin() {
   window.location.href = 'index.html';
 }
 
+// Pantalla de "nueva contraseña": se muestra al volver del link del correo de
+// recuperación. La sesión de recuperación ya la estableció supabase-js al leer
+// el token del hash; aquí solo escribimos la clave nueva con updateUser().
+function enterRecoveryMode() {
+  recoveryMode = true;
+  document.getElementById('cardTitle').textContent = 'Nueva contraseña';
+  document.getElementById('cardSub').textContent = 'Escribe tu nueva contraseña para completar el restablecimiento.';
+  document.getElementById('emailInp').closest('.fg').style.display = 'none';
+  document.getElementById('forgotLink').style.display = 'none';
+  const p = document.getElementById('passInp');
+  p.setAttribute('autocomplete', 'new-password');
+  p.setAttribute('placeholder', 'Mínimo 6 caracteres');
+  p.value = '';
+  document.getElementById('submitLabel').textContent = 'Guardar contraseña';
+  document.getElementById('submitBtn').setAttribute('onclick', 'handleSetNewPassword()');
+  const div = document.querySelector('.divider'); if (div) div.style.display = 'none';
+  const ghost = document.querySelector('.btn-ghost'); if (ghost) ghost.style.display = 'none';
+  const tog = document.querySelector('.toggle'); if (tog) tog.style.display = 'none';
+  const badge = document.querySelector('.badge-local'); if (badge) badge.style.display = 'none';
+  p.focus();
+}
+
+async function handleSetNewPassword() {
+  const pass = document.getElementById('passInp').value;
+  if (!pass || pass.length < 6) { showMsg('La contraseña debe tener al menos 6 caracteres.', 'er'); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('submitLabel').textContent = 'Guardando...';
+  showMsg('', '');
+  try {
+    const sb = await getSB();
+    const { error } = await sb.auth.updateUser({ password: pass });
+    if (error) throw error;
+    showMsg('Contraseña actualizada. Entrando…', 'ok');
+    // limpia el token del hash y entra
+    history.replaceState(null, '', 'login.html');
+    setTimeout(() => window.location.href = 'index.html', 1200);
+  } catch (e) {
+    showMsg(e.message === 'Auth session missing!' ? 'El link expiró. Vuelve a pedir "¿Olvidaste tu contraseña?".' : (e.message || 'No se pudo actualizar la contraseña.'), 'er');
+    btn.disabled = false;
+    document.getElementById('submitLabel').textContent = 'Guardar contraseña';
+  }
+}
+
 async function handleForgot() {
   const email = document.getElementById('emailInp').value.trim();
   if (!email) { showMsg('Escribe tu correo electrónico primero.', 'er'); document.getElementById('emailInp').focus(); return; }
@@ -176,11 +221,14 @@ async function handleForgot() {
 }
 
 document.getElementById('emailInp').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('passInp').focus(); });
-document.getElementById('passInp').addEventListener('keydown', e => { if (e.key==='Enter') handleSubmit(); });
+document.getElementById('passInp').addEventListener('keydown', e => { if (e.key==='Enter') { recoveryMode ? handleSetNewPassword() : handleSubmit(); } });
 
-// If already logged in, redirect
+// Al cargar: si venimos del link de recuperación (hash con type=recovery),
+// mostramos la pantalla de nueva contraseña en vez de redirigir. Si no, y ya
+// hay sesión, entramos directo.
 (async () => {
   if (!SKF_CONFIGURED) return;
+  if (location.hash.includes('type=recovery')) { enterRecoveryMode(); return; }
   const user = await sbGetUser();
   if (user) window.location.href = 'index.html';
 })();
