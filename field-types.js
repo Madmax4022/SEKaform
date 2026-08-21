@@ -48,9 +48,14 @@ function fieldNeedsOptions(tipo) {
 // automáticamente un hallazgo. Los campos de texto libre no califican: no
 // hay forma confiable de saber si la respuesta es "mala" sin que el
 // inspector la reporte manualmente.
-const SEVERITY_TYPES = ['si_no', 'escala_1_5', 'select', 'radio', 'checkbox_multi'];
+const SEVERITY_TYPES = ['si_no', 'escala_1_5', 'select', 'radio', 'checkbox_multi', 'numero'];
 function fieldCanHaveSeveridad(tipo) {
   return SEVERITY_TYPES.includes(tipo);
+}
+// El número es el único que usa un RANGO válido (mín/máx): si el valor
+// registrado queda por fuera, se marca como hallazgo automáticamente.
+function fieldUsaRango(tipo) {
+  return tipo === 'numero';
 }
 
 // Detecta si una respuesta concreta indica un incumplimiento, dado el tipo
@@ -58,10 +63,20 @@ function fieldCanHaveSeveridad(tipo) {
 // sugerirTipo()/sugerirOpciones() en digitalizador.html — sin requerir que
 // el creador del formulario marque opción por opción cuál es "la mala".
 const _SKF_BAD_ANSWER_RE = /no conforme|no cumple|incumple|deficiente|rechazad|inadecuad|insuficiente|vencid|da[ñn]ad|fuera de servicio/i;
-function answerIsFinding(tipo, valor) {
+function answerIsFinding(tipo, valor, field) {
   if (valor === undefined || valor === null || valor === '') return false;
   if (tipo === 'si_no') return valor === 'No';
   if (tipo === 'escala_1_5') return /^1\b|^2\b/.test(String(valor).trim());
+  if (tipo === 'numero') {
+    // Hallazgo si el valor queda por fuera del rango válido (mín/máx) definido
+    // en el campo. Sin rango definido, un número nunca genera hallazgo.
+    const n = parseFloat(String(valor).replace(',', '.'));
+    if (isNaN(n) || !field) return false;
+    const mn = (field.rangoMin === '' || field.rangoMin == null) ? null : parseFloat(field.rangoMin);
+    const mx = (field.rangoMax === '' || field.rangoMax == null) ? null : parseFloat(field.rangoMax);
+    if (mn === null && mx === null) return false;
+    return (mn !== null && n < mn) || (mx !== null && n > mx);
+  }
   if (tipo === 'checkbox_multi') {
     return Array.isArray(valor) && valor.some(v => _SKF_BAD_ANSWER_RE.test(String(v)));
   }

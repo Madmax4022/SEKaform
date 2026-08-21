@@ -53,6 +53,52 @@
     .flt-lbl{font-size:.8rem;color:var(--mut);font-weight:600;}
     .flt-custom{display:inline-flex;align-items:center;gap:8px;}
     .flt-count{margin-left:auto;font-size:.76rem;color:var(--mut);font-family:var(--mono,monospace);}
+    /* Vista de solo lectura (panel compartido por link, sin cuenta) */
+    body.panel-readonly #sidebar,
+    body.panel-readonly #sidebarToggle,
+    body.panel-readonly #sidebarBackdrop,
+    body.panel-readonly #skfBottomBar,
+    body.panel-readonly #skfSyncBar{display:none!important;}
+    /* Modo simple: deja solo KPIs + correcciones; oculta gráficas/análisis. */
+    body.dash-simple .dash-adv{display:none!important;}
+    #btnVista{cursor:pointer;font-weight:700;}
+    body.dash-simple #btnVista{background:var(--pri);color:#fff;border-color:var(--pri);}
+    body.panel-readonly .wrap{max-width:1180px;}
+    .ro-banner{background:linear-gradient(135deg,var(--card),rgba(37,99,235,.1));border:1px solid rgba(37,99,235,.3);border-radius:10px;padding:11px 15px;font-size:.82rem;color:var(--txt);margin-bottom:18px;font-weight:600;}
+    /* modal compartir panel */
+    .share-over{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:700;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .share-over.hidden{display:none;}
+    .share-box{background:var(--card);border:1px solid var(--bor);border-radius:18px;padding:26px 22px;max-width:410px;width:100%;text-align:center;}
+    .share-box h3{font-size:1.05rem;font-weight:800;margin:0 0 4px;}
+    .share-box .sub{color:var(--mut);font-size:.82rem;margin-bottom:16px;line-height:1.5;}
+    .share-qr{background:#1e293b;border-radius:12px;padding:12px;display:inline-block;margin-bottom:14px;border:1px solid var(--bor);min-height:60px;}
+    .share-qr img{display:block;border-radius:6px;}
+    .share-url-row{display:flex;gap:8px;margin-bottom:14px;}
+    .share-url{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bor);border-radius:8px;color:var(--mut);font-size:.72rem;padding:8px 10px;font-family:monospace;word-break:break-all;outline:none;}
+    .share-copy{background:var(--pri,#2563eb);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    .share-note{font-size:.73rem;color:var(--mut);line-height:1.5;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:8px;padding:9px 12px;margin-bottom:14px;text-align:left;}
+    .share-close{background:none;border:1px solid var(--bor);color:var(--mut);border-radius:8px;padding:8px 16px;font-size:.82rem;cursor:pointer;font-family:inherit;}
+    /* dos vías: estatus (gerencia) vs correcciones (campo) */
+    .panel-actions{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 22px;}
+    .pa-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--bor);border-radius:12px;padding:9px 12px;}
+    .pa-lbl{font-size:.72rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-right:2px;}
+    .corr-group{margin-bottom:18px;}
+    .corr-group-h{font-size:.85rem;font-weight:800;color:var(--txt);padding:9px 2px;border-bottom:1px solid var(--bor);margin-bottom:2px;}
+    .corr-group-h small{color:var(--mut);font-weight:600;}
+    .corr-row{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--bor);flex-wrap:wrap;}
+    .corr-info{flex:1;min-width:180px;font-weight:700;font-size:.9rem;color:var(--txt);}
+    .corr-info small{display:block;color:var(--mut);font-weight:500;font-size:.76rem;margin-top:2px;}
+    .corr-act{margin-left:auto;}
+    .corr-mark{background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.45);color:var(--pri,#60a5fa);border-radius:8px;padding:7px 13px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    .corr-mark:hover{background:rgba(37,99,235,.28);}
+    .corr-done{font-size:.82rem;font-weight:700;color:var(--ok,#22c55e);white-space:nowrap;}
+    .corr-undo{background:none;border:none;color:var(--mut);text-decoration:underline;cursor:pointer;font-size:.74rem;font-family:inherit;margin-left:4px;}
+    .hz-au-cer.cer-campo{color:#38bdf8;font-weight:700;}
+    .cerrar-btn{display:inline-block;margin-left:8px;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);color:var(--ok,#22c55e);border-radius:7px;padding:4px 10px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;vertical-align:middle;}
+    .cerrar-btn:hover{background:rgba(34,197,94,.26);}
+    .reabrir-btn{display:inline-block;margin-left:8px;background:none;border:1px solid var(--bor);color:var(--mut);border-radius:7px;padding:3px 9px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;vertical-align:middle;}
+    .reabrir-btn:hover{color:var(--txt);border-color:var(--mut);}
+    .cer-audit{display:block;color:var(--mut);font-weight:500;font-size:.72rem;margin-top:2px;}
     .flt-bar .filter-sel{max-width:none;}
     /* modo auditoría */
     .audit-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--pri);}
@@ -74,6 +120,30 @@
     .sev-pill.menor{background:var(--card2);color:var(--mut);}
     .cer-si{color:var(--ok);font-weight:700;} .cer-no{color:var(--warn);font-weight:700;}
     .audit-empty{color:var(--mut);font-size:.85rem;padding:22px 4px;text-align:center;}
+    /* explorador de datos por campo */
+    .expl-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+    .expl-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+    @media(max-width:640px){.expl-tiles{grid-template-columns:1fr 1fr;}}
+    .expl-tile{background:var(--card2);border:1px solid var(--bor);border-radius:10px;padding:14px 16px;}
+    .expl-tile .l{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);}
+    .expl-tile .n{font-size:1.6rem;font-weight:900;margin-top:4px;line-height:1;}
+    .expl-tile .n small{font-size:.8rem;font-weight:600;color:var(--mut);}
+    .expl-tile.warn .n{color:var(--warn);}
+    .expl-range{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--card2);border:1px solid var(--bor);border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:.84rem;color:var(--mut);}
+    .expl-range input{width:90px;background:var(--inp);border:1px solid var(--bor);color:var(--txt);border-radius:7px;padding:7px 9px;font-family:inherit;outline:none;}
+    .expl-dist-row{display:grid;grid-template-columns:1fr 44% 60px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bor);font-size:.86rem;}
+    .expl-dist-row:last-child{border-bottom:none;}
+    .expl-dist-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .expl-dist-track{height:9px;background:var(--card2);border-radius:5px;overflow:hidden;}
+    .expl-dist-fill{height:100%;border-radius:5px;background:var(--pri);}
+    .expl-dist-fill.mala{background:var(--err);}
+    .expl-dist-n{font-size:.82rem;font-weight:800;color:var(--mut);text-align:right;}
+    .expl-empty{color:var(--mut);font-size:.85rem;padding:30px 4px;text-align:center;line-height:1.5;}
+    .expl-uni-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--bor);font-size:.85rem;}
+    .expl-uni-row:last-child{border-bottom:none;}
+    .expl-sub{font-size:.78rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 10px;}
+    .pbi-note{margin-top:18px;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:13px 15px;font-size:.82rem;color:var(--mut);line-height:1.55;}
+    .pbi-note code{background:var(--card2);border:1px solid var(--bor);border-radius:5px;padding:1px 6px;font-size:.8rem;color:var(--txt);}
     .table-wrap{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
     thead th{padding:11px 16px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);background:var(--card2);}
@@ -184,6 +254,7 @@
   </div>
 
   <div id="srcBadge" class="src-badge" style="display:none"></div>
+  <div class="ro-banner" id="roBanner" style="display:none"></div>
 
   <div id="loadingState" class="loading">
     <div class="spinner"></div>
@@ -209,7 +280,26 @@
       </span>
       <select class="filter-sel" id="fltUnidad" onchange="onFiltroChange()"><option value="">Todas las unidades</option></select>
       <select class="filter-sel" id="fltFormulario" onchange="onFiltroChange()"><option value="">Todos los formularios</option></select>
+      <button class="filter-sel" id="btnVista" onclick="toggleVista()" title="Cambia entre lo esencial y el panel completo">🔎 Vista simple</button>
       <span class="flt-count" id="fltCount"></span>
+    </div>
+
+    <!-- acciones del panel: dos vías — estatus hacia gerencia, correcciones hacia campo -->
+    <div class="panel-actions" id="panelActions">
+      <div class="pa-group">
+        <span class="pa-lbl">📈 Para gerencia · estatus</span>
+        <button class="btn-export" onclick="exportarPanelPDF()">🖨 Panel (PDF)</button>
+        <button class="btn-export" onclick="abrirCompartirPanel()">📤 Compartir</button>
+      </div>
+      <div class="pa-group">
+        <span class="pa-lbl">🔧 Para campo · correcciones</span>
+        <select class="filter-sel" id="corrGroup" title="Cómo agrupar la lista de correcciones">
+          <option value="unidad">Por unidad</option>
+          <option value="responsable">Por responsable</option>
+        </select>
+        <button class="btn-export" onclick="informeOperativo()">📋 Correcciones (PDF)</button>
+        <button class="btn-export" onclick="abrirCompartirCorrecciones()">📤 Compartir</button>
+      </div>
     </div>
 
     <!-- stat cards -->
@@ -236,6 +326,10 @@
       </div>
     </div>
 
+    <!-- Bloque avanzado: se oculta en «Vista simple» (gráficas, cumplimiento,
+         comparativo, tendencia y análisis de datos). Lo esencial (KPIs y
+         correcciones) queda siempre visible. -->
+    <div class="dash-adv">
     <!-- charts -->
     <div class="chart-grid">
       <div class="chart-card">
@@ -267,7 +361,7 @@
       <div class="stat-card c-err">
         <div class="stat-label">Críticos sin resolver</div>
         <div class="stat-num" id="sHzCriticos">0</div>
-        <div class="stat-desc">requieren atención inmediata</div>
+        <div class="stat-desc">riesgo de sanción — atiende ya</div>
       </div>
       <div class="stat-card c-purple">
         <div class="stat-label">Tiempo promedio de cierre</div>
@@ -317,6 +411,25 @@
       <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
     </div>
 
+    <!-- explorador de datos por campo -->
+    <h2 class="section-title">🔬 Análisis de datos<button class="skf-help" data-help-t="¿Qué es esto?" data-help="Aquí no ves cuántas veces se llenó un formulario, sino QUÉ se llenó.
+
+Elige un formulario y un campo, y la app grafica sus valores: promedio y tendencia de un número (por ejemplo la temperatura de la nevera), o la distribución de una respuesta (por ejemplo cuántas veces salió «No»).
+
+Respeta el periodo y la unidad que elijas arriba.">?</button></h2>
+    <div class="chart-card" style="margin-bottom:32px">
+      <div class="expl-controls">
+        <span class="flt-lbl">Formulario:</span>
+        <select class="filter-sel" id="explForm" onchange="onExplForm()"></select>
+        <span class="flt-lbl">Campo:</span>
+        <select class="filter-sel" id="explCampo" onchange="onExplCampo()"></select>
+        <button class="btn-export" style="margin-left:auto" onclick="exportCSVLargo()">⬇ Datos para Power BI / Excel</button>
+      </div>
+      <div id="explBody"></div>
+      <div class="pbi-note">💡 <strong>Conecta Power BI, Excel o Google Data Studio.</strong> El botón de arriba descarga <strong>todos</strong> los datos filtrados en «formato largo» (una fila por respuesta) — se importa y grafica sin arreglar nada. Para conexión <strong>en vivo</strong>, tus datos viven en una base de datos real (Supabase/Postgres) y hay una vista lista, <code>vista_respuestas</code> — ver «Conectar Power BI» en Organización.</div>
+    </div>
+    </div><!-- /dash-adv -->
+
     <!-- modo auditoría -->
     <div class="audit-card">
       <div class="audit-head">
@@ -326,10 +439,10 @@
 3. Entrégala o muéstrala en la inspección.
 
 La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se cerró — que es lo que un auditor revisa.">?</button></h2>
-          <p class="audit-sub">Para una inspección o auditoría: elige arriba el periodo y la unidad, y descarga la evidencia lista para entregar.</p>
+          <p class="audit-sub">🛡️ <strong>Tu defensa ante una inspección.</strong> Elige el periodo y la unidad, y ten la evidencia lista para demostrar que cumples — antes de que te la pidan.</p>
         </div>
         <div class="audit-btns">
-          <button class="btn-export" onclick="reporteConsolidado()">📄 Carpeta de evidencia (PDF)</button>
+          <button class="btn-export" onclick="reporteConsolidado()" title="Tu defensa ante una inspección: resumen, hallazgos y evidencia lista para entregar">📄 Carpeta de evidencia (PDF)</button>
           <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla (CSV)</button>
         </div>
       </div>
@@ -338,14 +451,14 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
     </div>
 
     <!-- recent submissions table -->
-    <div class="table-card">
+    <div class="table-card dash-adv">
       <div class="table-head">
         <div>
           <h2>Registros capturados</h2>
           <span style="font-size:.75rem;color:var(--mut)" id="tableCount"></span>
         </div>
         <div class="table-actions">
-          <button class="btn-export" onclick="reporteConsolidado()">📄 Carpeta de evidencia (PDF)</button>
+          <button class="btn-export" onclick="reporteConsolidado()" title="Tu defensa ante una inspección: resumen, hallazgos y evidencia lista para entregar">📄 Carpeta de evidencia (PDF)</button>
           <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla</button>
         </div>
       </div>
@@ -353,6 +466,21 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
     </div>
 
   </div><!-- /mainContent -->
+</div>
+
+<!-- modal: compartir panel de solo lectura -->
+<div class="share-over hidden" id="shareModal">
+  <div class="share-box">
+    <h3>📤 Compartir panel</h3>
+    <div class="sub">Cualquiera con este link ve una <strong>foto de solo lectura</strong> de lo que estás viendo ahora — sin cuenta y sin poder editar.</div>
+    <div class="share-qr" id="shareQr"></div>
+    <div class="share-url-row">
+      <input type="text" class="share-url" id="shareUrl" readonly>
+      <button class="share-copy" onclick="copyPanelLink()">Copiar</button>
+    </div>
+    <div class="share-note" id="shareNote"></div>
+    <button class="share-close" onclick="cerrarCompartirPanel()">Cerrar</button>
+  </div>
 </div>
 
 <script src="chart.min.js"></script>
@@ -364,7 +492,9 @@ const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct'
 // ── Filtros globales del panel ──────────────────────────────────────
 // Recalculan TODO el BI y también los reportes (la "Carpeta de evidencia"
 // no es más que este panel filtrado por periodo + unidad + formulario).
-let _chDaily = null, _chForms = null, _chTrend = null;   // instancias de gráfica (para destruir al recalcular)
+let _chDaily = null, _chForms = null, _chTrend = null, _chExpl = null;   // instancias de gráfica (para destruir al recalcular)
+let _explForms = [];                    // formularios con campos analizables
+const _explRango = { min: null, max: null };  // rango válido opcional para campos número
 const _filtros = { periodo: 'todo', desde: null, hasta: null, unidadId: '', codigo: '' };
 let _formLabels = new Map();   // codigo → nombre de formulario (para el selector y las etiquetas)
 
@@ -574,6 +704,8 @@ const fHzPlantillaId = h => h.plantilla_id||h.plantillaId;
 const fHzPlantillaNom = h => h.plantilla_nombre||h.plantillaNombre||'Sin nombre';
 const fHzCampo = h => h.campo_etiqueta||h.campoEtiqueta||'';
 const fHzCreado = h => h.creado_en||h.creadoEn;
+const fHzCerradoEn = h => h.cerrado_en||h.cerradoEn||null;
+const fHzCerradoPor = h => h.cerrado_por||h.cerradoPor||null;
 const fAcResponsable = a => a.responsable||'Sin responsable';
 const fAcFechaLimite = a => a.fecha_limite||a.fechaLimite;
 const fAcCerrado = a => a.cerrado_en||a.cerradoEn;
@@ -751,6 +883,138 @@ function printReport(title, bodyHtml, opts) {
   setTimeout(go, 500);
 }
 
+// ══════════════════════════════════════════════════════════════════
+// EXPLORADOR DE DATOS POR CAMPO — analiza los VALORES que se llenan,
+// no cuántas veces se llenó. Respeta el periodo y la unidad del filtro
+// global (no el filtro de formulario: el explorador elige su propio).
+// ══════════════════════════════════════════════════════════════════
+const EXPL_ANALIZABLES = ['numero','si_no','escala_1_5','select','radio','checkbox','checkbox_multi'];
+const EXPL_TIPO_ICO = { numero:'#', si_no:'✓✗', escala_1_5:'⭐', select:'▼', radio:'◉', checkbox:'☑', checkbox_multi:'📋' };
+const EXPL_BAD_RE = /^no$|no conforme|no cumple|incumple|deficiente|rechazad|inadecuad|insuficiente|vencid|da[ñn]ad|fuera de servicio|^[12]\b/i;
+function _plantKey(p){ return p.codigo || p.id || ('n:'+(p.nombre||'')); }
+
+function populateExplorador() {
+  const selF = document.getElementById('explForm');
+  const seen = new Set(); _explForms = [];
+  (_bi.plantillas||[]).forEach(p => {
+    const key = _plantKey(p);
+    const campos = (p.campos||[]).filter(c => EXPL_ANALIZABLES.includes(c.tipo));
+    if (campos.length && !seen.has(key)) { seen.add(key); _explForms.push({ key, nombre: p.nombre, campos }); }
+  });
+  selF.innerHTML = _explForms.length
+    ? _explForms.map(f => `<option value="${escD(f.key)}">${escD(f.nombre)}</option>`).join('')
+    : '<option value="">— sin formularios con campos analizables —</option>';
+  onExplForm();
+}
+function onExplForm() {
+  const key = document.getElementById('explForm').value;
+  const f = _explForms.find(x => x.key === key);
+  const selC = document.getElementById('explCampo');
+  selC.innerHTML = f && f.campos.length
+    ? f.campos.map(c => `<option value="${escD(c.id)}">${EXPL_TIPO_ICO[c.tipo]||''} ${escD(c.etiqueta||c.id)}</option>`).join('')
+    : '<option value="">—</option>';
+  onExplCampo();
+}
+// Al elegir un campo, si es número y tiene un rango definido en el formulario,
+// el explorador lo usa por defecto (muestra el % fuera de una vez).
+function onExplCampo() {
+  const key = document.getElementById('explForm').value;
+  const campoId = document.getElementById('explCampo').value;
+  const f = _explForms.find(x => x.key === key);
+  const campo = f && f.campos.find(c => c.id === campoId);
+  if (campo && campo.tipo === 'numero') {
+    _explRango.min = (campo.rangoMin == null || campo.rangoMin === '') ? null : parseFloat(campo.rangoMin);
+    _explRango.max = (campo.rangoMax == null || campo.rangoMax === '') ? null : parseFloat(campo.rangoMax);
+  } else { _explRango.min = null; _explRango.max = null; }
+  renderExplorador();
+}
+function onExplRango() {
+  const mn = document.getElementById('explMin').value, mx = document.getElementById('explMax').value;
+  _explRango.min = mn === '' ? null : parseFloat(mn);
+  _explRango.max = mx === '' ? null : parseFloat(mx);
+  renderExplorador();
+}
+function renderExplorador() {
+  const el = document.getElementById('explBody');
+  if (!el) return;
+  if (_chExpl) { _chExpl.destroy(); _chExpl = null; }
+  const key = document.getElementById('explForm').value;
+  const campoId = document.getElementById('explCampo').value;
+  const f = _explForms.find(x => x.key === key);
+  const campo = f && f.campos.find(c => c.id === campoId);
+  if (!f || !campo) { el.innerHTML = '<div class="expl-empty">Crea o llena un formulario con campos de número, sí/no o selección para analizar su data aquí.</div>'; return; }
+  const envios = (_bi.envios||[]).filter(e => _enRango(e) && _pasaUnidad(e) && envioGroupKey(e) === key);
+  const rows = envios.map(e => ({ v:(e.datos||{})[campoId], u:fEnvUnidad(e), fe:fEnvCreado(e) }))
+    .filter(r => r.v !== undefined && r.v !== null && r.v !== '' && !(Array.isArray(r.v) && !r.v.length));
+  if (!rows.length) { el.innerHTML = `<div class="expl-empty">Aún no hay respuestas para «${escD(campo.etiqueta||campo.id)}» en el periodo/unidad elegidos.</div>`; return; }
+  if (campo.tipo === 'numero') renderExplNumero(el, campo, rows);
+  else renderExplCategorico(el, campo, rows);
+}
+function renderExplNumero(el, campo, rows) {
+  const nums = rows.map(r => ({ n: parseFloat(String(r.v).replace(',', '.')), u:r.u, fe:r.fe })).filter(x => !isNaN(x.n));
+  if (!nums.length) { el.innerHTML = '<div class="expl-empty">Este campo no tiene valores numéricos para promediar.</div>'; return; }
+  const vals = nums.map(x => x.n);
+  const prom = vals.reduce((a,b)=>a+b,0) / vals.length;
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const fmt = n => Number.isInteger(n) ? String(n) : n.toFixed(2);
+  const rmin = _explRango.min, rmax = _explRango.max;
+  let fueraTxt = '<span style="margin-left:auto;color:var(--mut)">escribe un rango para ver el % fuera</span>';
+  if (rmin !== null || rmax !== null) {
+    const fuera = vals.filter(v => (rmin !== null && v < rmin) || (rmax !== null && v > rmax)).length;
+    fueraTxt = `<span style="margin-left:auto;font-weight:700;color:${fuera ? 'var(--err)' : 'var(--ok)'}">${fuera} fuera de rango · ${Math.round(fuera/vals.length*100)}%</span>`;
+  }
+  el.innerHTML = `
+    <div class="expl-tiles">
+      <div class="expl-tile"><div class="l">Promedio</div><div class="n">${fmt(prom)}</div></div>
+      <div class="expl-tile"><div class="l">Mínimo</div><div class="n">${fmt(mn)}</div></div>
+      <div class="expl-tile"><div class="l">Máximo</div><div class="n">${fmt(mx)}</div></div>
+      <div class="expl-tile"><div class="l">Registros</div><div class="n">${vals.length}</div></div>
+    </div>
+    <div class="expl-range">
+      <span>Rango válido (opcional):</span> mín <input type="number" step="any" id="explMin" value="${rmin ?? ''}" onchange="onExplRango()"> máx <input type="number" step="any" id="explMax" value="${rmax ?? ''}" onchange="onExplRango()">
+      ${fueraTxt}
+    </div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chartExpl"></canvas></div>
+    <div class="expl-sub">Promedio por unidad</div>
+    <div id="explUni"></div>`;
+  const byMonth = {};
+  nums.forEach(x => { const d=new Date(x.fe); const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; (byMonth[k]=byMonth[k]||[]).push(x.n); });
+  const keys = Object.keys(byMonth).sort();
+  const labels = keys.map(k => { const [y,m]=k.split('-'); return `${MONTHS_ES[+m-1]} ${y.slice(2)}`; });
+  const data = keys.map(k => { const a=byMonth[k]; return a.reduce((s,v)=>s+v,0)/a.length; });
+  if (typeof Chart !== 'undefined') {
+    _chExpl = new Chart(document.getElementById('chartExpl'), {
+      type:'line', data:{ labels, datasets:[{ label:'Promedio', data, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.14)', fill:true, tension:.3, pointRadius:3, pointBackgroundColor:'#2563eb' }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:CHART_TEXT,font:{size:11}},grid:{color:CHART_GRID}}, y:{ticks:{color:CHART_TEXT,font:{size:11}},grid:{color:CHART_GRID}} } }
+    });
+  }
+  const byUni = {};
+  nums.forEach(x => { const k=x.u||'__none'; (byUni[k]=byUni[k]||[]).push(x.n); });
+  document.getElementById('explUni').innerHTML = Object.entries(byUni).map(([k,arr]) => {
+    const nom = k==='__none' ? 'Sin unidad' : (unidadNombreDash(k) || k);
+    const avg = arr.reduce((s,v)=>s+v,0)/arr.length;
+    return `<div class="expl-uni-row"><span>${escD(nom)}</span><span style="font-weight:800">${fmt(avg)} <span style="color:var(--mut);font-weight:600">(${arr.length})</span></span></div>`;
+  }).join('');
+}
+function renderExplCategorico(el, campo, rows) {
+  const counts = {}; let total = 0;
+  rows.forEach(r => {
+    if (Array.isArray(r.v)) r.v.forEach(o => { counts[o]=(counts[o]||0)+1; total++; });
+    else { const k = r.v===true?'Sí (marcado)':r.v===false?'No marcado':String(r.v); counts[k]=(counts[k]||0)+1; total++; }
+  });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(...entries.map(e=>e[1]), 1);
+  el.innerHTML = `
+    <div class="expl-tiles">
+      <div class="expl-tile"><div class="l">Respuestas</div><div class="n">${rows.length}</div></div>
+      <div class="expl-tile"><div class="l">Opciones</div><div class="n">${entries.length}</div></div>
+      <div class="expl-tile"><div class="l">Más frecuente</div><div class="n" style="font-size:1.05rem">${escD(entries[0][0])}</div></div>
+      <div class="expl-tile"><div class="l">% del más frecuente</div><div class="n">${Math.round(entries[0][1]/rows.length*100)}<small>%</small></div></div>
+    </div>
+    <div class="expl-sub">Distribución de respuestas</div>
+    <div>${entries.map(([k,n]) => `<div class="expl-dist-row"><span class="expl-dist-name" title="${escD(k)}">${escD(k)}</span><span class="expl-dist-track"><span class="expl-dist-fill ${EXPL_BAD_RE.test(k)?'mala':''}" style="width:${Math.round(n/max*100)}%"></span></span><span class="expl-dist-n">${n} · ${Math.round(n/total*100)}%</span></div>`).join('')}</div>`;
+}
+
 // ── Modo auditoría: hallazgo + su acción correctiva (¿se cerró?) ────────
 const ESTADO_LBL = { abierto:'Abierto', en_proceso:'En atención', cerrado:'Cerrado' };
 function _auditRows(ds) {
@@ -759,23 +1023,40 @@ function _auditRows(ds) {
     const ac = acc.find(a => (a.hallazgo_id||a.hallazgoId) === h.id);
     const cerrado = (h.estado === 'cerrado') || (ac && ac.estado === 'completada');
     const lim = ac && fAcFechaLimite(ac) ? new Date(fAcFechaLimite(ac)+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '—';
-    return { form: fHzPlantillaNom(h), campo: fHzCampo(h), sev: h.severidad||'menor',
-             estado: h.estado||'abierto', resp: ac ? fAcResponsable(ac) : '—', limite: lim, cerrado };
+    return { id: h.id, form: fHzPlantillaNom(h), campo: fHzCampo(h), sev: h.severidad||'menor',
+             estado: h.estado||'abierto', resp: ac ? fAcResponsable(ac) : '—', limite: lim, cerrado,
+             cerradoPor: fHzCerradoPor(h), cerradoEn: fHzCerradoEn(h) };
   });
 }
 function renderAuditoria(ds) {
   const rows = _auditRows(ds);
-  document.getElementById('auditCount').textContent = rows.length ? `· ${rows.length} en el filtro` : '';
+  const nCampo = rows.filter(r => !r.cerrado && _marcasCampo[r.id]).length;
+  document.getElementById('auditCount').textContent = rows.length
+    ? `· ${rows.length} en el filtro${nCampo ? ` · 🔧 ${nCampo} reportada${nCampo !== 1 ? 's' : ''} corregida${nCampo !== 1 ? 's' : ''} por campo` : ''}`
+    : '';
   const el = document.getElementById('auditHallazgos');
   if (!rows.length) { el.innerHTML = '<div class="audit-empty">Sin hallazgos en este periodo — nada por corregir. 👍</div>'; return; }
   el.innerHTML = `<div class="hz-au-head"><span>Hallazgo</span><span>Severidad</span><span>Responsable</span><span class="hz-au-lim">Límite</span><span class="hz-au-cer">Cierre</span></div>`
-    + rows.map(r => `<div class="hz-au-row">
+    + rows.map(r => {
+        const m = _marcasCampo[r.id];
+        const editable = !document.body.classList.contains('panel-readonly');
+        const btnCerrar = editable ? `<button class="cerrar-btn" onclick="cerrarHallazgo('${escJ(r.id)}')">✓ ${m ? 'Confirmar cierre' : 'Cerrar'}</button>` : '';
+        const btnReabrir = editable ? `<button class="reabrir-btn" onclick="reabrirHallazgo('${escJ(r.id)}')">↩ Reabrir</button>` : '';
+        const cerradoInfo = (r.cerradoPor || r.cerradoEn)
+          ? `<small class="cer-audit">${r.cerradoPor ? 'por ' + escD(r.cerradoPor) : ''}${r.cerradoEn ? ' · ' + escD(new Date(r.cerradoEn).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })) : ''}</small>`
+          : '';
+        const cer = r.cerrado
+          ? `<span class="hz-au-cer cer-si">✓ Cerrado${cerradoInfo}${btnReabrir}</span>`
+          : m
+            ? `<span class="hz-au-cer cer-campo" title="${m.en ? 'Reportado ' + escD(new Date(m.en).toLocaleString('es-CO')) : ''}">🔧 Campo corrigió${m.por ? ' · ' + escD(m.por) : ''}${btnCerrar}</span>`
+            : `<span class="hz-au-cer cer-no">Pendiente${btnCerrar}</span>`;
+        return `<div class="hz-au-row">
         <span class="hz-au-form">${escD(r.form)}<small>${escD(r.campo||'Reportado a mano')} · ${ESTADO_LBL[r.estado]||r.estado}</small></span>
         <span><span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span></span>
         <span class="hz-au-form">${escD(r.resp)}</span>
         <span class="hz-au-lim">${escD(r.limite)}</span>
-        <span class="hz-au-cer ${r.cerrado?'cer-si':'cer-no'}">${r.cerrado?'✓ Cerrado':'Pendiente'}</span>
-      </div>`).join('');
+        ${cer}
+      </div>`; }).join('');
 }
 
 function reporteConsolidado() {
@@ -824,6 +1105,347 @@ function reporteConsolidado() {
     : `<p style="color:#9ca3af">Sin hallazgos en este periodo.</p>`;
 
   printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Hallazgos y su cierre</h2>${tablaHz}<h2>Registros del periodo</h2>${tablaDet}`);
+}
+
+// Exporta el PANEL COMPLETO a PDF: los KPIs, las gráficas (capturadas como
+// imagen desde el canvas de Chart.js), el análisis de datos y los hallazgos.
+// A diferencia de la "Carpeta de evidencia" (orientada a auditoría, solo
+// tablas), esto es el dashboard visual tal como se ve — para entregar por
+// correo o WhatsApp sin que nadie tenga que abrir la app ni bajar datos.
+function _canvasImg(id) {
+  const c = document.getElementById(id);
+  if (!c || typeof Chart === 'undefined') return '';
+  try {
+    // Fondo blanco detrás del canvas transparente para que imprima legible.
+    const w = c.width, h = c.height;
+    if (!w || !h) return '';
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    const ctx = tmp.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(c, 0, 0);
+    const png = tmp.toDataURL('image/png');
+    return (png && png.length > 200) ? `<img src="${png}" alt="" style="width:100%;max-width:660px;height:auto;border:1px solid #e5e7eb;border-radius:8px;margin:4px 0 2px">` : '';
+  } catch (e) { return ''; }
+}
+
+function exportarPanelPDF() {
+  const ds = datosFiltrados();
+  const st = computeStats(ds.envios);
+  const { done, total, pct } = computeCumplimiento(ds.asignaciones, ds.envios);
+  const abiertos = ds.hallazgos.filter(h => (h.estado||'abierto') !== 'cerrado');
+  const criticos = abiertos.filter(h => h.severidad === 'critico').length;
+
+  const kpis = `<div class="kv">
+    <div class="k">Periodo / filtro</div><div class="v">${escD(_etiquetaFiltro())}</div>
+    <div class="k">Formularios</div><div class="v">${ds.plantillas.length}</div>
+    <div class="k">Envíos totales</div><div class="v">${st.total}</div>
+    <div class="k">Este mes</div><div class="v">${st.month}</div>
+    <div class="k">Últimos 7 días</div><div class="v">${st.week}</div>
+  </div>`;
+
+  const cumpl = `<div class="kv">
+    <div class="k">Cumplimiento de asignaciones</div><div class="v">${pct===null?'—':pct+'% ('+done+'/'+total+')'}</div>
+    <div class="k">Hallazgos abiertos</div><div class="v">${abiertos.length} de ${ds.hallazgos.length}</div>
+    <div class="k">Críticos sin resolver</div><div class="v">${criticos}</div>
+  </div>`;
+
+  const imgDaily = _canvasImg('chartDaily');
+  const imgForms = _canvasImg('chartForms');
+  const imgTrend = _canvasImg('chartTrend');
+  const imgExpl  = _canvasImg('chartExpl');
+
+  const graficas = [
+    imgDaily && `<h2>Envíos por día — últimos 30 días</h2>${imgDaily}`,
+    imgForms && `<h2>Envíos por formulario</h2>${imgForms}`,
+    imgTrend && `<h2>Tendencia mensual — envíos y hallazgos</h2>${imgTrend}`,
+  ].filter(Boolean).join('');
+
+  // Análisis de datos: campo elegido en el explorador + sus tiles + gráfica.
+  let analisis = '';
+  const explSelF = document.getElementById('explForm');
+  const explSelC = document.getElementById('explCampo');
+  const tiles = [...document.querySelectorAll('#explBody .expl-tile')].map(t => {
+    const l = t.querySelector('.l'), n = t.querySelector('.n');
+    return (l && n) ? `<div class="k">${escD(l.textContent)}</div><div class="v">${escD(n.textContent)}</div>` : '';
+  }).join('');
+  if (tiles) {
+    const campoLbl = explSelC && explSelC.selectedOptions[0] ? explSelC.selectedOptions[0].textContent : '';
+    const formLbl  = explSelF && explSelF.selectedOptions[0] ? explSelF.selectedOptions[0].textContent : '';
+    analisis = `<h2>Análisis de datos — ${escD(formLbl)} · ${escD(campoLbl)}</h2><div class="kv">${tiles}</div>${imgExpl}`;
+  }
+
+  // Hallazgos y su cierre (mismo cuadro de la Carpeta de evidencia).
+  const auRows = _auditRows(ds);
+  const tablaHz = auRows.length
+    ? `<table><thead><tr><th style="text-align:left">Hallazgo</th><th style="text-align:left">Severidad</th><th style="text-align:left">Estado</th><th style="text-align:left">Responsable</th><th style="text-align:left">Cierre</th></tr></thead><tbody>${auRows.map(r=>`<tr><td style="text-align:left">${escD(r.form)} — ${escD(r.campo||'manual')}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${ESTADO_LBL[r.estado]||r.estado}</td><td style="text-align:left">${escD(r.resp)}</td><td style="text-align:left">${r.cerrado?'Cerrado':'Pendiente'}</td></tr>`).join('')}</tbody></table>`
+    : `<p style="color:#9ca3af">Sin hallazgos en este periodo. 👍</p>`;
+
+  const body = `<h2>Resumen del panel</h2>${kpis}${graficas}<h2>Cumplimiento y brechas</h2>${cumpl}${analisis}<h2>Hallazgos y su cierre</h2>${tablaHz}`;
+  printReport('Panel de control', body);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// COMPARTIR PANEL DE SOLO LECTURA — entrega el dashboard por link/QR a
+// alguien SIN cuenta. Se publica una FOTO inmutable (snapshot) de lo que
+// se está viendo; el visitante nunca toca las tablas reales. Guardado
+// local (mismo equipo) + nube vía Supabase (cualquier equipo).
+// ══════════════════════════════════════════════════════════════════
+function _panelToken() {
+  // Este token es la única credencial del panel: quien lo tenga ve la foto
+  // completa. Math.random() con un prefijo de Date.now() era adivinable —
+  // el prefijo se acota sabiendo cuándo se compartió. skfUUID() usa
+  // crypto.getRandomValues (122 bits de azar), que sí aguanta ser un secreto.
+  return 'pnl_' + (typeof skfUUID === 'function'
+    ? skfUUID().replace(/-/g, '')
+    : Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+}
+function _construirSnapshot() {
+  const ds = datosFiltrados();
+  return {
+    v: 1,
+    generadoEn: new Date().toISOString(),
+    filtro: _etiquetaFiltro(),
+    org: _biOrg ? { nombre: _biOrg.nombre || 'SEKaform', logo: _biOrg.logo || null } : null,
+    plantillas: ds.plantillas, envios: ds.envios, hallazgos: ds.hallazgos,
+    acciones: ds.acciones, asignaciones: ds.asignaciones, unidades: ds.unidades,
+  };
+}
+// Publica un snapshot y muestra el modal. modo 'estatus' = dashboard graficado
+// (hacia gerencia); modo 'operativo' = solo la lista de correcciones (hacia
+// campo). El snapshot es el mismo; el modo viaja en la URL.
+async function _compartir(modo) {
+  const snap = _construirSnapshot();
+  if (!snap.envios.length) { alert('No hay datos en este filtro para compartir.'); return; }
+  const token = _panelToken();
+  try { localStorage.setItem('skf_panel_' + token, JSON.stringify(snap)); } catch {}
+  let extra = '';
+  if (modo === 'operativo') {
+    const g = (document.getElementById('corrGroup') && document.getElementById('corrGroup').value) || 'unidad';
+    extra = '&modo=operativo&group=' + g;
+  }
+  const url = location.origin + location.pathname + '?panel=' + token + extra;
+  document.querySelector('#shareModal h3').textContent = modo === 'operativo' ? '📤 Compartir correcciones' : '📤 Compartir panel';
+  document.querySelector('#shareModal .sub').innerHTML = modo === 'operativo'
+    ? 'Quien abra este link ve <strong>solo la lista de lo que hay que corregir</strong> — de solo lectura, sin cuenta. Ideal para mandar a campo.'
+    : 'Quien abra este link ve una <strong>foto de solo lectura</strong> del estatus graficado — sin cuenta y sin poder editar.';
+  document.getElementById('shareUrl').value = url;
+  document.getElementById('shareQr').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}&bgcolor=1e293b&color=f8fafc&margin=6" width="180" height="180" alt="QR">`;
+  const note = document.getElementById('shareNote');
+  note.textContent = 'Publicando…';
+  document.getElementById('shareModal').classList.remove('hidden');
+  let cloud = false;
+  if (typeof sbPublishPanel === 'function') { try { cloud = await sbPublishPanel(token, snap.filtro, snap); } catch {} }
+  note.innerHTML = cloud
+    ? '☁ <strong>Link en la nube:</strong> funciona en cualquier dispositivo. Es una foto de este momento — vuelve a compartir para actualizarla.'
+    : '💾 Guardado en <strong>este dispositivo</strong>. No se pudo publicar en la nube — revisa tu conexión y vuelve a compartir para que el link abra en otros equipos.';
+}
+function abrirCompartirPanel() { _compartir('estatus'); }
+function abrirCompartirCorrecciones() { _compartir('operativo'); }
+
+// ══════════════════════════════════════════════════════════════════
+// INFORME OPERATIVO — lo que hay que ir a corregir (punch list). Solo los
+// hallazgos/señalamientos ABIERTOS, agrupados por unidad o por responsable.
+// Sin gráficas: es la lista accionable que se manda a campo. Respeta el filtro.
+// ══════════════════════════════════════════════════════════════════
+const SEV_ORDER = { critico: 0, mayor: 1, menor: 2 };
+function _correccionRows(ds) {
+  const acc = ds.acciones || [];
+  return ds.hallazgos
+    .filter(h => (h.estado || 'abierto') !== 'cerrado')
+    .map(h => {
+      const ac = acc.find(a => (a.hallazgo_id || a.hallazgoId) === h.id);
+      const cr = fHzCreado(h);
+      return {
+        id: h.id,
+        form: fHzPlantillaNom(h),
+        campo: fHzCampo(h) || 'Reportado a mano',
+        sev: h.severidad || 'menor',
+        fecha: cr ? new Date(cr).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+        unidad: unidadNombreDash(fHzUnidad(h)) || 'Sin unidad',
+        resp: ac ? fAcResponsable(ac) : 'Sin responsable',
+        limite: (ac && fAcFechaLimite(ac)) ? new Date(fAcFechaLimite(ac) + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—',
+      };
+    })
+    .sort((a, b) => (SEV_ORDER[a.sev] ?? 9) - (SEV_ORDER[b.sev] ?? 9));
+}
+function _correccionGrupos(ds, groupBy) {
+  const rows = _correccionRows(ds);
+  const keyOf = groupBy === 'responsable' ? (r => r.resp) : (r => r.unidad);
+  const groups = {};
+  rows.forEach(r => { (groups[keyOf(r)] = groups[keyOf(r)] || []).push(r); });
+  return { rows, groups };
+}
+// PDF (impresión con marca): tablas con casilla "Hecho" para marcar en papel.
+function informeOperativo() {
+  const ds = datosFiltrados();
+  const groupBy = (document.getElementById('corrGroup') && document.getElementById('corrGroup').value) || 'unidad';
+  const { rows, groups } = _correccionGrupos(ds, groupBy);
+  if (!rows.length) { printReport('Lista de correcciones', `<p style="color:#16a34a;font-weight:700">✅ No hay correcciones pendientes en este filtro (${escD(_etiquetaFiltro())}). Todo al día.</p>`); return; }
+  const otherCol = groupBy === 'unidad' ? 'Responsable' : 'Unidad';
+  const otherVal = groupBy === 'unidad' ? (r => r.resp) : (r => r.unidad);
+  const secciones = Object.entries(groups).map(([g, items]) => `<h2>${escD(g)} — ${items.length} pendiente${items.length !== 1 ? 's' : ''}</h2>
+    <table><thead><tr><th style="text-align:center;width:44px">Hecho</th><th style="text-align:left">Formulario</th><th style="text-align:left">Señalamiento</th><th style="text-align:left">Gravedad</th><th style="text-align:left">${otherCol}</th><th style="text-align:left">Reportado</th><th style="text-align:left">Límite</th></tr></thead>
+    <tbody>${items.map(r => `<tr><td style="text-align:center;font-size:15px">☐</td><td style="text-align:left">${escD(r.form)}</td><td style="text-align:left">${escD(r.campo)}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${escD(otherVal(r))}</td><td style="text-align:left">${escD(r.fecha)}</td><td style="text-align:left">${escD(r.limite)}</td></tr>`).join('')}</tbody></table>`).join('');
+  printReport('Lista de correcciones — lo que hay que corregir', `<p style="color:#6b7280;margin:0 0 4px">${escD(_etiquetaFiltro())} · ${rows.length} pendiente${rows.length !== 1 ? 's' : ''} · agrupado por ${groupBy === 'unidad' ? 'unidad' : 'responsable'}</p>${secciones}`);
+}
+// ── Cierre del ciclo: el campo marca "corregido" desde el link operativo ──
+// _marcasCampo: hallazgoId -> {por, nota, en}. Lo llena el campo (por token) o
+// el dueño (toda su org). Guardado local (mismo equipo/offline) + nube.
+let _marcasCampo = {};
+let _roToken = null;      // token del panel operativo abierto en solo lectura
+let _roGroup = 'unidad';  // agrupación de esa vista
+const escJ = s => String(s == null ? '' : s).replace(/[\\'"]/g, '\\$&');
+function _marcasKey(t) { return 'skf_marcas_' + t; }
+function _leerMarcasToken(t) { try { return JSON.parse(localStorage.getItem(_marcasKey(t)) || '{}'); } catch { return {}; } }
+function _guardarMarcasToken(t, o) { try { localStorage.setItem(_marcasKey(t), JSON.stringify(o)); } catch {} }
+function _todasMarcasLocales() {
+  const m = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.indexOf('skf_marcas_') === 0) { try { Object.assign(m, JSON.parse(localStorage.getItem(k) || '{}')); } catch {} }
+  }
+  return m;
+}
+async function _cargarMarcasToken(token) {
+  _marcasCampo = _leerMarcasToken(token);
+  if (typeof sbPanelMarcas === 'function') {
+    try { const arr = await sbPanelMarcas(token); if (Array.isArray(arr)) arr.forEach(x => { _marcasCampo[x.hallazgo_id] = { por: x.marcado_por, nota: x.nota, en: x.marcado_en }; }); } catch {}
+  }
+}
+async function _cargarMarcasDueno() {
+  _marcasCampo = _todasMarcasLocales();
+  if (typeof sbLoadCorreccionesCampo === 'function') {
+    try { const arr = await sbLoadCorreccionesCampo(); if (Array.isArray(arr)) arr.forEach(x => { _marcasCampo[x.hallazgo_id] = { por: x.marcado_por, nota: x.nota, en: x.marcado_en }; }); } catch {}
+  }
+}
+async function marcarCampo(hzId) {
+  const nombre = (prompt('¿Quién corrigió esto? (tu nombre — opcional)') || '').trim();
+  const o = _leerMarcasToken(_roToken); o[hzId] = { por: nombre, nota: '', en: new Date().toISOString() };
+  _guardarMarcasToken(_roToken, o); _marcasCampo = o;
+  if (typeof sbMarcarCorregido === 'function') { try { await sbMarcarCorregido(_roToken, hzId, nombre, ''); } catch {} }
+  renderOperativoReadonly(_roGroup);
+}
+async function desmarcarCampo(hzId) {
+  const o = _leerMarcasToken(_roToken); delete o[hzId];
+  _guardarMarcasToken(_roToken, o); _marcasCampo = o;
+  if (typeof sbDesmarcarCorregido === 'function') { try { await sbDesmarcarCorregido(_roToken, hzId); } catch {} }
+  renderOperativoReadonly(_roGroup);
+}
+
+// Cierre de un clic desde el panel (solo dueño, no en vista de solo lectura).
+// Confirma el cierre del hallazgo: lo pasa a 'cerrado' en memoria, en el caché
+// local y en la nube, y repinta todo (KPIs, brechas, auditoría).
+async function cerrarHallazgo(id) {
+  const m = _marcasCampo[id];
+  const msg = m ? `¿Confirmar el cierre de este hallazgo?\nEl campo lo reportó corregido${m.por ? ' (' + m.por + ')' : ''}.` : '¿Cerrar este hallazgo? Quedará marcado como resuelto.';
+  if (!confirm(msg)) return;
+  const ahora = new Date().toISOString();
+  // Quién cierra: el correo de la sesión (o "Panel" si es local/sin cuenta).
+  let por = 'Panel';
+  if (typeof sbGetUser === 'function') { try { const u = await sbGetUser(); if (u && u.email) por = u.email; } catch {} }
+  const h = (_bi.hallazgos || []).find(x => x.id === id);
+  if (h) { h.estado = 'cerrado'; h.cerrado_en = ahora; h.cerradoEn = ahora; h.cerrado_por = por; h.cerradoPor = por; h.actualizado_en = ahora; h.actualizadoEn = ahora; }
+  try {
+    const arr = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');
+    const lh = arr.find(x => x.id === id);
+    if (lh) { lh.estado = 'cerrado'; lh.cerradoEn = ahora; lh.cerradoPor = por; lh.actualizadoEn = ahora; localStorage.setItem('skf_hallazgos', JSON.stringify(arr)); }
+  } catch {}
+  if (typeof sbCerrarHallazgo === 'function') { try { await sbCerrarHallazgo(id, por); } catch {} }
+  pintar();
+}
+
+// Reabre un hallazgo cerrado por error: vuelve a 'abierto' y limpia el cierre.
+async function reabrirHallazgo(id) {
+  if (!confirm('¿Reabrir este hallazgo? Volverá a quedar pendiente.')) return;
+  const ahora = new Date().toISOString();
+  const h = (_bi.hallazgos || []).find(x => x.id === id);
+  if (h) { h.estado = 'abierto'; h.cerrado_en = null; h.cerradoEn = null; h.cerrado_por = null; h.cerradoPor = null; h.actualizado_en = ahora; h.actualizadoEn = ahora; }
+  try {
+    const arr = JSON.parse(localStorage.getItem('skf_hallazgos') || '[]');
+    const lh = arr.find(x => x.id === id);
+    if (lh) { lh.estado = 'abierto'; delete lh.cerradoEn; delete lh.cerradoPor; lh.actualizadoEn = ahora; localStorage.setItem('skf_hallazgos', JSON.stringify(arr)); }
+  } catch {}
+  if (typeof sbReabrirHallazgo === 'function') { try { await sbReabrirHallazgo(id); } catch {} }
+  pintar();
+}
+
+// Pantalla (vista de solo lectura operativa, tema oscuro del dashboard).
+function _correccionesPantallaHTML(ds, groupBy) {
+  const { rows, groups } = _correccionGrupos(ds, groupBy);
+  if (!rows.length) return '<div class="audit-empty">✅ No hay correcciones pendientes. Todo al día. 👍</div>';
+  const other = groupBy === 'unidad' ? (r => r.resp) : (r => r.unidad);
+  const accion = (r) => {
+    const m = _marcasCampo[r.id];
+    return m
+      ? `<span class="corr-done">✅ Reportado corregido${m.por ? ' · ' + escD(m.por) : ''} <button class="corr-undo" onclick="desmarcarCampo('${escJ(r.id)}')">deshacer</button></span>`
+      : `<button class="corr-mark" onclick="marcarCampo('${escJ(r.id)}')">✓ Marcar corregido</button>`;
+  };
+  return Object.entries(groups).map(([g, items]) => `<div class="corr-group">
+    <div class="corr-group-h">${escD(g)} <small>· ${items.length} pendiente${items.length !== 1 ? 's' : ''}</small></div>
+    ${items.map(r => `<div class="corr-row">
+      <span class="corr-info">${escD(r.form)}<small>${escD(r.campo)} · ${escD(other(r))} · ${escD(r.fecha)}</small></span>
+      <span class="sev-pill ${escD(r.sev)}">${escD(r.sev)}</span>
+      <span class="corr-act">${accion(r)}</span>
+    </div>`).join('')}</div>`).join('');
+}
+function renderOperativoReadonly(groupBy) {
+  _roGroup = groupBy;
+  const ds = datosFiltrados();
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `<div class="audit-card"><div class="audit-head"><h2 style="margin:0">🔧 Correcciones pendientes</h2></div>
+    <p style="color:var(--mut);font-size:.82rem;margin:2px 0 14px">Lo que hay que ir a corregir — agrupado por ${groupBy === 'unidad' ? 'unidad' : 'responsable'}. Marca lo que ya corregiste; queda reportado a la administración.</p>
+    <div id="corrBody"></div></div>`;
+  document.getElementById('corrBody').innerHTML = _correccionesPantallaHTML(ds, groupBy);
+  mc.style.display = 'block';
+}
+function copyPanelLink() {
+  const inp = document.getElementById('shareUrl');
+  inp.select();
+  const done = () => { const b = document.querySelector('.share-copy'); if (b) { b.textContent = '✓ Copiado'; setTimeout(() => b.textContent = 'Copiar', 1600); } };
+  if (navigator.clipboard) navigator.clipboard.writeText(inp.value).then(done).catch(() => { try { document.execCommand('copy'); done(); } catch {} });
+  else { try { document.execCommand('copy'); done(); } catch {} }
+}
+function cerrarCompartirPanel() { document.getElementById('shareModal').classList.add('hidden'); }
+
+// Carga el panel en modo solo-lectura desde un snapshot publicado.
+async function initPanelReadonly(token) {
+  document.getElementById('monthName').textContent = MONTHS_ES[new Date().getMonth()];
+  let snap = null;
+  if (typeof sbLoadPanel === 'function') { try { snap = await sbLoadPanel(token); } catch {} }
+  if (!snap) { try { snap = JSON.parse(localStorage.getItem('skf_panel_' + token) || 'null'); } catch {} }
+  if (!snap) {
+    document.getElementById('loadingState').innerHTML = '<span style="color:var(--err)">Este panel compartido no está disponible o expiró. Pide a quien te lo envió que lo comparta de nuevo.</span>';
+    return;
+  }
+  document.body.classList.add('panel-readonly');
+  document.body.classList.remove('dash-simple'); // el panel compartido se ve completo
+  _bi = { plantillas: snap.plantillas || [], envios: snap.envios || [], hallazgos: snap.hallazgos || [], acciones: snap.acciones || [], asignaciones: snap.asignaciones || [], unidades: snap.unidades || [] };
+  _biOrg = snap.org || null;
+  _filtros.periodo = 'todo'; _filtros.unidadId = ''; _filtros.codigo = ''; _filtros.desde = null; _filtros.hasta = null;
+  // Oculta lo interactivo (menú, filtros, acciones) y muestra el aviso.
+  ['setupBanner', 'srcBadge', 'fltBar', 'panelActions'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  const b = document.getElementById('roBanner');
+  const fecha = snap.generadoEn ? new Date(snap.generadoEn).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }) : '';
+  b.textContent = `👁️ Vista de solo lectura · ${(snap.org && snap.org.nombre) || 'SEKaform'} · ${snap.filtro || ''} · generado ${fecha}`;
+  b.style.display = 'block';
+  document.getElementById('loadingState').style.display = 'none';
+  const params = new URLSearchParams(location.search);
+  if (params.get('modo') === 'operativo') {
+    // Vista operativa: solo la lista de correcciones (hacia campo).
+    const group = params.get('group') === 'responsable' ? 'responsable' : 'unidad';
+    document.title = `Correcciones — ${(snap.org && snap.org.nombre) || 'SEKaform'}`;
+    b.textContent = `🔧 Correcciones pendientes · ${(snap.org && snap.org.nombre) || 'SEKaform'} · ${snap.filtro || ''} · generado ${fecha}`;
+    _roToken = token;
+    await _cargarMarcasToken(token);
+    renderOperativoReadonly(group);
+  } else {
+    // Vista ejecutiva: el dashboard graficado completo (hacia gerencia).
+    document.title = `Panel — ${(snap.org && snap.org.nombre) || 'SEKaform'}`;
+    populateExplorador();
+    document.getElementById('mainContent').style.display = 'block';
+    pintar();
+  }
 }
 
 let _reportEnvios = [];
@@ -1033,6 +1655,56 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
+// Exportación en «formato largo» (tall): una fila por cada respuesta, no por
+// registro. Es el formato que Power BI / Excel / Google Data Studio importan y
+// grafican sin necesidad de despivotar nada — cada campo llenado es una fila con
+// su Valor y, cuando aplica, su Valor numérico ya convertido para las medidas.
+// Refleja la misma forma que la vista SQL `vista_respuestas` para que migrar de
+// la descarga a la conexión en vivo no cambie el modelo de datos.
+function exportCSVLargo() {
+  const ds = datosFiltrados();
+  const envios = ds.envios;
+  if (!envios.length) { alert('No hay registros para exportar.'); return; }
+  const campoMap = buildCampoMap(ds.plantillas.length ? ds.plantillas : (_allPlantillas||[]));
+  // Tipos que no aportan un dato analizable en formato largo (estructura o binarios).
+  const OMITIR = new Set(['separador','firma','foto']);
+  const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const header = ['Formulario','Código','N°','Fecha','Unidad','Llenado por','Campo','Tipo','Valor','Valor numérico'].map(esc).join(',');
+  const rows = [];
+  envios.forEach(e => {
+    const pId   = e.plantilla_id||e.plantillaId||'';
+    const raw   = e.enviado_en||e.enviadoEn||e.creadoEn;
+    const fecha = raw ? new Date(raw).toLocaleString('es-CO') : '';
+    const uni   = (_bi.unidades||[]).find(x => x.id === (e.unidad_id||e.unidadId));
+    const form  = e.plantilla_nombre||e.plantillaNombre||'';
+    const cod   = e.plantilla_codigo||e.plantillaCodigo||'';
+    const num   = e.numero||(e.id||'').slice(-12);
+    const quien = e.llenado_por||e.llenadoPor||'';
+    Object.entries(e.datos||{}).forEach(([k,v]) => {
+      const meta = campoMap[pId]?.[k];
+      const tipo = meta?.tipo || '';
+      if (OMITIR.has(tipo)) return;
+      let valTxt;
+      if (Array.isArray(v)) valTxt = v.join('; ');
+      else if (typeof v==='string' && v.startsWith('data:image')) return; // imagen embebida, no es un dato
+      else valTxt = v;
+      if (valTxt === undefined || valTxt === null || String(valTxt).trim() === '') return;
+      // Valor numérico: solo cuando el campo es numérico o el texto es un número limpio.
+      let valNum = '';
+      const n = parseFloat(String(valTxt).replace(',', '.'));
+      if (!isNaN(n) && (tipo === 'numero' || /^-?\d+([.,]\d+)?$/.test(String(valTxt).trim()))) valNum = n;
+      rows.push([form, cod, num, fecha, uni?uni.nombre:'', quien, meta?.etiqueta||k, tipo, valTxt, valNum].map(esc).join(','));
+    });
+  });
+  if (!rows.length) { alert('No hay respuestas para exportar.'); return; }
+  const csv = [header,...rows].join('\r\n');
+  const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`SEKaform-datos-largo-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── Init ──────────────────────────────────────────────────────────
 const U_ICO_FLT = { sede:'🏢', area:'🗂️', contratista:'🤝', otro:'📍' };
 
@@ -1055,6 +1727,7 @@ function pintar() {
   renderComparativo();
   buildCompliance(ds.hallazgos, ds.acciones, ds.asignaciones, ds.envios);
   renderAuditoria(ds);
+  renderExplorador();
   buildTable(ds.envios, ds.plantillas);
 
   const n = ds.envios.length;
@@ -1071,7 +1744,27 @@ function onFiltroChange() {
   pintar();
 }
 
+// Vista simple vs completa: la simple deja solo KPIs + correcciones (menos
+// intimidante para el usuario no técnico); la completa muestra todo el BI.
+// Por defecto arranca en simple; la preferencia se guarda por dispositivo.
+function aplicarVista() {
+  const simple = (localStorage.getItem('skf_dash_simple') || '1') === '1';
+  document.body.classList.toggle('dash-simple', simple);
+  const b = document.getElementById('btnVista');
+  if (b) b.textContent = simple ? '📊 Ver panel completo' : '🔎 Vista simple';
+}
+function toggleVista() {
+  const simple = !((localStorage.getItem('skf_dash_simple') || '1') === '1');
+  localStorage.setItem('skf_dash_simple', simple ? '1' : '0');
+  aplicarVista();
+}
+
 async function init() {
+  // Panel compartido de solo lectura: si viene ?panel=<token>, se carga el
+  // snapshot publicado en vez de los datos del usuario y se oculta lo editable.
+  const _panelTok = new URLSearchParams(location.search).get('panel');
+  if (_panelTok) { await initPanelReadonly(_panelTok); return; }
+
   const now = new Date();
   document.getElementById('monthName').textContent = MONTHS_ES[now.getMonth()];
 
@@ -1110,8 +1803,14 @@ async function init() {
     const o = document.createElement('option'); o.value = k; o.textContent = l; fSel.appendChild(o);
   });
 
+  populateExplorador();
+
+  // Marcas de "corregido" que el campo reportó desde los links operativos.
+  await _cargarMarcasDueno();
+
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('mainContent').style.display  = 'block';
+  aplicarVista();
 
   pintar();
 }

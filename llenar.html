@@ -889,7 +889,7 @@ function buildFieldEl(c) {
       inner.type = 'number';
       inner.placeholder = c.placeholder||'0';
       inner.value = submission[c.id]||'';
-      inner.addEventListener('input', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); });
+      inner.addEventListener('input', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); onCampoRespondido(c); });
       break;
 
     case 'textarea':
@@ -1067,7 +1067,7 @@ function onCampoRespondido(c) {
   const valor = submission[c.id];
   const banner = document.getElementById(`hz_${c.id}`);
   const idx = hallazgos.findIndex(h => h.campoId===c.id && h.origen==='automatico');
-  if (answerIsFinding(c.tipo, valor)) {
+  if (answerIsFinding(c.tipo, valor, c)) {
     const valorTxt = Array.isArray(valor) ? valor.join(', ') : String(valor);
     if (idx>=0) {
       hallazgos[idx].valorDetectado = valorTxt;

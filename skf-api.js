@@ -24,6 +24,13 @@ const SKF_COLA = 'skf_cola_sync';
 const SKF_RECHAZADOS = 'skf_rechazados';
 const SKF_MAX_INTENTOS = 8;
 
+// Varias páginas preguntan por esto antes de ofrecer algo que necesita nube
+// (compartir un formulario, recuperar la contraseña). Con Supabase era «¿pegó
+// alguien las claves en el archivo de configuración?» y podía ser false. Aquí
+// el backend viaja con la aplicación: si esta página cargó, la API está del
+// otro lado. Se conserva el nombre porque las páginas lo consultan tal cual.
+const SKF_CONFIGURED = true;
+
 // ── Utilidades ───────────────────────────────────────────────────────────
 
 function skfUUID() {
@@ -233,6 +240,94 @@ async function sbLoadPublicPlantilla(token) {
     const p = await skfFetch(`/api/publico/plantilla/${encodeURIComponent(token)}`);
     return _mapCloud(p, _P_PLANTILLA);
   } catch { return null; }
+}
+
+// ── Paneles compartidos y cierre del ciclo ───────────────────────────────
+// El panel se entrega a un cliente o a un jefe SIN cuenta, por un enlace no
+// listado. Lo que viaja es una FOTO de los datos ya filtrados, no acceso en
+// vivo. Las funciones de lectura y marcado NO llevan sesión a propósito: quien
+// abre el enlace no tiene usuario y nunca va a tenerlo; el token es la
+// credencial y el servidor lo valida contra la base en cada llamada.
+//
+// Todas devuelven false/null en lugar de lanzar: la página las llama detrás de
+// un `typeof … === 'function'` y sigue funcionando contra localStorage si algo
+// falla. Un panel que se abre a medias es mejor que uno que no se abre.
+
+async function sbPublishPanel(token, titulo, snapshot) {
+  try {
+    await skfFetch('/api/panel', {
+      method: 'POST',
+      body: JSON.stringify({ token, titulo: titulo || null, snapshot }),
+    });
+    return true;
+  } catch { return false; }
+}
+
+async function sbLoadPanel(token) {
+  if (!token) return null;
+  try { return await skfFetch(`/api/panel/${encodeURIComponent(token)}`); }
+  catch { return null; }
+}
+
+// Lo ya reportado desde ESTE enlace (lo lee el propio enlace al abrirse).
+async function sbPanelMarcas(token) {
+  if (!token) return null;
+  try { return (await skfFetch(`/api/panel/${encodeURIComponent(token)}/marcas`)).marcas || []; }
+  catch { return null; }
+}
+
+// Todo lo reportado en la organización (lo lee el dueño en su panel).
+async function sbLoadCorreccionesCampo() {
+  try { return (await skfFetch('/api/correcciones')).correcciones || []; }
+  catch { return null; }
+}
+
+// Marcar es un REPORTE del campo, no un cierre: quien ejecuta avisa de que ya
+// lo atendió, y el dueño lo confirma después desde su panel. Por eso esto no
+// toca el estado del hallazgo.
+async function sbMarcarCorregido(token, hallazgoId, por, nota) {
+  if (!token || !hallazgoId) return false;
+  try {
+    await skfFetch(`/api/panel/${encodeURIComponent(token)}/marca`, {
+      method: 'POST',
+      body: JSON.stringify({ hallazgoId, por: por || '', nota: nota || '' }),
+    });
+    return true;
+  } catch { return false; }
+}
+
+async function sbDesmarcarCorregido(token, hallazgoId) {
+  if (!token || !hallazgoId) return false;
+  try {
+    await skfFetch(`/api/panel/${encodeURIComponent(token)}/marca/${encodeURIComponent(hallazgoId)}`,
+                   { method: 'DELETE' });
+    return true;
+  } catch { return false; }
+}
+
+// Cerrar y reabrir NO pasan por la cola sin conexión, y es deliberado: se hacen
+// con el panel delante y con datos de la nube a la vista, no en campo sin
+// señal. Encolarlos abriría la puerta a cerrar un hallazgo el martes contra un
+// estado del lunes. Si falla, la página ya dejó su copia local y el siguiente
+// refresco desde el servidor manda.
+async function sbCerrarHallazgo(id, por) {
+  if (!id) return false;
+  try {
+    await skfFetch(`/api/hallazgos/${encodeURIComponent(id)}/cerrar`, {
+      method: 'POST', body: JSON.stringify({ por: por || null }),
+    });
+    _hzCache = null;
+    return true;
+  } catch { return false; }
+}
+
+async function sbReabrirHallazgo(id) {
+  if (!id) return false;
+  try {
+    await skfFetch(`/api/hallazgos/${encodeURIComponent(id)}/reabrir`, { method: 'POST' });
+    _hzCache = null;
+    return true;
+  } catch { return false; }
 }
 
 // ── Escritura: traducción de la forma local a la del servidor ────────────

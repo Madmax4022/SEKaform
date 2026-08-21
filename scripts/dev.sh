@@ -69,7 +69,7 @@ SQL
 
 migrar(){
   info "Aplicando migraciones como skf_owner…"
-  for f in migrations/001_core.sql migrations/002_auth_functions.sql migrations/003_super_admin_invitacion.sql migrations/004_publico.sql; do
+  for f in migrations/001_core.sql migrations/002_auth_functions.sql migrations/003_super_admin_invitacion.sql migrations/004_publico.sql migrations/005_paneles.sql; do
     docker cp "$f" "$CONTENEDOR:/tmp/$(basename "$f")" >/dev/null
     psql_owner -q -v ON_ERROR_STOP=1 -f "/tmp/$(basename "$f")"
   done

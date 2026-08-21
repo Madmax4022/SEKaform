@@ -46,6 +46,27 @@ PAGINAS = {
 ESTATICOS = {
     "styles.css", "field-types.js", "form-library.js", "sidebar.js",
     "chart.min.js", "sw.js", "manifest.json", "skf-api.js",
+    # login.html ya no es una pantalla: es un desvío a /login, que es donde
+    # Flask sirve el formulario de verdad. Va aquí y no en PAGINAS porque no
+    # puede exigir sesión — la pide justo quien no la tiene. Además el service
+    # worker lo lleva en su lista de recursos, y si el servidor respondiera 404
+    # el cache.addAll() del install fallaría entero y la PWA se quedaría sin
+    # modo sin conexión.
+    "login.html",
+}
+
+# Las dos páginas que SÍ tienen que abrirse sin cuenta, y solo cuando el enlace
+# trae su parámetro: un formulario compartido por QR y un panel de solo lectura.
+# Ambos casos son el producto funcionando como se diseñó — el contratista que
+# llena una inspección y el cliente que recibe el panel no tienen usuario, y
+# nunca van a tenerlo.
+#
+# Dejar pasar la PÁGINA no entrega ningún dato: es HTML vacío que acto seguido
+# pide sus datos a /api/publico/... o /api/panel/..., y ahí el token se valida
+# contra la base. Sin token válido, la página se queda sin nada que enseñar.
+ACCESO_PUBLICO = {
+    "llenar.html": "pub",       # formulario compartido por enlace / QR
+    "dashboard.html": "panel",  # panel compartido de solo lectura
 }
 
 
@@ -135,7 +156,12 @@ def _registrar_frontend(app: Flask) -> None:
             # no debe siquiera ver la interfaz: se le manda a identificarse.
             # Los estáticos (sw.js, manifest, marca) quedan abiertos porque el
             # service worker debe poder registrarse antes de haber sesión.
-            if not current_user.is_authenticated:
+            #
+            # La excepción son los enlaces compartidos (ACCESO_PUBLICO): mandar
+            # a identificarse a quien recibió un QR o un panel es cerrarle la
+            # puerta a alguien que por definición no tiene cuenta.
+            publico = ACCESO_PUBLICO.get(ruta)
+            if not current_user.is_authenticated and not (publico and request.args.get(publico)):
                 return redirect(url_for("auth.login", next="/" + ruta))
             return _enviar(PAGINAS[ruta], cache=False)
         if ruta in ESTATICOS:

@@ -2,12 +2,12 @@
 //
 // Cachea el "app shell" (HTML/CSS/JS propios) para que la app cargue sin
 // conexión, indispensable para un inspector trabajando en campo sin señal.
-// Las llamadas a Supabase y al CDN de supabase-js viajan tal cual a la red
-// — nunca se cachean — para no reproducir una escritura vieja; cuando no
-// hay red simplemente fallan, y supabase-config.js ya las encola para
-// reintentarlas al volver la conexión (ver SKF_QUEUE_KEY).
+// Las llamadas a /api/ viajan tal cual a la red — nunca se cachean — para no
+// reproducir una escritura vieja; cuando no hay red simplemente fallan, y
+// skf-api.js ya las encola para reintentarlas al volver la conexión (ver
+// SKF_QUEUE_KEY).
 
-const CACHE_VERSION = 'skf-shell-v5';
+const CACHE_VERSION = 'skf-shell-v7';
 
 const SHELL_ASSETS = [
   'index.html',

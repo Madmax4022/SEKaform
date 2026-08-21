@@ -9,181 +9,39 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Iniciar sesión — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
+  <meta http-equiv="refresh" content="0; url=/login">
   <style>
-    body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
-
-    .logo{font-size:2rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px;text-align:center;}
+    body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+         min-height:100vh;padding:20px;text-align:center;}
+    .logo{font-size:2rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px;}
     .logo span{color:var(--pri);}
-    .logo-sub{color:var(--mut);font-size:.88rem;margin-bottom:36px;text-align:center;}
-
-    .card{background:var(--card);border:1px solid var(--bor);border-radius:18px;padding:36px 32px;width:100%;max-width:400px;}
-    .card-title{font-size:1.25rem;font-weight:800;margin-bottom:4px;}
-    .card-sub{color:var(--mut);font-size:.85rem;margin-bottom:28px;line-height:1.5;}
-
-    .fg{margin-bottom:18px;}
-    .fg label{display:block;font-size:.72rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
-    .fg input{width:100%;background:var(--inp);border:1.5px solid var(--bor);border-radius:9px;color:var(--txt);font-size:.95rem;font-family:inherit;padding:13px 15px;outline:none;transition:border-color .2s,box-shadow .2s;}
-    .fg input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
-    .fg input.err{border-color:var(--err);}
-
-    .btn{width:100%;padding:13px;border-radius:9px;font-size:.95rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;}
-    .btn-pri{background:var(--pri);color:#fff;margin-bottom:12px;}
-    .btn-pri:hover:not(:disabled){background:var(--pri-h);}
-    .btn-pri:disabled{opacity:.5;cursor:not-allowed;}
-    .btn-ghost{background:transparent;border:1.5px solid var(--bor);color:var(--mut);margin-bottom:0;}
-    .btn-ghost:hover{border-color:var(--pri);color:var(--txt);}
-
-    .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--mut);font-size:.78rem;}
-    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--bor);}
-
-    .toggle{text-align:center;margin-top:20px;font-size:.85rem;color:var(--mut);}
-    .toggle a{color:var(--pri);cursor:pointer;text-decoration:none;font-weight:600;}
-    .toggle a:hover{text-decoration:underline;}
-
-    .msg{border-radius:8px;padding:11px 14px;font-size:.85rem;margin-bottom:16px;display:none;}
-    .msg.ok{background:rgba(26,188,156,.12);border:1px solid rgba(26,188,156,.35);color:var(--ok);}
-    .msg.er{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:var(--err);}
-    .msg.on{display:block;}
-
-    .badge-local{display:block;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.3);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--mut);line-height:1.5;margin-top:24px;text-align:center;}
-    .badge-local strong{color:var(--txt);}
-
-    footer{margin-top:32px;font-size:.75rem;color:var(--mut);text-align:center;border-top:none;padding-top:0;}
+    .sub{color:var(--mut);font-size:.9rem;}
+    a{color:var(--pri);}
   </style>
 </head>
 <body>
+  <!--
+    Esta pantalla ya no vive aquí.
 
-<div class="logo">SEK<span>a</span>form</div>
-<p class="logo-sub">Digitalización inteligente de documentos</p>
+    Cuando la aplicación hablaba con Supabase directamente, el inicio de sesión
+    y el restablecimiento de contraseña se resolvían en esta página con
+    JavaScript. Con el backend propio los formularios los sirve Flask:
 
-<div class="card">
-  <h1 class="card-title" id="cardTitle">Iniciar sesión</h1>
-  <p class="card-sub" id="cardSub">Guarda tus formularios en la nube y accede desde cualquier dispositivo.</p>
+      /login            entrar
+      /registro         alta
+      /recuperar        pedir el enlace de restablecimiento
+      /restablecer/<t>  poner la contraseña nueva
 
-  <div class="msg" id="msgBox"></div>
+    Está mejor ahí: la contraseña no pasa por un archivo estático cacheado, el
+    límite de intentos se aplica del lado del servidor y el token de
+    restablecimiento se valida contra la base, no contra el fragmento de la URL.
 
-  <div class="fg">
-    <label>Correo electrónico</label>
-    <input type="email" id="emailInp" placeholder="inspector@empresa.com" autocomplete="email">
-  </div>
-  <div class="fg">
-    <label>Contraseña</label>
-    <input type="password" id="passInp" placeholder="••••••••" autocomplete="current-password">
-    <div style="text-align:right;margin-top:6px"><a id="forgotLink" onclick="handleForgot()" style="font-size:.78rem;color:var(--mut);cursor:pointer;text-decoration:none" onmouseover="this.style.color='var(--txt)'" onmouseout="this.style.color='var(--mut)'">¿Olvidaste tu contraseña?</a></div>
-  </div>
-
-  <button class="btn btn-pri" id="submitBtn" onclick="handleSubmit()">
-    <span id="submitLabel">Iniciar sesión →</span>
-  </button>
-
-  <div class="divider">o</div>
-
-  <button class="btn btn-ghost" onclick="skipLogin()">Continuar sin cuenta (modo local)</button>
-
-  <div class="toggle">
-    <span id="toggleText">¿No tienes cuenta?</span>
-    <a onclick="toggleMode()" id="toggleLink">Crear cuenta</a>
-  </div>
-
-  <div class="badge-local">
-    <strong>Modo local:</strong> Tus formularios y envíos se guardan en este dispositivo.
-    Con cuenta, se sincronizan en la nube y puedes ver el panel de control.
-  </div>
-</div>
-
-<footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
-
-<script src="skf-api.js"></script>
-<script>
-let mode = 'login'; // 'login' | 'signup'
-
-function toggleMode() {
-  mode = mode === 'login' ? 'signup' : 'login';
-  const isSignup = mode === 'signup';
-  document.getElementById('cardTitle').textContent = isSignup ? 'Crear cuenta' : 'Iniciar sesión';
-  document.getElementById('cardSub').textContent = isSignup
-    ? 'Crea tu cuenta para sincronizar datos y acceder desde cualquier dispositivo.'
-    : 'Guarda tus formularios en la nube y accede desde cualquier dispositivo.';
-  document.getElementById('forgotLink').style.display = isSignup ? 'none' : 'inline';
-  document.getElementById('submitLabel').textContent = isSignup ? 'Crear cuenta →' : 'Iniciar sesión →';
-  document.getElementById('toggleText').textContent = isSignup ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
-  document.getElementById('toggleLink').textContent = isSignup ? 'Iniciar sesión' : 'Crear cuenta';
-  showMsg('','');
-}
-
-function showMsg(text, type) {
-  const el = document.getElementById('msgBox');
-  el.textContent = text;
-  el.className = 'msg' + (type ? ' '+type+' on' : '');
-}
-
-async function handleSubmit() {
-  if (!SKF_CONFIGURED) {
-    showMsg('Supabase no está configurado. Edita skf-api.js con tu URL y clave.', 'er');
-    return;
-  }
-  const email = document.getElementById('emailInp').value.trim();
-  const pass  = document.getElementById('passInp').value;
-  if (!email || !pass) { showMsg('Completa correo y contraseña.', 'er'); return; }
-
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  document.getElementById('submitLabel').textContent = 'Procesando...';
-  showMsg('', '');
-
-  try {
-    const fn = mode === 'signup' ? sbSignUp : sbSignIn;
-    const { data, error } = await fn(email, pass);
-    if (error) throw error;
-    if (mode === 'signup') {
-      showMsg('Cuenta creada. Revisa tu correo para confirmar antes de ingresar.', 'ok');
-      setTimeout(() => toggleMode(), 2500);
-    } else {
-      window.location.href = 'index.html';
-    }
-  } catch (e) {
-    const errMap = {
-      'Invalid login credentials': 'Correo o contraseña incorrectos.',
-      'Email not confirmed': 'Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada.',
-      'User already registered': 'Ya existe una cuenta con ese correo. Inicia sesión.',
-      'Password should be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres.',
-      'Unable to validate email address': 'Escribe un correo electrónico válido.',
-    };
-    const msg = errMap[e.message] || e.message || 'Error al ingresar. Intenta de nuevo.';
-    showMsg(msg, 'er');
-  } finally {
-    btn.disabled = false;
-    document.getElementById('submitLabel').textContent = mode === 'signup' ? 'Crear cuenta →' : 'Iniciar sesión →';
-  }
-}
-
-function skipLogin() {
-  window.location.href = 'index.html';
-}
-
-async function handleForgot() {
-  const email = document.getElementById('emailInp').value.trim();
-  if (!email) { showMsg('Escribe tu correo electrónico primero.', 'er'); document.getElementById('emailInp').focus(); return; }
-  if (!SKF_CONFIGURED) { showMsg('Función no disponible en modo local.', 'er'); return; }
-  try {
-    const sb = await getSB();
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/login.html' });
-    if (error) throw error;
-    showMsg('Te enviamos un link para restablecer tu contraseña. Revisa tu correo.', 'ok');
-  } catch(e) {
-    showMsg('No se pudo enviar el correo. Verifica la dirección.', 'er');
-  }
-}
-
-document.getElementById('emailInp').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('passInp').focus(); });
-document.getElementById('passInp').addEventListener('keydown', e => { if (e.key==='Enter') handleSubmit(); });
-
-// If already logged in, redirect
-(async () => {
-  if (!SKF_CONFIGURED) return;
-  const user = await sbGetUser();
-  if (user) window.location.href = 'index.html';
-})();
-</script>
+    El archivo se conserva —en vez de borrarlo— porque el service worker lo
+    tiene cacheado en los navegadores que ya instalaron la PWA, y porque puede
+    haber enlaces y marcadores viejos apuntando aquí. Redirige y ya.
+  -->
+  <div class="logo">SEK<span>aform</span></div>
+  <p class="sub">Llevándote a la pantalla de acceso… <a href="/login">Entrar</a></p>
+  <script>location.replace('/login');</script>
 </body>
 </html>

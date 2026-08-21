@@ -29,6 +29,26 @@
       letter-spacing: .9px; color: var(--mut); margin: 0 0 12px;
     }
 
+    /* ── Onboarding guiado (solo usuarios nuevos) ───────────────── */
+    .onb { background: linear-gradient(135deg, rgba(37,99,235,.1), var(--card)); border: 1px solid rgba(37,99,235,.3); border-radius: 16px; padding: 22px 24px; margin-bottom: 32px; }
+    .onb-h { font-size: 1.15rem; font-weight: 900; margin: 0 0 4px; }
+    .onb-sub { color: var(--mut); font-size: .86rem; margin: 0 0 16px; line-height: 1.5; }
+    .onb-steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+    .onb-step { display: flex; align-items: center; gap: 11px; font-size: .92rem; color: var(--txt); text-decoration: none; padding: 9px 10px; border-radius: 9px; transition: background .15s; }
+    .onb-step:hover { background: rgba(255,255,255,.04); }
+    .onb-num { width: 25px; height: 25px; border-radius: 50%; background: var(--bor); color: var(--mut); display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0; }
+    .onb-step.done .onb-num { background: var(--ok); color: #fff; }
+    .onb-step.done .onb-lbl { color: var(--mut); text-decoration: line-through; }
+    .onb-lbl { flex: 1; font-weight: 600; }
+    .onb-arr { color: var(--mut); }
+    .onb-step.done .onb-arr { visibility: hidden; }
+    .onb-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    .onb-btn { display: inline-flex; align-items: center; gap: 7px; border-radius: 10px; padding: 11px 18px; font-size: .9rem; font-weight: 700; text-decoration: none; cursor: pointer; border: 1px solid var(--bor); font-family: inherit; }
+    .onb-btn.prim { background: var(--pri); color: #fff; border-color: var(--pri); }
+    .onb-btn.sec { background: transparent; color: var(--txt); }
+    .onb-btn.sec:hover { border-color: var(--pri); }
+    .onb-dismiss { background: none; border: none; color: var(--mut); font-size: .76rem; cursor: pointer; margin-top: 14px; text-decoration: underline; font-family: inherit; padding: 0; }
+
     .action-card {
       display: flex; align-items: center; gap: 18px;
       background: var(--card); border: 1px solid var(--bor); border-radius: 14px;
@@ -109,6 +129,7 @@
     .vcard-sector { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--mut); }
     .vcard h3    { font-size: .9rem; font-weight: 800; margin: 0; line-height: 1.3; }
     .vcard-reg   { font-size: .7rem; color: var(--mut); margin: 0; line-height: 1.4; }
+    .vcard-risk  { font-size: .7rem; font-weight: 600; color: #fca5a5; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.22); border-radius: 7px; padding: 6px 9px; margin-top: 3px; line-height: 1.45; }
 
     .vchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
     .vchip  { font-size: .63rem; padding: 2px 7px; border-radius: 20px; background: rgba(26,188,156,.1); color: #5eead4; border: 1px solid rgba(26,188,156,.2); }
@@ -133,8 +154,20 @@
 
     <header>
       <h1>SEKaform</h1>
-      <p>Formularios digitales para el trabajo en campo.</p>
+      <p>Cumple, demuéstralo y <strong style="color:var(--txt)">evita multas</strong>. Digitaliza tus inspecciones y ten la evidencia lista para cada visita — INVIMA, Trabajo, Bomberos.</p>
     </header>
+
+    <!-- ── Onboarding guiado (aparece solo mientras seas nuevo) ── -->
+    <section class="onb" id="onbCard" style="display:none">
+      <h2 class="onb-h">👋 Bienvenido a SEKaform</h2>
+      <p class="onb-sub">Ten la prueba de que cumples, lista para cualquier inspección — para que una visita no se vuelva una multa. Empieza en 3 pasos (o prueba con un ejemplo listo):</p>
+      <div class="onb-steps" id="onbSteps"></div>
+      <div class="onb-btns">
+        <a href="digitalizador.html" class="onb-btn prim">⚡ Crear mi primer formulario</a>
+        <button type="button" class="onb-btn sec" onclick="cargarEjemplo()">🧪 Probar con un ejemplo</button>
+      </div>
+      <button type="button" class="onb-dismiss" onclick="ocultarOnb()">Ocultar esta guía</button>
+    </section>
 
     <!-- ── ¿Qué quieres hacer? ────────────────────────────────── -->
     <div class="actions-hd">¿Qué quieres hacer?</div>
@@ -193,6 +226,7 @@
         <div class="vcard-sector">Salud Ocupacional</div>
         <h3>SST — Seguridad y Salud en el Trabajo</h3>
         <p class="vcard-reg">Ley 1562/2012 · Decreto 1072/2015 · Res. 0312/2019</p>
+        <div class="vcard-risk">⚠️ No cumplir el SG-SST: multas del Ministerio de Trabajo hasta 500 SMMLV.</div>
         <div class="vchips">
           <span class="vchip">Matriz de peligros</span>
           <span class="vchip">COPASST</span>
@@ -211,6 +245,7 @@
         <div class="vcard-sector">Inmuebles &amp; Facilidades</div>
         <h3>Mantenimiento y Seguridad de Edificios</h3>
         <p class="vcard-reg">NFPA 10 · NFPA 13 · NFPA 72 · NFPA 96 · NFPA 70E</p>
+        <div class="vcard-risk">⚠️ Sin el concepto técnico de Bomberos no operas — y ante un incidente, la responsabilidad es tuya.</div>
         <div class="vchips">
           <span class="vchip">Extintores</span>
           <span class="vchip">Rociadores</span>
@@ -228,6 +263,7 @@
         <div class="vcard-sector">Calidad — SGC</div>
         <h3>ISO 9001:2015</h3>
         <p class="vcard-reg">ISO 9001:2015 · Auditorías internas · CAPA</p>
+        <div class="vcard-risk">⚠️ Una no conformidad sin cerrar te cuesta la certificación — y el cliente que la exige.</div>
         <div class="vchips">
           <span class="vchip">No conformidad</span>
           <span class="vchip">Auditoría interna</span>
@@ -245,6 +281,7 @@
         <div class="vcard-sector">Construcción</div>
         <h3>RUC + Seguridad en Obra</h3>
         <p class="vcard-reg">RUC 2024 · NSR-10 · Ley 400/1997</p>
+        <div class="vcard-risk">⚠️ Sin RUC al día pierdes contratos; y Trabajo sanciona la obra insegura.</div>
         <div class="vchips">
           <span class="vchip">Permiso de trabajo</span>
           <span class="vchip">Inspección de obra</span>
@@ -262,6 +299,7 @@
         <div class="vcard-sector">Alimentos &amp; Restaurantes</div>
         <h3>INVIMA &amp; HACCP</h3>
         <p class="vcard-reg">Res. 2674/2013 · Decreto 60/2002 · BPM</p>
+        <div class="vcard-risk">⚠️ Incumplir BPM: cierre del establecimiento y decomiso por INVIMA / Secretaría de Salud.</div>
         <div class="vchips">
           <span class="vchip">Control de temperatura</span>
           <span class="vchip">Control de plagas</span>
@@ -278,6 +316,7 @@
         <div class="vcard-sector">Salud</div>
         <h3>Clínicas &amp; Laboratorios</h3>
         <p class="vcard-reg">Decreto 1011/2006 · SOGCS</p>
+        <div class="vcard-risk">⚠️ Sin habilitación cumplida, la Supersalud sanciona y suspende el servicio.</div>
         <div class="vchips">
           <span class="vchip">Historia clínica</span>
           <span class="vchip">Consentimiento informado</span>
@@ -290,5 +329,70 @@
 
     <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
   </div>
+
+  <script>
+    // Onboarding guiado: acompaña al usuario nuevo hasta que crea un formulario,
+    // captura un registro y ve su panel. Desaparece solo cuando completa los 3
+    // pasos (o si lo oculta). Todo es local; no estorba a un usuario que vuelve.
+    function _lsArr(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } }
+    function estadoOnb() {
+      return {
+        tieneForm: _lsArr('skf_plantillas').length > 0,
+        tieneEnvio: _lsArr('skf_envios').length > 0,
+        vioPanel: localStorage.getItem('skf_onb_panel') === '1',
+      };
+    }
+    function renderOnb() {
+      if (localStorage.getItem('skf_onb_hide') === '1') return;
+      const st = estadoOnb();
+      if (st.tieneForm && st.tieneEnvio && st.vioPanel) return; // ya se graduó
+      const steps = [
+        { done: st.tieneForm,  lbl: 'Crea tu primer formulario',  href: 'digitalizador.html' },
+        { done: st.tieneEnvio, lbl: 'Captura tu primer registro',  href: 'llenar.html' },
+        { done: st.vioPanel,   lbl: 'Mira tu panel de control',    href: 'dashboard.html', panel: true },
+      ];
+      document.getElementById('onbSteps').innerHTML = steps.map((s, i) => `
+        <a href="${s.href}" class="onb-step${s.done ? ' done' : ''}"${s.panel ? ' data-panel="1"' : ''}>
+          <span class="onb-num">${s.done ? '✓' : i + 1}</span>
+          <span class="onb-lbl">${s.lbl}</span>
+          <span class="onb-arr">→</span>
+        </a>`).join('');
+      document.querySelectorAll('.onb-step[data-panel]').forEach(a =>
+        a.addEventListener('click', () => localStorage.setItem('skf_onb_panel', '1')));
+      document.getElementById('onbCard').style.display = 'block';
+    }
+    function ocultarOnb() {
+      localStorage.setItem('skf_onb_hide', '1');
+      document.getElementById('onbCard').style.display = 'none';
+    }
+    // Carga un formulario de ejemplo (una sola vez) y lo abre para llenarlo, así
+    // el usuario ve el flujo completo — incluido el hallazgo automático al poner
+    // una temperatura fuera de rango.
+    function cargarEjemplo() {
+      try {
+        const list = _lsArr('skf_plantillas');
+        let ej = list.find(t => t._ejemplo);
+        if (!ej) {
+          ej = {
+            id: 'tmpl_ejemplo_' + Date.now(), nombre: 'Ejemplo — Control de nevera',
+            codigo: 'EJ-001', descripcion: 'Formulario de ejemplo para probar SEKaform',
+            _ejemplo: true, favorito: false, actualizadoEn: new Date().toISOString(),
+            campos: [
+              { id: 'e_fecha',    tipo: 'fecha_auto', etiqueta: 'Fecha', requerido: false },
+              { id: 'e_local',    tipo: 'texto',      etiqueta: 'Nombre del local', requerido: true },
+              { id: 'e_temp',     tipo: 'numero',     etiqueta: 'Temperatura de la nevera (°C)', requerido: true, rangoMin: 0, rangoMax: 8, severidad: 'mayor' },
+              { id: 'e_limpieza', tipo: 'si_no',      etiqueta: '¿Cumple limpieza?', requerido: true, severidad: 'critico' },
+              { id: 'e_obs',      tipo: 'textarea',   etiqueta: 'Observaciones', requerido: false },
+            ],
+          };
+          list.push(ej);
+          localStorage.setItem('skf_plantillas', JSON.stringify(list));
+          if (typeof skfSyncOrQueue === 'function') { try { skfSyncOrQueue('plantilla', ej); } catch {} }
+        }
+        location.href = 'llenar.html?tmpl=' + encodeURIComponent(ej.id);
+      } catch (e) { location.href = 'llenar.html'; }
+    }
+    renderOnb();
+  </script>
 </body>
 </html>

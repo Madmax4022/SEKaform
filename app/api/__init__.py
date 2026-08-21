@@ -21,6 +21,7 @@ Contrato con el frontend sin conexión, y el motivo de cada decisión:
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from typing import Any, Optional
 
@@ -441,6 +442,221 @@ def publico_hallazgo():
     return jsonify({"ok": True}), 201
 
 
+# ── Paneles compartidos de solo lectura ────────────────────────────────────
+# Entregar el panel a un cliente o a un jefe SIN cuenta, por un enlace no
+# listado. Se publica una FOTO inmutable de los datos ya filtrados, no acceso
+# en vivo: el visitante ve lo que el dueño decidió enseñarle en ese momento, y
+# un enlace compartido no se convierte en una ventana permanente a la
+# operación. Para actualizarlo, se vuelve a compartir.
+
+# El token es la ÚNICA credencial de un panel compartido, así que se exige que
+# parezca lo que debe ser: largo y sin caracteres raros. Los que genera la app
+# son UUID v4 (122 bits de azar); el mínimo de 16 deja pasar los `pnl_...`
+# antiguos, más cortos, que ya estuvieran circulando.
+_TOKEN_PANEL = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
+
+# Un snapshot lleva dentro los envíos y hallazgos ya filtrados: puede ser
+# grande, pero no ilimitado. Sin tope, compartir un panel sin filtrar sobre un
+# histórico de años deja megabytes muertos en la tabla por cada clic.
+MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024
+
+
+def _token_panel(valor: Any) -> Optional[str]:
+    t = (str(valor or "")).strip()
+    return t if _TOKEN_PANEL.match(t) else None
+
+
+@bp.route("/panel", methods=["POST"])
+@requiere_organizacion
+@requiere_escritura
+def publicar_panel():
+    """Publica (o vuelve a publicar) el snapshot de un panel compartido."""
+    d = request.get_json(silent=True) or {}
+    token = _token_panel(d.get("token"))
+    snapshot = d.get("snapshot")
+
+    if not token:
+        return jsonify({"error": "Token de panel inválido."}), 400
+    if not isinstance(snapshot, dict):
+        return jsonify({"error": "Falta el snapshot del panel."}), 400
+
+    import json as _json
+    crudo = _json.dumps(snapshot)
+    if len(crudo.encode("utf-8")) > MAX_SNAPSHOT_BYTES:
+        return jsonify({
+            "error": "El panel es demasiado grande para compartirlo. "
+                     "Acota el periodo o la unidad y vuelve a intentarlo."
+        }), 413
+
+    titulo = (d.get("titulo") or None)
+    with sesion_usuario() as cur:
+        # El WHERE del ON CONFLICT impide que republicar pise el panel de otra
+        # organización si dos tokens llegaran a coincidir. RLS ya lo impediría;
+        # esto lo convierte en un 409 legible en vez de un error de la base.
+        cur.execute(
+            """
+            INSERT INTO paneles_publicos (token, org_id, titulo, snapshot)
+                 VALUES (%s, %s, %s, %s)
+            ON CONFLICT (token) DO UPDATE
+                    SET titulo = EXCLUDED.titulo,
+                        snapshot = EXCLUDED.snapshot,
+                        actualizado_en = NOW()
+                  WHERE paneles_publicos.org_id = EXCLUDED.org_id
+              RETURNING token
+            """,
+            (token, current_user.org_id, titulo, psycopg2.extras.Json(snapshot)),
+        )
+        fila = cur.fetchone()
+
+    if not fila:
+        return jsonify({"error": "Ese enlace ya está en uso."}), 409
+
+    auditar("panel_publicado", entidad="paneles_publicos", entidad_id=token)
+    return jsonify({"ok": True, "token": token}), 201
+
+
+@bp.route("/panel/<token>")
+def leer_panel(token: str):
+    """Lee un panel por su token. Sin sesión: es el enlace compartido.
+
+    Va por la función SECURITY DEFINER, que devuelve UNA fila por su token
+    exacto y solo el snapshot — no se puede enumerar la tabla ni averiguar de
+    qué organización es el panel.
+    """
+    tok = _token_panel(token)
+    if not tok:
+        return jsonify({"error": "Panel no disponible."}), 404
+
+    with db.sesion_privilegiada() as cur:
+        cur.execute("SELECT skf_panel_publico(%s) AS snapshot", (tok,))
+        fila = cur.fetchone()
+
+    if not fila or fila["snapshot"] is None:
+        return jsonify({"error": "Panel no disponible."}), 404
+    return jsonify(fila["snapshot"])
+
+
+# ── Cierre del ciclo: el campo reporta lo corregido ────────────────────────
+# Desde el enlace operativo, quien ejecuta la corrección la REPORTA. Es un
+# reporte, no un cierre: el dueño lo ve en su panel y confirma. Por eso vive en
+# su propia tabla y no toca `hallazgos.estado` — quien ejecuta no decide el
+# estado del hallazgo, solo avisa de que ya lo atendió.
+
+@bp.route("/panel/<token>/marcas")
+def marcas_panel(token: str):
+    """Lo ya reportado desde este enlace, para que la página lo muestre."""
+    tok = _token_panel(token)
+    if not tok:
+        return jsonify({"marcas": []})
+    with db.sesion_privilegiada() as cur:
+        cur.execute("SELECT skf_panel_marcas(%s) AS marcas", (tok,))
+        return jsonify({"marcas": cur.fetchone()["marcas"] or []})
+
+
+@bp.route("/panel/<token>/marca", methods=["POST"])
+def marcar_corregido(token: str):
+    tok = _token_panel(token)
+    hallazgo_id = _uuid_valido((request.get_json(silent=True) or {}).get("hallazgoId"))
+    if not tok or not hallazgo_id:
+        return jsonify({"error": "Datos incompletos."}), 400
+
+    d = request.get_json(silent=True) or {}
+    with db.sesion_privilegiada() as cur:
+        # La función comprueba que el token existe Y que el hallazgo es de la
+        # misma organización de ese panel. Sin lo segundo, cualquiera con un
+        # enlace válido podría marcar hallazgos de otro cliente pasando ids.
+        cur.execute(
+            "SELECT skf_panel_marcar_corregido(%s, %s, %s, %s) AS ok",
+            (tok, hallazgo_id, (d.get("por") or "")[:120], (d.get("nota") or "")[:500]),
+        )
+        ok = cur.fetchone()["ok"]
+
+    if not ok:
+        return jsonify({"error": "No se pudo registrar la corrección."}), 403
+    return jsonify({"ok": True}), 201
+
+
+@bp.route("/panel/<token>/marca/<hallazgo_id>", methods=["DELETE"])
+def desmarcar_corregido(token: str, hallazgo_id: str):
+    tok = _token_panel(token)
+    hz = _uuid_valido(hallazgo_id)
+    if not tok or not hz:
+        return jsonify({"error": "Datos incompletos."}), 400
+
+    with db.sesion_privilegiada() as cur:
+        cur.execute("SELECT skf_panel_desmarcar_corregido(%s, %s) AS ok", (tok, hz))
+        ok = cur.fetchone()["ok"]
+
+    if not ok:
+        return jsonify({"error": "No se pudo deshacer la marca."}), 403
+    return jsonify({"ok": True})
+
+
+@bp.route("/correcciones")
+@requiere_organizacion
+def correcciones():
+    """Todo lo reportado desde los enlaces de la organización. Lo lee el dueño
+    en su panel para saber qué dice el campo que ya está corregido."""
+    with sesion_usuario(solo_lectura=True) as cur:
+        cur.execute(
+            "SELECT hallazgo_id, marcado_por, nota, marcado_en "
+            "FROM correcciones_campo ORDER BY marcado_en DESC LIMIT 2000"
+        )
+        return jsonify({"correcciones": cur.fetchall()})
+
+
+# ── Cierre y reapertura de hallazgos ───────────────────────────────────────
+# Un clic desde el panel. El UPDATE toca solo lo del cierre: la fila puede venir
+# de la nube con campos que la página no conoce, y reescribirla entera sería
+# arriesgarse a pisarlos.
+
+@bp.route("/hallazgos/<hallazgo_id>/cerrar", methods=["POST"])
+@requiere_organizacion
+@requiere_escritura
+def cerrar_hallazgo(hallazgo_id: str):
+    hz = _uuid_valido(hallazgo_id)
+    if not hz:
+        return jsonify({"error": "Id inválido."}), 400
+
+    por = ((request.get_json(silent=True) or {}).get("por") or "")[:120] or None
+    with sesion_usuario() as cur:
+        cur.execute(
+            "UPDATE hallazgos SET estado = 'cerrado', cerrado_en = NOW(), cerrado_por = %s "
+            "WHERE id = %s RETURNING id",
+            (por, hz),
+        )
+        fila = cur.fetchone()
+
+    if not fila:
+        return jsonify({"error": "No encontrado."}), 404
+    auditar("hallazgo_cerrado", entidad="hallazgos", entidad_id=hz, detalle={"por": por})
+    return jsonify({"ok": True})
+
+
+@bp.route("/hallazgos/<hallazgo_id>/reabrir", methods=["POST"])
+@requiere_organizacion
+@requiere_escritura
+def reabrir_hallazgo(hallazgo_id: str):
+    hz = _uuid_valido(hallazgo_id)
+    if not hz:
+        return jsonify({"error": "Id inválido."}), 400
+
+    with sesion_usuario() as cur:
+        cur.execute(
+            "UPDATE hallazgos SET estado = 'abierto', cerrado_en = NULL, cerrado_por = NULL "
+            "WHERE id = %s RETURNING id",
+            (hz,),
+        )
+        fila = cur.fetchone()
+
+    if not fila:
+        return jsonify({"error": "No encontrado."}), 404
+    # Reabrir es tan digno de bitácora como cerrar: alguien decidió que aquello
+    # no estaba resuelto, y esa decisión también tiene dueño y fecha.
+    auditar("hallazgo_reabierto", entidad="hallazgos", entidad_id=hz)
+    return jsonify({"ok": True})
+
+
 def registrar_api(app, csrf) -> None:
     app.register_blueprint(bp)
     # Los envíos públicos llegan de gente sin sesión y, por tanto, sin token
@@ -448,3 +664,9 @@ def registrar_api(app, csrf) -> None:
     # única escritura posible es contra una plantilla marcada como pública.
     csrf.exempt(publico_envio)
     csrf.exempt(publico_hallazgo)
+    # Igual que los envíos públicos: quien abre un panel compartido no tiene
+    # sesión, así que no hay token CSRF que traer ni sesión que suplantar. Lo
+    # único que puede hacer es marcar un hallazgo de la organización dueña de
+    # ese token, y eso lo valida la función en la base.
+    csrf.exempt(marcar_corregido)
+    csrf.exempt(desmarcar_corregido)

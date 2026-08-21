@@ -42,5 +42,8 @@ correr() {
 correr migrations/000_roles.sql -v owner_pw="${OWNER_PW}" -v app_pw="${APP_PW}"
 correr migrations/001_core.sql
 correr migrations/002_auth_functions.sql
+correr migrations/003_super_admin_invitacion.sql
+correr migrations/004_publico.sql
+correr migrations/005_paneles.sql
 
 echo "✓ Migraciones aplicadas."

@@ -52,6 +52,8 @@ jobs:
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/001_core.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/002_auth_functions.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/003_super_admin_invitacion.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/004_publico.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/005_paneles.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -q -c "
             GRANT USAGE ON SCHEMA public TO skf_app;
             GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO skf_app;
@@ -70,11 +72,18 @@ jobs:
         env: { PGPASSWORD: a }
         run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/superadmin_test.sql
 
+      - name: Paneles compartidos y correcciones de campo
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/paneles_test.sql
+
       - name: Idempotencia de migraciones
         env: { PGPASSWORD: o }
         run: |
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/001_core.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/002_auth_functions.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/003_super_admin_invitacion.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/004_publico.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/005_paneles.sql
 
   desplegar:
     needs: pruebas
