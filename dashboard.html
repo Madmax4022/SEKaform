@@ -59,6 +59,10 @@
     body.panel-readonly #sidebarBackdrop,
     body.panel-readonly #skfBottomBar,
     body.panel-readonly #skfSyncBar{display:none!important;}
+    /* Modo simple: deja solo KPIs + correcciones; oculta gráficas/análisis. */
+    body.dash-simple .dash-adv{display:none!important;}
+    #btnVista{cursor:pointer;font-weight:700;}
+    body.dash-simple #btnVista{background:var(--pri);color:#fff;border-color:var(--pri);}
     body.panel-readonly .wrap{max-width:1180px;}
     .ro-banner{background:linear-gradient(135deg,var(--card),rgba(37,99,235,.1));border:1px solid rgba(37,99,235,.3);border-radius:10px;padding:11px 15px;font-size:.82rem;color:var(--txt);margin-bottom:18px;font-weight:600;}
     /* modal compartir panel */
@@ -276,6 +280,7 @@
       </span>
       <select class="filter-sel" id="fltUnidad" onchange="onFiltroChange()"><option value="">Todas las unidades</option></select>
       <select class="filter-sel" id="fltFormulario" onchange="onFiltroChange()"><option value="">Todos los formularios</option></select>
+      <button class="filter-sel" id="btnVista" onclick="toggleVista()" title="Cambia entre lo esencial y el panel completo">🔎 Vista simple</button>
       <span class="flt-count" id="fltCount"></span>
     </div>
 
@@ -321,6 +326,10 @@
       </div>
     </div>
 
+    <!-- Bloque avanzado: se oculta en «Vista simple» (gráficas, cumplimiento,
+         comparativo, tendencia y análisis de datos). Lo esencial (KPIs y
+         correcciones) queda siempre visible. -->
+    <div class="dash-adv">
     <!-- charts -->
     <div class="chart-grid">
       <div class="chart-card">
@@ -419,6 +428,7 @@ Respeta el periodo y la unidad que elijas arriba.">?</button></h2>
       <div id="explBody"></div>
       <div class="pbi-note">💡 <strong>Conecta Power BI, Excel o Google Data Studio.</strong> El botón de arriba descarga <strong>todos</strong> los datos filtrados en «formato largo» (una fila por respuesta) — se importa y grafica sin arreglar nada. Para conexión <strong>en vivo</strong>, tus datos viven en una base de datos real (Supabase/Postgres) y hay una vista lista, <code>vista_respuestas</code> — ver «Conectar Power BI» en Organización.</div>
     </div>
+    </div><!-- /dash-adv -->
 
     <!-- modo auditoría -->
     <div class="audit-card">
@@ -441,7 +451,7 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
     </div>
 
     <!-- recent submissions table -->
-    <div class="table-card">
+    <div class="table-card dash-adv">
       <div class="table-head">
         <div>
           <h2>Registros capturados</h2>
@@ -1403,6 +1413,7 @@ async function initPanelReadonly(token) {
     return;
   }
   document.body.classList.add('panel-readonly');
+  document.body.classList.remove('dash-simple'); // el panel compartido se ve completo
   _bi = { plantillas: snap.plantillas || [], envios: snap.envios || [], hallazgos: snap.hallazgos || [], acciones: snap.acciones || [], asignaciones: snap.asignaciones || [], unidades: snap.unidades || [] };
   _biOrg = snap.org || null;
   _filtros.periodo = 'todo'; _filtros.unidadId = ''; _filtros.codigo = ''; _filtros.desde = null; _filtros.hasta = null;
@@ -1727,6 +1738,21 @@ function onFiltroChange() {
   pintar();
 }
 
+// Vista simple vs completa: la simple deja solo KPIs + correcciones (menos
+// intimidante para el usuario no técnico); la completa muestra todo el BI.
+// Por defecto arranca en simple; la preferencia se guarda por dispositivo.
+function aplicarVista() {
+  const simple = (localStorage.getItem('skf_dash_simple') || '1') === '1';
+  document.body.classList.toggle('dash-simple', simple);
+  const b = document.getElementById('btnVista');
+  if (b) b.textContent = simple ? '📊 Ver panel completo' : '🔎 Vista simple';
+}
+function toggleVista() {
+  const simple = !((localStorage.getItem('skf_dash_simple') || '1') === '1');
+  localStorage.setItem('skf_dash_simple', simple ? '1' : '0');
+  aplicarVista();
+}
+
 async function init() {
   // Panel compartido de solo lectura: si viene ?panel=<token>, se carga el
   // snapshot publicado en vez de los datos del usuario y se oculta lo editable.
@@ -1778,6 +1804,7 @@ async function init() {
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('mainContent').style.display  = 'block';
+  aplicarVista();
 
   pintar();
 }
