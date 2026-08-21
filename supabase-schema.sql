@@ -624,3 +624,33 @@ BEGIN
     RAISE NOTICE 'pg_cron no está habilitado: actívalo en Dashboard → Database → Extensions y re-ejecuta este bloque para el recordatorio diario.';
   END IF;
 END $$;
+
+-- ── 19 · Vista aplanada para Power BI / Looker (conexión en vivo) ────────────
+-- Una fila por respuesta (formato largo), lista para graficar sin despivotar —
+-- la misma forma que exporta el botón «Datos para Power BI». security_invoker
+-- ON hace que la vista respete la RLS de quien la consulta: cada usuario ve solo
+-- los datos de su organización. Excluye campos de estructura/binarios. Seguro
+-- re-ejecutar.
+CREATE OR REPLACE VIEW vista_respuestas
+WITH (security_invoker = on) AS
+SELECT
+  e.org_id,
+  e.id                                  AS envio_id,
+  e.numero,
+  e.plantilla_nombre                    AS formulario,
+  e.plantilla_codigo                    AS codigo,
+  COALESCE(e.enviado_en, e.creado_en)   AS fecha,
+  u.nombre                              AS unidad,
+  e.llenado_por,
+  campo->>'etiqueta'                    AS campo,
+  campo->>'tipo'                        AS tipo,
+  e.datos->>(campo->>'id')              AS valor,
+  CASE WHEN replace(e.datos->>(campo->>'id'), ',', '.') ~ '^-?\d+(\.\d+)?$'
+       THEN replace(e.datos->>(campo->>'id'), ',', '.')::numeric END AS valor_numerico
+FROM envios e
+JOIN plantillas p ON p.id = e.plantilla_id
+LEFT JOIN unidades u ON u.id = e.unidad_id
+CROSS JOIN LATERAL jsonb_array_elements(COALESCE(p.campos, '[]'::jsonb)) AS campo
+WHERE (campo->>'tipo') NOT IN ('separador','firma','foto')
+  AND COALESCE(e.datos->>(campo->>'id'), '') <> '';
+GRANT SELECT ON vista_respuestas TO authenticated;
