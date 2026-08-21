@@ -361,7 +361,7 @@
       <div class="stat-card c-err">
         <div class="stat-label">Críticos sin resolver</div>
         <div class="stat-num" id="sHzCriticos">0</div>
-        <div class="stat-desc">requieren atención inmediata</div>
+        <div class="stat-desc">riesgo de sanción — atiende ya</div>
       </div>
       <div class="stat-card c-purple">
         <div class="stat-label">Tiempo promedio de cierre</div>
@@ -439,10 +439,10 @@ Respeta el periodo y la unidad que elijas arriba.">?</button></h2>
 3. Entrégala o muéstrala en la inspección.
 
 La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se cerró — que es lo que un auditor revisa.">?</button></h2>
-          <p class="audit-sub">Para una inspección o auditoría: elige arriba el periodo y la unidad, y descarga la evidencia lista para entregar.</p>
+          <p class="audit-sub">🛡️ <strong>Tu defensa ante una inspección.</strong> Elige el periodo y la unidad, y ten la evidencia lista para demostrar que cumples — antes de que te la pidan.</p>
         </div>
         <div class="audit-btns">
-          <button class="btn-export" onclick="reporteConsolidado()">📄 Carpeta de evidencia (PDF)</button>
+          <button class="btn-export" onclick="reporteConsolidado()" title="Tu defensa ante una inspección: resumen, hallazgos y evidencia lista para entregar">📄 Carpeta de evidencia (PDF)</button>
           <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla (CSV)</button>
         </div>
       </div>
@@ -458,7 +458,7 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
           <span style="font-size:.75rem;color:var(--mut)" id="tableCount"></span>
         </div>
         <div class="table-actions">
-          <button class="btn-export" onclick="reporteConsolidado()">📄 Carpeta de evidencia (PDF)</button>
+          <button class="btn-export" onclick="reporteConsolidado()" title="Tu defensa ante una inspección: resumen, hallazgos y evidencia lista para entregar">📄 Carpeta de evidencia (PDF)</button>
           <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla</button>
         </div>
       </div>
