@@ -469,3 +469,188 @@ END $$;
 ALTER TABLE plantillas     ADD COLUMN IF NOT EXISTS norma TEXT;
 ALTER TABLE organizaciones ADD COLUMN IF NOT EXISTS pais  TEXT;
 GRANT SELECT (id, nombre, campos, codigo, descripcion, logo, publica, share_token, norma) ON plantillas TO anon;
+
+-- ── 15 · Paneles compartidos de solo lectura (dashboard sin cuenta) ──────────
+-- Permite entregar el dashboard a un cliente/jefe SIN cuenta, con un link no
+-- listado (dashboard.html?panel=<token>). Se publica una FOTO inmutable de los
+-- datos ya filtrados (snapshot), no acceso en vivo: el visitante anónimo nunca
+-- toca las tablas reales (envios/hallazgos/…), solo lee el snapshot que el dueño
+-- decidió publicar. La lectura anónima va por una función SECURITY DEFINER que
+-- devuelve UNA sola fila por su token exacto — no se puede enumerar la tabla.
+-- Seguro re-ejecutar.
+CREATE TABLE IF NOT EXISTS paneles_publicos (
+  token      TEXT PRIMARY KEY,
+  org_id     UUID NOT NULL REFERENCES organizaciones(id) ON DELETE CASCADE,
+  titulo     TEXT,
+  snapshot   JSONB NOT NULL,
+  creado_en  TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS paneles_publicos_org_idx ON paneles_publicos (org_id, creado_en DESC);
+ALTER TABLE paneles_publicos ENABLE ROW LEVEL SECURITY;
+
+-- Solo los miembros de la org ven/crean/borran sus propios paneles. El anónimo
+-- NO tiene acceso directo a la tabla (sin GRANT a anon): entra por la función.
+DROP POLICY IF EXISTS "Miembros ven paneles"   ON paneles_publicos;
+DROP POLICY IF EXISTS "Editores crean paneles" ON paneles_publicos;
+DROP POLICY IF EXISTS "Editores borran paneles" ON paneles_publicos;
+CREATE POLICY "Miembros ven paneles"    ON paneles_publicos FOR SELECT USING (skf_es_miembro(org_id));
+CREATE POLICY "Editores crean paneles"  ON paneles_publicos FOR INSERT WITH CHECK (skf_puede_escribir(org_id));
+CREATE POLICY "Editores borran paneles" ON paneles_publicos FOR DELETE USING (skf_puede_escribir(org_id));
+GRANT SELECT, INSERT, DELETE ON paneles_publicos TO authenticated;
+
+-- Lectura pública por token exacto (no enumera): devuelve solo el snapshot.
+CREATE OR REPLACE FUNCTION skf_panel_publico(p_token TEXT)
+RETURNS JSONB SECURITY DEFINER SET search_path = public LANGUAGE sql AS $$
+  SELECT snapshot FROM paneles_publicos WHERE token = p_token LIMIT 1;
+$$;
+GRANT EXECUTE ON FUNCTION skf_panel_publico(TEXT) TO anon, authenticated;
+
+-- ── 16 · Cierre del ciclo: el campo REPORTA corregido desde el link ──────────
+-- Desde el link operativo (?panel=<token>&modo=operativo) el ejecutante marca un
+-- señalamiento como corregido. Es un REPORTE, no un cierre: el dueño lo ve en su
+-- panel y confirma. El anónimo nunca escribe directo en hallazgos; va por una
+-- función que valida que el token existe y que el hallazgo pertenece a la MISMA
+-- organización de ese panel (no puede tocar hallazgos de otra org ni inventar).
+-- Seguro re-ejecutar.
+CREATE TABLE IF NOT EXISTS correcciones_campo (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token        TEXT NOT NULL REFERENCES paneles_publicos(token) ON DELETE CASCADE,
+  org_id       UUID NOT NULL REFERENCES organizaciones(id) ON DELETE CASCADE,
+  hallazgo_id  TEXT NOT NULL REFERENCES hallazgos(id) ON DELETE CASCADE,
+  marcado_por  TEXT,
+  nota         TEXT,
+  marcado_en   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS correcciones_campo_org_idx ON correcciones_campo (org_id, marcado_en DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS correcciones_campo_uni ON correcciones_campo (token, hallazgo_id);
+ALTER TABLE correcciones_campo ENABLE ROW LEVEL SECURITY;
+-- El dueño (miembro) ve las marcas de su org. Nadie escribe directo: va por RPC.
+DROP POLICY IF EXISTS "Miembros ven correcciones campo" ON correcciones_campo;
+CREATE POLICY "Miembros ven correcciones campo" ON correcciones_campo FOR SELECT USING (skf_es_miembro(org_id));
+GRANT SELECT ON correcciones_campo TO authenticated;
+
+-- Marcar corregido (anónimo, validado por token + org del hallazgo).
+CREATE OR REPLACE FUNCTION skf_panel_marcar_corregido(p_token TEXT, p_hallazgo_id TEXT, p_por TEXT, p_nota TEXT)
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE v_org UUID; v_hz_org UUID;
+BEGIN
+  SELECT org_id INTO v_org FROM paneles_publicos WHERE token = p_token;
+  IF v_org IS NULL THEN RETURN false; END IF;
+  SELECT org_id INTO v_hz_org FROM hallazgos WHERE id = p_hallazgo_id;
+  IF v_hz_org IS NULL OR v_hz_org <> v_org THEN RETURN false; END IF;
+  INSERT INTO correcciones_campo (token, org_id, hallazgo_id, marcado_por, nota)
+    VALUES (p_token, v_org, p_hallazgo_id, NULLIF(p_por,''), NULLIF(p_nota,''))
+    ON CONFLICT (token, hallazgo_id)
+    DO UPDATE SET marcado_por = EXCLUDED.marcado_por, nota = EXCLUDED.nota, marcado_en = now();
+  RETURN true;
+END; $$;
+GRANT EXECUTE ON FUNCTION skf_panel_marcar_corregido(TEXT, TEXT, TEXT, TEXT) TO anon, authenticated;
+
+-- Deshacer la marca (anónimo, mismo token).
+CREATE OR REPLACE FUNCTION skf_panel_desmarcar_corregido(p_token TEXT, p_hallazgo_id TEXT)
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE v_org UUID;
+BEGIN
+  SELECT org_id INTO v_org FROM paneles_publicos WHERE token = p_token;
+  IF v_org IS NULL THEN RETURN false; END IF;
+  DELETE FROM correcciones_campo WHERE token = p_token AND hallazgo_id = p_hallazgo_id;
+  RETURN true;
+END; $$;
+GRANT EXECUTE ON FUNCTION skf_panel_desmarcar_corregido(TEXT, TEXT) TO anon, authenticated;
+
+-- Marcas ya hechas para un token (para que el link muestre lo ya reportado).
+CREATE OR REPLACE FUNCTION skf_panel_marcas(p_token TEXT)
+RETURNS JSONB SECURITY DEFINER SET search_path = public LANGUAGE sql AS $$
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'hallazgo_id', hallazgo_id, 'marcado_por', marcado_por,
+           'nota', nota, 'marcado_en', marcado_en)), '[]'::jsonb)
+  FROM correcciones_campo WHERE token = p_token;
+$$;
+GRANT EXECUTE ON FUNCTION skf_panel_marcas(TEXT) TO anon, authenticated;
+
+-- ── 17 · Auditoría de cierre (quién y cuándo cerró un hallazgo) ──────────────
+-- Guarda quién cerró cada hallazgo desde el panel y cuándo. Seguro re-ejecutar.
+ALTER TABLE hallazgos ADD COLUMN IF NOT EXISTS cerrado_en  TIMESTAMPTZ;
+ALTER TABLE hallazgos ADD COLUMN IF NOT EXISTS cerrado_por TEXT;
+
+-- ── 18 · Recordatorio automático de correcciones vencidas ───────────────────
+-- Una vez al día, a quien tenga una acción correctiva VENCIDA (pasó su fecha
+-- límite y el hallazgo sigue abierto) le llega un correo con su lista. Reusa el
+-- mismo Resend + vault del resto de avisos: si no hay 'resend_api_key' cargada,
+-- no hace nada. Requiere la extensión pg_cron habilitada para agendarse solo.
+CREATE OR REPLACE FUNCTION skf_recordar_vencidos()
+RETURNS void SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE api_key TEXT; rec RECORD;
+BEGIN
+  SELECT decrypted_secret INTO api_key FROM vault.decrypted_secrets WHERE name = 'resend_api_key' LIMIT 1;
+  IF api_key IS NULL OR api_key = '' THEN RETURN; END IF;
+  FOR rec IN
+    SELECT ac.correo AS correo, count(*) AS n,
+           string_agg('<li><strong>' || skf_html_escape(COALESCE(h.plantilla_nombre,'')) || '</strong> — ' ||
+             skf_html_escape(COALESCE(h.campo_etiqueta, h.descripcion, 'hallazgo')) ||
+             ' (venció el ' || to_char(ac.fecha_limite,'DD/MM/YYYY') || ')</li>', '') AS items
+    FROM acciones_correctivas ac
+    JOIN hallazgos h ON h.id = ac.hallazgo_id
+    WHERE ac.estado <> 'completada'
+      AND ac.fecha_limite IS NOT NULL AND ac.fecha_limite < current_date
+      AND h.estado <> 'cerrado'
+      AND ac.correo IS NOT NULL AND ac.correo <> ''
+    GROUP BY ac.correo
+  LOOP
+    PERFORM net.http_post(
+      url := 'https://api.resend.com/emails',
+      headers := jsonb_build_object('Authorization','Bearer '||api_key,'Content-Type','application/json'),
+      body := jsonb_build_object(
+        'from','SEKaform <onboarding@resend.dev>','to',ARRAY[rec.correo],
+        'subject','⏰ Tienes '||rec.n||' corrección(es) vencida(s)',
+        'html','<h2>Correcciones vencidas</h2><p>Estas acciones ya pasaron su fecha límite y siguen abiertas:</p><ul>'||rec.items||'</ul><p>Ingresa a SEKaform para atenderlas y cerrarlas.</p>'));
+  END LOOP;
+  -- deja el estado 'vencida' para que la app lo muestre igual
+  UPDATE acciones_correctivas ac SET estado = 'vencida'
+   FROM hallazgos h
+   WHERE ac.hallazgo_id = h.id AND ac.estado = 'pendiente'
+     AND ac.fecha_limite IS NOT NULL AND ac.fecha_limite < current_date AND h.estado <> 'cerrado';
+END; $$;
+
+-- Se agenda solo si pg_cron está habilitado (Dashboard → Database → Extensions).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'skf-recordar-vencidos') THEN
+      PERFORM cron.unschedule('skf-recordar-vencidos');
+    END IF;
+    PERFORM cron.schedule('skf-recordar-vencidos', '0 13 * * *', 'SELECT skf_recordar_vencidos();');
+  ELSE
+    RAISE NOTICE 'pg_cron no está habilitado: actívalo en Dashboard → Database → Extensions y re-ejecuta este bloque para el recordatorio diario.';
+  END IF;
+END $$;
+
+-- ── 19 · Vista aplanada para Power BI / Looker (conexión en vivo) ────────────
+-- Una fila por respuesta (formato largo), lista para graficar sin despivotar —
+-- la misma forma que exporta el botón «Datos para Power BI». security_invoker
+-- ON hace que la vista respete la RLS de quien la consulta: cada usuario ve solo
+-- los datos de su organización. Excluye campos de estructura/binarios. Seguro
+-- re-ejecutar.
+CREATE OR REPLACE VIEW vista_respuestas
+WITH (security_invoker = on) AS
+SELECT
+  e.org_id,
+  e.id                                  AS envio_id,
+  e.numero,
+  e.plantilla_nombre                    AS formulario,
+  e.plantilla_codigo                    AS codigo,
+  COALESCE(e.enviado_en, e.creado_en)   AS fecha,
+  u.nombre                              AS unidad,
+  e.llenado_por,
+  campo->>'etiqueta'                    AS campo,
+  campo->>'tipo'                        AS tipo,
+  e.datos->>(campo->>'id')              AS valor,
+  CASE WHEN replace(e.datos->>(campo->>'id'), ',', '.') ~ '^-?\d+(\.\d+)?$'
+       THEN replace(e.datos->>(campo->>'id'), ',', '.')::numeric END AS valor_numerico
+FROM envios e
+JOIN plantillas p ON p.id = e.plantilla_id
+LEFT JOIN unidades u ON u.id = e.unidad_id
+CROSS JOIN LATERAL jsonb_array_elements(COALESCE(p.campos, '[]'::jsonb)) AS campo
+WHERE (campo->>'tipo') NOT IN ('separador','firma','foto')
+  AND COALESCE(e.datos->>(campo->>'id'), '') <> '';
+GRANT SELECT ON vista_respuestas TO authenticated;

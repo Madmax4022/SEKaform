@@ -223,6 +223,103 @@ async function sbLoadPublicPlantilla(token) {
   } catch { return null; }
 }
 
+// ── Paneles compartidos de solo lectura (dashboard sin cuenta) ───────
+// Publica una FOTO inmutable del dashboard (el snapshot ya filtrado) para
+// compartir por link/QR sin que el visitante necesite cuenta. Devuelve true si
+// quedó guardado en la nube (link válido en cualquier dispositivo).
+async function sbPublishPanel(token, titulo, snapshot) {
+  try {
+    const sb = await getSB();
+    if (!sb) return false;
+    const org = await skfGetOrg();
+    if (!org || !org.orgId) return false;
+    const { error } = await sb.from('paneles_publicos')
+      .upsert({ token, org_id: org.orgId, titulo: titulo || null, snapshot });
+    return !error;
+  } catch { return false; }
+}
+
+// Lee un panel público por su token, sin sesión. Va por la función RPC
+// SECURITY DEFINER skf_panel_publico, que devuelve SOLO esa fila por su token
+// exacto (el anónimo nunca toca las tablas reales ni puede enumerar). Usado por
+// dashboard.html?panel=<token>.
+async function sbLoadPanel(token) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token) return null;
+    const { data, error } = await sb.rpc('skf_panel_publico', { p_token: token });
+    if (error || !data) return null;
+    return data;
+  } catch { return null; }
+}
+
+// ── Cierre del ciclo: el campo reporta corregido desde el link operativo ──
+// El anónimo marca/desmarca un hallazgo vía funciones RPC validadas por token.
+async function sbMarcarCorregido(token, hallazgoId, por, nota) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token || !hallazgoId) return false;
+    const { data, error } = await sb.rpc('skf_panel_marcar_corregido', { p_token: token, p_hallazgo_id: hallazgoId, p_por: por || '', p_nota: nota || '' });
+    return !error && data === true;
+  } catch { return false; }
+}
+async function sbDesmarcarCorregido(token, hallazgoId) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token || !hallazgoId) return false;
+    const { data, error } = await sb.rpc('skf_panel_desmarcar_corregido', { p_token: token, p_hallazgo_id: hallazgoId });
+    return !error && data === true;
+  } catch { return false; }
+}
+// Marcas ya hechas para un token (las lee el link operativo al abrir).
+async function sbPanelMarcas(token) {
+  try {
+    const sb = await getSB();
+    if (!sb || !token) return null;
+    const { data, error } = await sb.rpc('skf_panel_marcas', { p_token: token });
+    if (error || !data) return null;
+    return data;
+  } catch { return null; }
+}
+// Todas las marcas de la org (las lee el dueño en su panel, RLS lo limita).
+async function sbLoadCorreccionesCampo() {
+  try {
+    const sb = await getSB();
+    if (!sb) return null;
+    const org = await skfGetOrg();
+    if (!org || !org.orgId) return null;
+    const { data, error } = await sb.from('correcciones_campo')
+      .select('hallazgo_id, marcado_por, nota, marcado_en').eq('org_id', org.orgId);
+    if (error) return null;
+    return data || [];
+  } catch { return null; }
+}
+
+// Cierra un hallazgo desde el panel (un clic). Update mínimo: solo toca el
+// estado, así no se arriesga a pisar otros campos de una fila que vino de la
+// nube en snake_case. La RLS "Editores editan hallazgos" ya lo permite.
+async function sbCerrarHallazgo(id, por) {
+  try {
+    const sb = await getSB();
+    if (!sb || !id) return false;
+    const now = new Date().toISOString();
+    const { error } = await sb.from('hallazgos')
+      .update({ estado: 'cerrado', cerrado_en: now, cerrado_por: por || null, actualizado_en: now }).eq('id', id);
+    return !error;
+  } catch { return false; }
+}
+// Reabre un hallazgo cerrado por error: vuelve a 'abierto' y limpia la
+// auditoría de cierre.
+async function sbReabrirHallazgo(id) {
+  try {
+    const sb = await getSB();
+    if (!sb || !id) return false;
+    const { error } = await sb.from('hallazgos')
+      .update({ estado: 'abierto', cerrado_en: null, cerrado_por: null, actualizado_en: new Date().toISOString() }).eq('id', id);
+    return !error;
+  } catch { return false; }
+}
+
 // Envía un formulario sin sesión. No viaja org_id: el trigger envios_asignar_org
 // lo fija desde la organización dueña de la plantilla, así el dato cae en el
 // dataset correcto sin que un anónimo pueda inyectar en otra organización.
