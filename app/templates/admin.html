@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+{% block titulo %}Administración · Kanan Sentinel{% endblock %}
+
+{% block estilos %}
+<style>
+  .adm-top{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    padding:16px 26px;border-bottom:1px solid var(--line);background:var(--navy-900);
+    position:sticky;top:0;z-index:10;
+  }
+  .adm-wrap{max-width:1240px;margin:0 auto;padding:26px}
+  .adm-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+  .adm-tab{
+    font-family:var(--font-cond);text-transform:uppercase;letter-spacing:1.3px;
+    font-size:13px;font-weight:600;padding:9px 17px;border-radius:8px;
+    background:transparent;border:1px solid var(--line);color:var(--text-dim);cursor:pointer;
+  }
+  .adm-tab.on{background:rgba(63,217,210,.11);border-color:var(--line-strong);color:var(--teal)}
+  .adm-panel{display:none}
+  .adm-panel.on{display:block}
+  .adm-sec-t{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:1.6px;
+             font-size:14px;color:var(--bronze-light);margin:0 0 13px;font-weight:600}
+  .adm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px;margin-bottom:22px}
+  .adm-form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+  .adm-form-row .k-field{margin-bottom:0;flex:1;min-width:165px}
+  .adm-empty{color:var(--text-dim);font-size:14px;padding:22px;text-align:center}
+  .adm-user{display:flex;flex-direction:column;gap:2px}
+  .adm-user b{color:var(--silver);font-weight:600}
+  .adm-user span{font-size:12px;color:var(--text-dim)}
+  .adm-acc{display:flex;gap:6px;flex-wrap:wrap}
+  .adm-chip-org{
+    display:inline-flex;align-items:center;gap:6px;font-size:12px;
+    background:rgba(63,217,210,.09);border:1px solid var(--line);border-radius:16px;
+    padding:3px 6px 3px 11px;margin:2px 3px 2px 0;
+  }
+  .adm-chip-org button{
+    background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px;
+    line-height:1;padding:0 3px;
+  }
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--teal-bright)}
+</style>
+{% endblock %}
+
+{% block cuerpo %}
+<div class="adm-top">
+  <div class="k-brand">
+    <img src="/brand/logo.png" alt="">
+    <div class="k-brand-text">
+      <span class="k-brand-name">Kanan Sentinel</span>
+      <span class="k-brand-sub">Administración de plataforma</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:13px">
+    <span class="k-badge k-badge-bronze">Super administrador</span>
+    <span style="font-size:13px;color:var(--text-dim)">{{ usuario.email }}</span>
+    <a class="k-btn k-btn-ghost k-btn-sm" href="/">Ir a la app</a>
+    <a class="k-btn k-btn-ghost k-btn-sm" href="{{ url_for('auth.logout') }}">Salir</a>
+  </div>
+</div>
+
+<div class="adm-wrap">
+  <div id="aviso"></div>
+
+  <div class="adm-tabs">
+    <button class="adm-tab on" data-p="organizaciones">Organizaciones</button>
+    <button class="adm-tab" data-p="usuarios">Usuarios</button>
+    <button class="adm-tab" data-p="invitaciones">Invitaciones</button>
+    <button class="adm-tab" data-p="formularios">Acceso a formularios</button>
+    <button class="adm-tab" data-p="auditoria">Auditoría</button>
+  </div>
+
+  <!-- ── Organizaciones ── -->
+  <div class="adm-panel on" id="p-organizaciones">
+    <h2 class="adm-sec-t">Nueva organización</h2>
+    <div class="adm-form-row">
+      <div class="k-field"><label>Nombre</label><input id="orgNombre" placeholder="Constructora XYZ S.A.S."></div>
+      <div class="k-field"><label>País</label><input id="orgPais" placeholder="Colombia"></div>
+      <div class="k-field"><label>Plan</label>
+        <select id="orgPlan">
+          <option value="emprende">Emprende</option><option value="pyme">Pyme</option>
+          <option value="negocio">Negocio</option><option value="vertical">Vertical</option>
+        </select>
+      </div>
+      <button class="k-btn k-btn-primary" onclick="crearOrg()">Crear</button>
+    </div>
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Organización</th><th>País</th><th>Plan</th><th>Miembros</th>
+                 <th>Formularios</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="tOrgs"></tbody>
+    </table></div>
+  </div>
+
+  <!-- ── Usuarios ── -->
+  <div class="adm-panel" id="p-usuarios">
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Usuario</th><th>Organización</th><th>Rol</th><th>Último acceso</th>
+                 <th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="tUsuarios"></tbody>
+    </table></div>
+  </div>
+
+  <!-- ── Invitaciones ── -->
+  <div class="adm-panel" id="p-invitaciones">
+    <div class="k-alert k-alert-warn">
+      Nadie puede crear una cuenta si su correo no aparece aquí, activo y sin usar.
+      Es la puerta de entrada a la plataforma.
+    </div>
+    <h2 class="adm-sec-t">Autorizar un correo</h2>
+    <div class="adm-form-row">
+      <div class="k-field"><label>Correo</label><input id="invEmail" type="email" placeholder="inspector@empresa.com"></div>
+      <div class="k-field"><label>Organización</label><select id="invOrg"></select></div>
+      <div class="k-field"><label>Rol inicial</label>
+        <select id="invRol">
+          <option value="editor">Editor</option><option value="lector">Solo lectura</option>
+          <option value="admin">Administrador</option><option value="dueno">Dueño</option>
+        </select>
+      </div>
+      <div class="k-field"><label>Vigencia (días)</label><input id="invDias" type="number" value="14" min="1" max="90"></div>
+      <button class="k-btn k-btn-primary" onclick="invitar()">Autorizar</button>
+    </div>
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Correo</th><th>Organización</th><th>Rol</th><th>Autorizado</th>
+                 <th>Vence</th><th></th></tr></thead>
+      <tbody id="tInv"></tbody>
+    </table></div>
+  </div>
+
+  <!-- ── Acceso a formularios ── -->
+  <div class="adm-panel" id="p-formularios">
+    <div class="k-alert k-alert-warn">
+      Una organización solo ve las plantillas del catálogo que se le concedan aquí.
+      Revocar conserva el histórico: queda registrado quién tuvo acceso y entre qué fechas.
+    </div>
+    <div class="adm-form-row">
+      <div class="k-field"><label>Conceder a</label><select id="fagOrg"></select></div>
+      <div class="k-field"><label>Filtrar por vertical</label>
+        <select id="fagVertical"><option value="">Todos</option></select>
+      </div>
+    </div>
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Formulario</th><th>Vertical</th><th>Norma</th>
+                 <th>Organizaciones con acceso</th><th></th></tr></thead>
+      <tbody id="tForms"></tbody>
+    </table></div>
+  </div>
+
+  <!-- ── Auditoría ── -->
+  <div class="adm-panel" id="p-auditoria">
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Entidad</th><th>Detalle</th><th>IP</th></tr></thead>
+      <tbody id="tAudit"></tbody>
+    </table></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let DATOS = { organizaciones: [], usuarios: [], invitacionesPendientes: [] };
+
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const fecha = s => s ? new Date(s).toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fechaHora = s => s ? new Date(s).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '—';
+
+function aviso(msg, tipo='ok') {
+  document.getElementById('aviso').innerHTML =
+    `<div class="k-alert k-alert-${tipo}">${esc(msg)}</div>`;
+  setTimeout(() => { document.getElementById('aviso').innerHTML = ''; }, 5000);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('.adm-tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.adm-tab').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.adm-panel').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  document.getElementById('p-' + b.dataset.p).classList.add('on');
+  if (b.dataset.p === 'auditoria') cargarAuditoria();
+  if (b.dataset.p === 'formularios') cargarFormularios();
+});
+
+async function cargar() {
+  DATOS = await (await fetch('/admin/api/resumen', { credentials: 'same-origin' })).json();
+  pintarOrgs(); pintarUsuarios(); pintarInvitaciones(); llenarSelectores();
+}
+
+function llenarSelectores() {
+  const opciones = DATOS.organizaciones
+    .map(o => `<option value="${o.id}">${esc(o.nombre)}</option>`).join('');
+  document.getElementById('invOrg').innerHTML = '<option value="">— Sin organización —</option>' + opciones;
+  document.getElementById('fagOrg').innerHTML = opciones;
+}
+
+function pintarOrgs() {
+  const t = document.getElementById('tOrgs');
+  if (!DATOS.organizaciones.length) {
+    t.innerHTML = '<tr><td colspan="7" class="adm-empty">Todavía no hay organizaciones.</td></tr>';
+    return;
+  }
+  t.innerHTML = DATOS.organizaciones.map(o => `
+    <tr>
+      <td><b>${esc(o.nombre)}</b><br><code>${o.id.slice(0,8)}</code></td>
+      <td>${esc(o.pais) || '—'}</td>
+      <td><span class="k-badge k-badge-bronze">${esc(o.plan)}</span></td>
+      <td>${o.miembros}</td>
+      <td>${o.formularios}</td>
+      <td><span class="k-badge ${o.activa ? 'k-badge-ok' : 'k-badge-err'}">
+          ${o.activa ? 'Activa' : 'Suspendida'}</span></td>
+      <td><button class="k-btn ${o.activa ? 'k-btn-danger' : 'k-btn-ghost'} k-btn-sm"
+                  onclick="alternarOrg('${o.id}')">${o.activa ? 'Suspender' : 'Reactivar'}</button></td>
+    </tr>`).join('');
+}
+
+function pintarUsuarios() {
+  const t = document.getElementById('tUsuarios');
+  if (!DATOS.usuarios.length) {
+    t.innerHTML = '<tr><td colspan="6" class="adm-empty">Sin usuarios.</td></tr>';
+    return;
+  }
+  t.innerHTML = DATOS.usuarios.map(u => `
+    <tr>
+      <td><div class="adm-user"><b>${esc(u.nombre || u.email)}</b><span>${esc(u.email)}</span></div></td>
+      <td>${esc(u.org_nombre) || '<span style="color:var(--text-dim)">— sin asignar —</span>'}</td>
+      <td>${u.rol ? `<span class="k-badge k-badge-teal">${esc(u.rol)}</span>` : '—'}</td>
+      <td>${fechaHora(u.last_login_at)}</td>
+      <td>
+        ${u.is_super_admin ? '<span class="k-badge k-badge-bronze">Super</span> ' : ''}
+        <span class="k-badge ${u.is_active ? 'k-badge-ok' : 'k-badge-err'}">
+          ${u.is_active ? 'Activo' : 'Inactivo'}</span>
+        ${u.locked_until && new Date(u.locked_until) > new Date()
+          ? ' <span class="k-badge k-badge-err">Bloqueado</span>' : ''}
+      </td>
+      <td class="adm-acc">
+        <button class="k-btn k-btn-ghost k-btn-sm" onclick="alternarUsuario('${u.id}')">
+          ${u.is_active ? 'Desactivar' : 'Activar'}</button>
+        <button class="k-btn k-btn-ghost k-btn-sm" onclick="alternarSuper('${u.id}')">
+          ${u.is_super_admin ? 'Quitar super' : 'Hacer super'}</button>
+      </td>
+    </tr>`).join('');
+}
+
+function pintarInvitaciones() {
+  const t = document.getElementById('tInv');
+  const inv = DATOS.invitacionesPendientes || [];
+  if (!inv.length) {
+    t.innerHTML = '<tr><td colspan="6" class="adm-empty">No hay invitaciones pendientes.</td></tr>';
+    return;
+  }
+  const ahora = new Date();
+  t.innerHTML = inv.map(i => {
+    const vencida = i.expira_en && new Date(i.expira_en) < ahora;
+    return `<tr>
+      <td><b>${esc(i.email)}</b></td>
+      <td>${esc(i.org_nombre) || '—'}</td>
+      <td><span class="k-badge k-badge-teal">${esc(i.rol_inicial)}</span></td>
+      <td>${fecha(i.autorizado_en)}</td>
+      <td>${vencida ? '<span class="k-badge k-badge-err">Vencida</span>' : fecha(i.expira_en)}</td>
+      <td><button class="k-btn k-btn-danger k-btn-sm" onclick="revocarInv('${i.id}')">Revocar</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function cargarFormularios() {
+  const { formularios } = await (await fetch('/admin/api/formularios', { credentials: 'same-origin' })).json();
+  const verticales = [...new Set(formularios.map(f => f.vertical).filter(Boolean))].sort();
+  const sel = document.getElementById('fagVertical');
+  if (sel.options.length <= 1) {
+    sel.innerHTML = '<option value="">Todos</option>' +
+      verticales.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    sel.onchange = () => pintarFormularios(formularios);
+  }
+  window._FORMS = formularios;
+  pintarFormularios(formularios);
+}
+
+function pintarFormularios(formularios) {
+  const filtro = document.getElementById('fagVertical').value;
+  const lista = filtro ? formularios.filter(f => f.vertical === filtro) : formularios;
+  const t = document.getElementById('tForms');
+  if (!lista.length) {
+    t.innerHTML = '<tr><td colspan="5" class="adm-empty">El catálogo está vacío. ' +
+      'Corre <code>scripts/seed_catalogo.py</code> para cargar las plantillas.</td></tr>';
+    return;
+  }
+  t.innerHTML = lista.map(f => `
+    <tr>
+      <td><b>${esc(f.nombre)}</b>${f.codigo ? `<br><code>${esc(f.codigo)}</code>` : ''}</td>
+      <td><span class="k-badge k-badge-teal">${esc(f.vertical) || '—'}</span></td>
+      <td style="font-size:12px;color:var(--text-dim)">${esc(f.norma) || '—'}</td>
+      <td>${(f.concedido_a || []).length
+            ? f.concedido_a.map(g => `<span class="adm-chip-org">${esc(g.orgNombre)}
+                <button title="Revocar" onclick="acceso('${f.id}','${g.orgId}',false)">✕</button></span>`).join('')
+            : '<span style="color:var(--text-dim);font-size:13px">Sin acceso concedido</span>'}</td>
+      <td><button class="k-btn k-btn-primary k-btn-sm" onclick="concederSeleccion('${f.id}')">Conceder</button></td>
+    </tr>`).join('');
+}
+
+async function cargarAuditoria() {
+  const { entradas } = await (await fetch('/admin/api/auditoria', { credentials: 'same-origin' })).json();
+  const t = document.getElementById('tAudit');
+  if (!entradas.length) {
+    t.innerHTML = '<tr><td colspan="6" class="adm-empty">Sin registros.</td></tr>';
+    return;
+  }
+  t.innerHTML = entradas.map(e => `
+    <tr>
+      <td style="white-space:nowrap">${fechaHora(e.ocurrido_en)}</td>
+      <td>${esc(e.actor_email) || '—'}</td>
+      <td><span class="k-badge k-badge-teal">${esc(e.accion)}</span></td>
+      <td>${esc(e.entidad) || '—'}</td>
+      <td><code>${esc(JSON.stringify(e.detalle)).slice(0, 110)}</code></td>
+      <td style="font-size:12px;color:var(--text-dim)">${esc(e.ip) || '—'}</td>
+    </tr>`).join('');
+}
+
+// ── Acciones ──
+const recargar = async (msg) => { await cargar(); aviso(msg); };
+
+async function crearOrg() {
+  const nombre = document.getElementById('orgNombre').value.trim();
+  if (!nombre) return aviso('Escribe el nombre de la organización.', 'error');
+  try {
+    await skfPost('/admin/api/organizaciones', {
+      nombre, pais: document.getElementById('orgPais').value.trim(),
+      plan: document.getElementById('orgPlan').value,
+    });
+    document.getElementById('orgNombre').value = '';
+    document.getElementById('orgPais').value = '';
+    await recargar(`Organización «${nombre}» creada.`);
+  } catch (e) { aviso(e.message, 'error'); }
+}
+
+async function alternarOrg(id) {
+  try { await skfPost(`/admin/api/organizaciones/${id}/estado`); await recargar('Estado actualizado.'); }
+  catch (e) { aviso(e.message, 'error'); }
+}
+
+async function alternarUsuario(id) {
+  try { await skfPost(`/admin/api/usuarios/${id}/estado`); await recargar('Usuario actualizado.'); }
+  catch (e) { aviso(e.message, 'error'); }
+}
+
+async function alternarSuper(id) {
+  if (!confirm('El privilegio de super administrador da acceso completo al panel de la plataforma. ¿Continuar?')) return;
+  try { await skfPost(`/admin/api/usuarios/${id}/super`); await recargar('Privilegio actualizado.'); }
+  catch (e) { aviso(e.message, 'error'); }
+}
+
+async function invitar() {
+  const email = document.getElementById('invEmail').value.trim();
+  if (!email) return aviso('Escribe el correo a autorizar.', 'error');
+  try {
+    await skfPost('/admin/api/invitaciones', {
+      email, orgId: document.getElementById('invOrg').value || null,
+      rol: document.getElementById('invRol').value,
+      diasVigencia: Number(document.getElementById('invDias').value) || 14,
+    });
+    document.getElementById('invEmail').value = '';
+    await recargar(`${email} ya puede crear su cuenta.`);
+  } catch (e) { aviso(e.message, 'error'); }
+}
+
+async function revocarInv(id) {
+  try { await skfPost(`/admin/api/invitaciones/${id}`, null, 'DELETE'); await recargar('Invitación revocada.'); }
+  catch (e) { aviso(e.message, 'error'); }
+}
+
+async function concederSeleccion(plantillaId) {
+  const orgId = document.getElementById('fagOrg').value;
+  if (!orgId) return aviso('Elige primero la organización en «Conceder a».', 'error');
+  await acceso(plantillaId, orgId, true);
+}
+
+async function acceso(plantillaId, orgId, conceder) {
+  try {
+    await skfPost('/admin/api/formularios/acceso', { plantillaId, orgId, conceder });
+    await cargarFormularios();
+    aviso(conceder ? 'Acceso concedido.' : 'Acceso revocado.');
+  } catch (e) { aviso(e.message, 'error'); }
+}
+
+cargar().catch(e => aviso('No se pudo cargar el panel: ' + e.message, 'error'));
+</script>
+{% endblock %}

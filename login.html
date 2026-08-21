@@ -93,7 +93,7 @@
 
 <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
 
-<script src="supabase-config.js"></script>
+<script src="skf-api.js"></script>
 <script>
 let mode = 'login'; // 'login' | 'signup'
 
@@ -119,7 +119,7 @@ function showMsg(text, type) {
 
 async function handleSubmit() {
   if (!SKF_CONFIGURED) {
-    showMsg('Supabase no está configurado. Edita supabase-config.js con tu URL y clave.', 'er');
+    showMsg('Supabase no está configurado. Edita skf-api.js con tu URL y clave.', 'er');
     return;
   }
   const email = document.getElementById('emailInp').value.trim();

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block titulo %}Acceso · Kanan Sentinel{% endblock %}
+
+{% block estilos %}
+<style>
+  .acceso{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .acceso-caja{width:100%;max-width:420px}
+  .acceso-cab{text-align:center;margin-bottom:26px}
+  .acceso-cab img{height:88px;filter:drop-shadow(0 0 22px rgba(63,217,210,.28))}
+  .acceso-cab h1{font-size:23px;margin:15px 0 4px;letter-spacing:.02em}
+  .acceso-cab p{color:var(--text-dim);font-size:13.5px}
+  .acceso-pie{text-align:center;margin-top:19px;font-size:13px;color:var(--text-dim)}
+  .acceso-pie a{font-weight:600}
+  .acceso-legal{text-align:center;margin-top:26px;font-size:11.5px;color:var(--text-dim);opacity:.72}
+</style>
+{% endblock %}
+
+{% block cuerpo %}
+<div class="acceso">
+  <div class="acceso-caja">
+
+    <div class="acceso-cab">
+      <img src="/brand/logo.png" alt="Kanan Sentinel">
+      <h1>SEKaform</h1>
+      <p class="k-eyebrow">Kanan Sentinel Suite</p>
+    </div>
+
+    <div class="k-card">
+      {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% for categoria, texto in mensajes %}
+          <div class="k-alert k-alert-{{ 'ok' if categoria == 'ok' else 'error' }}">{{ texto }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      {# ── Iniciar sesión ── #}
+      {% if modo == 'login' %}
+        <form method="post" action="{{ url_for('auth.login') }}" autocomplete="on">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="k-field">
+            <label for="email">Correo corporativo</label>
+            <input id="email" name="email" type="email" required autofocus
+                   autocomplete="username" placeholder="nombre@empresa.com">
+          </div>
+          <div class="k-field">
+            <label for="password">Contraseña</label>
+            <input id="password" name="password" type="password" required
+                   autocomplete="current-password">
+          </div>
+          <button class="k-btn k-btn-primary" style="width:100%" type="submit">Entrar</button>
+        </form>
+        <div class="acceso-pie">
+          <a href="{{ url_for('auth.recuperar') }}">¿Olvidaste tu contraseña?</a>
+        </div>
+        <div class="acceso-pie" style="margin-top:8px">
+          ¿Te invitaron? <a href="{{ url_for('auth.registro') }}">Crea tu cuenta</a>
+        </div>
+
+      {# ── Crear cuenta (solo correos autorizados) ── #}
+      {% elif modo == 'registro' %}
+        <div class="k-alert k-alert-warn">
+          El acceso a Kanan Sentinel lo autoriza un administrador. Usa el mismo
+          correo al que te enviaron la invitación.
+        </div>
+        <form method="post" action="{{ url_for('auth.registro') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="k-field">
+            <label for="nombre">Nombre completo</label>
+            <input id="nombre" name="nombre" type="text" required autofocus autocomplete="name">
+          </div>
+          <div class="k-field">
+            <label for="email">Correo autorizado</label>
+            <input id="email" name="email" type="email" required autocomplete="username">
+          </div>
+          <div class="k-field">
+            <label for="password">Contraseña</label>
+            <input id="password" name="password" type="password" required
+                   minlength="10" autocomplete="new-password">
+            <div class="k-hint">Mínimo 10 caracteres, combinando letras y números.</div>
+          </div>
+          <button class="k-btn k-btn-primary" style="width:100%" type="submit">Crear cuenta</button>
+        </form>
+        <div class="acceso-pie"><a href="{{ url_for('auth.login') }}">Ya tengo cuenta</a></div>
+
+      {# ── Recuperar acceso ── #}
+      {% elif modo == 'recuperar' %}
+        <form method="post" action="{{ url_for('auth.recuperar') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="k-field">
+            <label for="email">Correo de tu cuenta</label>
+            <input id="email" name="email" type="email" required autofocus autocomplete="username">
+            <div class="k-hint">Te enviaremos un enlace válido por una hora.</div>
+          </div>
+          <button class="k-btn k-btn-primary" style="width:100%" type="submit">Enviar enlace</button>
+        </form>
+        <div class="acceso-pie"><a href="{{ url_for('auth.login') }}">Volver</a></div>
+
+      {# ── Definir nueva contraseña desde el enlace ── #}
+      {% elif modo == 'restablecer' %}
+        <form method="post" action="{{ url_for('auth.restablecer', token=token) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="k-field">
+            <label for="password">Nueva contraseña</label>
+            <input id="password" name="password" type="password" required
+                   minlength="10" autofocus autocomplete="new-password">
+          </div>
+          <button class="k-btn k-btn-primary" style="width:100%" type="submit">Guardar</button>
+        </form>
+
+      {# ── Cambio de contraseña con sesión abierta ── #}
+      {% elif modo == 'cambiar' %}
+        <form method="post" action="{{ url_for('auth.cambiar_password') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="k-field">
+            <label for="actual">Contraseña actual</label>
+            <input id="actual" name="actual" type="password" required autofocus
+                   autocomplete="current-password">
+          </div>
+          <div class="k-field">
+            <label for="password">Nueva contraseña</label>
+            <input id="password" name="password" type="password" required
+                   minlength="10" autocomplete="new-password">
+          </div>
+          <button class="k-btn k-btn-primary" style="width:100%" type="submit">Actualizar</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="acceso-legal">
+      © 2026 Kanan Sentinel · Acceso restringido y auditado
+    </div>
+  </div>
+</div>
+{% endblock %}

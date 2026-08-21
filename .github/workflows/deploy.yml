@@ -1,0 +1,109 @@
+name: Desplegar en Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Sin claves de servicio en los secretos del repositorio: se usa Workload
+# Identity Federation, que emite credenciales de corta duración por ejecución.
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: us-central1
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: skf
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Pruebas del frontend
+        run: |
+          node tests/analyzeText.test.cjs
+          node tests/fieldTypes.test.cjs
+          node tests/codigoPlantilla.test.cjs
+
+      # El aislamiento entre clientes es la garantía central del producto:
+      # si estas pruebas fallan, no se despliega nada.
+      - name: Preparar base de pruebas
+        env: { PGPASSWORD: test }
+        run: |
+          psql -h localhost -U postgres -d skf -q -c "
+            CREATE ROLE skf_owner LOGIN NOBYPASSRLS PASSWORD 'o';
+            CREATE ROLE skf_app   LOGIN NOBYPASSRLS PASSWORD 'a';"
+          psql -h localhost -U postgres -d skf -q -c "
+            GRANT CREATE, USAGE ON SCHEMA public TO skf_owner;"
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/001_core.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/002_auth_functions.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/003_super_admin_invitacion.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -q -c "
+            GRANT USAGE ON SCHEMA public TO skf_app;
+            GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO skf_app;
+            GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA public TO skf_app;
+            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO skf_app;"
+
+      - name: Aislamiento entre clientes (RLS)
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/rls_test.sql
+
+      - name: Autenticación
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/auth_test.sql
+
+      - name: Alta de super administrador
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/superadmin_test.sql
+
+      - name: Idempotencia de migraciones
+        env: { PGPASSWORD: o }
+        run: |
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/001_core.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/002_auth_functions.sql
+
+  desplegar:
+    needs: pruebas
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Construir y publicar la imagen
+        run: |
+          IMAGEN="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.AR_REPO }}/sekaform:${GITHUB_SHA::12}"
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+          docker build -t "$IMAGEN" .
+          docker push "$IMAGEN"
+          echo "IMAGEN=$IMAGEN" >> $GITHUB_ENV
+
+      # Se despliega por digest inmutable, no por etiqueta: garantiza que lo
+      # que corre es exactamente lo que se probó.
+      - name: Desplegar
+        run: |
+          gcloud run deploy ${{ secrets.RUN_SERVICE }} \
+            --image "$IMAGEN" \
+            --region "$REGION" \
+            --quiet

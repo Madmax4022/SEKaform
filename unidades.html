@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Sedes y áreas — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="supabase-config.js"></script>
+  <script src="skf-api.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -156,7 +156,7 @@ function crearUnidad(){
   if (!nombre) { toast('Escribe un nombre','er'); inp.focus(); return; }
   const tipo = document.getElementById('uTipo').value;
   const u = {
-    id: `uni_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    id: skfUUID(),
     nombre, tipo, padreId: null, creadoEn: new Date().toISOString()
   };
   const list = getUnidades();

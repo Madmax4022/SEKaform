@@ -7,7 +7,7 @@
 // hay red simplemente fallan, y supabase-config.js ya las encola para
 // reintentarlas al volver la conexión (ver SKF_QUEUE_KEY).
 
-const CACHE_VERSION = 'skf-shell-v4';
+const CACHE_VERSION = 'skf-shell-v5';
 
 const SHELL_ASSETS = [
   'index.html',
@@ -25,7 +25,7 @@ const SHELL_ASSETS = [
   'field-types.js',
   'form-library.js',
   'sidebar.js',
-  'supabase-config.js',
+  'skf-api.js',
   'chart.min.js',
   'manifest.json',
   'icons/icon-192.png',
@@ -52,7 +52,12 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return; // nunca interceptar escrituras (POST/PATCH a Supabase)
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // CDN/Supabase: directo a la red
+  if (url.origin !== self.location.origin) return; // CDN externo: directo a la red
+  // Nunca cachear la API ni las pantallas de sesión: servir una respuesta
+  // vieja de /api/bootstrap o de /login deja al usuario viendo datos o un
+  // estado de sesión que ya no son ciertos.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin')
+      || ['/login','/logout','/registro','/recuperar'].includes(url.pathname)) return;
 
   event.respondWith(
     caches.match(req).then((cached) => {

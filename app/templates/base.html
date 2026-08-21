@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070d14">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block titulo %}Kanan Sentinel · SEKaform{% endblock %}</title>
+  <link rel="icon" href="/brand/logo.png">
+  <link rel="stylesheet" href="/brand/kanan.css">
+  {% block estilos %}{% endblock %}
+</head>
+<body>
+  {% block cuerpo %}{% endblock %}
+
+  <script>
+    // Token CSRF disponible para las peticiones fetch de los paneles.
+    window.SKF_CSRF = "{{ csrf_token() }}";
+
+    async function skfPost(url, datos, metodo = 'POST') {
+      const r = await fetch(url, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.SKF_CSRF },
+        credentials: 'same-origin',
+        body: datos ? JSON.stringify(datos) : undefined,
+      });
+      let cuerpo = null;
+      try { cuerpo = await r.json(); } catch {}
+      if (!r.ok) throw new Error((cuerpo && cuerpo.error) || `Error ${r.status}`);
+      return cuerpo;
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

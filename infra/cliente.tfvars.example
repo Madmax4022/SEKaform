@@ -1,0 +1,55 @@
+# Copia a cliente.tfvars y ajusta. cliente.tfvars está en .gitignore.
+#
+# Valores listos para tz-dev-sekaform. Con prefijo "tz", entorno "dev" y
+# cliente "sekaform", los recursos quedan nombrados igual que el proyecto y
+# que el resto del parque (secapp usa la misma convención):
+#
+#   proyecto            tz-dev-sekaform
+#   Cloud SQL           tz-dev-sekaform-db
+#   base de datos       tz-dev-sekaform-database
+#   Cloud Run           tz-dev-sekaform-app
+#   bucket de evidencia tz-dev-sekaform-media
+#   Artifact Registry   tz-dev-sekaform-repo
+
+project_id    = "tz-dev-sekaform"
+prefijo       = "tz"
+customer_name = "sekaform"
+environment   = "dev"
+region        = "us-central1"
+
+# ── Despliegue en dos fases ──────────────────────────────────────────────
+# Cloud Run no puede crearse si la imagen no existe, y la imagen no puede
+# publicarse sin el Artifact Registry que crea este mismo Terraform.
+#
+#   FASE 1 · desplegar_app = false  → levanta todo menos Cloud Run
+#            (después: docker build + push)
+#   FASE 2 · desplegar_app = true e «imagen» rellena → crea Cloud Run
+#
+# SIEMPRE con -var-file=cliente.tfvars. Sin él, Terraform pide las variables
+# por consola y una respuesta vacía deja el proveedor sin proyecto.
+desplegar_app = false
+imagen        = ""
+# Fase 2: descomenta y pon la etiqueta que publicaste.
+# imagen = "us-central1-docker.pkg.dev/tz-dev-sekaform/tz-dev-sekaform-repo/sekaform:v1"
+
+# URL final. En la fase 1 aún no se conoce; deja el marcador. Tras crear Cloud
+# Run, pon la URL real (terraform output url_servicio) y vuelve a aplicar:
+# afecta al CORS del bucket y a los enlaces de los correos de recuperación.
+url_publica = "https://tz-dev-sekaform-app.us-central1.run.app"
+
+# ── Correo saliente ──────────────────────────────────────────────────────
+# false hasta que subas la API key de Resend. Terraform crea el contenedor del
+# secreto pero no su versión, y Cloud Run no puede montar un secreto vacío.
+#   echo -n 'TU_API_KEY' | gcloud secrets versions add skf-resend-api-key --data-file=-
+# Con false la app funciona igual; solo no envía correos de recuperación.
+habilitar_correo = false
+
+# ── Coste ────────────────────────────────────────────────────────────────
+# Aunque el entorno se llame "dev", la aplicación se despliega endurecida
+# (cookies Secure, SECRET_KEY obligatoria): se sirve por HTTPS a personas
+# reales. Lo único que relaja la configuración es SKF_ENV=local, que solo usa
+# scripts/dev.sh en tu máquina.
+db_tier             = "db-f1-micro"  # ~9 USD/mes. db-g1-small (~27) si se queda corto
+alta_disponibilidad = false          # true duplica el coste de Cloud SQL
+min_instancias      = 0              # 0 = escala a cero (~2 s de arranque en frío)
+max_instancias      = 10

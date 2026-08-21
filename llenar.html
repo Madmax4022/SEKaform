@@ -281,7 +281,7 @@
       .form-footer .btn-sec { flex: 0 0 auto; padding: 12px 16px; }
     }
   </style>
-  <script src="supabase-config.js"></script>
+  <script src="skf-api.js"></script>
   <script src="field-types.js"></script>
 </head>
 <body>
@@ -567,6 +567,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // del visitante) y el envío se manda con sbSubmitPublicEnvio, que cae en el
 // dataset del dueño gracias al trigger del servidor.
 async function openPublicTemplate(token) {
+  // Los envíos anónimos se atribuyen a la organización dueña de la plantilla a
+  // partir de este token; skf-api.js lo lee al vaciar la cola.
+  window.SKF_SHARE_TOKEN = token;
   const p = await sbLoadPublicPlantilla(token);
   if (!p) { toast('Este formulario no está disponible públicamente','er'); renderList(); return; }
   isPublicFill = true;
@@ -1302,7 +1305,7 @@ function submitForm() {
     const numero = envios.filter(e=>e.plantillaId===activeTmpl.id).reduce((max,e)=>Math.max(max,e.numero||0),0) + 1;
 
     const envio = {
-      id: `env_${Date.now()}`,
+      id: skfUUID(),
       numero,
       plantillaId: activeTmpl.id,
       plantillaNombre: activeTmpl.nombre,
@@ -1316,7 +1319,7 @@ function submitForm() {
     };
 
     const hallazgosEnvio = hallazgos.map(h => ({
-      id: `hz_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+      id: skfUUID(),
       envioId: envio.id,
       plantillaId: activeTmpl.id,
       plantillaNombre: activeTmpl.nombre,

@@ -199,7 +199,7 @@ function skfRenderSidebar() {
 
   // Si el cache del SW ya existe, mostrar que ya está lista para sin conexión
   if ('caches' in window) {
-    caches.has('skf-shell-v4').then(has => {
+    caches.has('skf-shell-v5').then(has => {
       if (has) {
         const btn = document.getElementById('bbOfflineBtn');
         if (btn) { btn.textContent = '✓ Lista sin conexión'; btn.classList.add('bb-offline-ready'); }

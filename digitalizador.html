@@ -227,7 +227,7 @@
     .dup-warn-btns{display:flex;gap:8px;flex-wrap:wrap;}
     .dup-warn-btns .btn{flex:1;justify-content:center;text-decoration:none;min-width:140px;}
   </style>
-  <script src="supabase-config.js"></script>
+  <script src="skf-api.js"></script>
   <script src="form-library.js"></script>
   <script src="field-types.js"></script>
 </head>
@@ -1946,7 +1946,7 @@ function save(){
   if(!tmpl.nombre){toast('Sin nombre','er');return;}
   if(!tmpl.campos.length){toast('Agrega campos primero','er');return;}
   if(!tmpl.codigo)tmpl.codigo=genNextCodigo(); // red de seguridad: nunca debería quedar vacío
-  if(!tmpl.id){tmpl.id=`tmpl_${Date.now()}`;tmpl.creadoEn=new Date().toISOString();}
+  if(!tmpl.id){tmpl.id=skfUUID();tmpl.creadoEn=new Date().toISOString();}
   tmpl.actualizadoEn=new Date().toISOString();
   const list=JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
   const i=list.findIndex(p=>p.id===tmpl.id);
