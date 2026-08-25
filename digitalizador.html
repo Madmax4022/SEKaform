@@ -2074,8 +2074,14 @@ async function _paisCode() {
 }
 
 async function loadPreset(presetId, editMode, archiveOnly) {
-  const t = FORM_LIBRARY.find(x => x.id === presetId);
-  if (!t) return false;
+  const base = FORM_LIBRARY.find(x => x.id === presetId);
+  if (!base) return false;
+  // Localiza nombre, norma y etiquetas de campo (p. ej. el comité: COPASST en
+  // Colombia, Comité de Salud, Seguridad e Higiene en Panamá…) al país de la
+  // organización. El formulario se guarda ya localizado. Sin país conocido cae
+  // a Colombia (ancla). skfLocalizeTemplate no muta el catálogo original.
+  const _pais = await _paisCode();
+  const t = (typeof skfLocalizeTemplate === 'function') ? skfLocalizeTemplate(base, _pais) : base;
   tmpl.nombre = t.nombre;
   tmpl.campos = t.campos_clave.map((f,i) => ({
     id: `c${Date.now()}_${i}_${Math.random().toString(36).slice(2,5)}`,
@@ -2088,10 +2094,7 @@ async function loadPreset(presetId, editMode, archiveOnly) {
   }));
   const fNomEl = document.getElementById('fNom');
   if (fNomEl) fNomEl.value = t.nombre;
-  // Norma localizada al país de la organización (núcleo SST). Sin localización
-  // o sin país conocido, usa la norma por defecto de la plantilla.
-  const _pais = await _paisCode();
-  tmpl.norma = (t.localizacion && t.localizacion[_pais] && t.localizacion[_pais].norma) || t.norma || '';
+  tmpl.norma = t.norma || '';
   const fNormaEl = document.getElementById('fNorma');
   if (fNormaEl) fNormaEl.value = tmpl.norma;
 
