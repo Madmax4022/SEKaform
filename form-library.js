@@ -4,11 +4,19 @@
 // `comite_de` es el nombre del comité con su artículo/contracción correctos
 // ("del COPASST", "de la Comisión…"), para que los campos localizados
 // ("Presidente {comite_de}") queden gramaticalmente bien en cada país.
+// `aseguradora` = ente que cubre los riesgos laborales/profesionales, distinto
+// en cada país: ARL (varias, Colombia), CSS (Panamá), INS (Costa Rica), ISSS
+// (El Salvador). Un campo con `local:'aseguradora'` toma de aquí su etiqueta y
+// sus opciones según el país de la organización.
 const SST_LOCAL = {
-  co: { pais:'Colombia',    regulador:'Ministerio del Trabajo',              comite:'COPASST',                                  comite_de:'del COPASST',                                comite_sigla:'COPASST', norma:'Decreto 1072/2015 · Res. 0312/2019',                  umbral:'—' },
-  pa: { pais:'Panamá',      regulador:'CSS · MITRADEL',                      comite:'Comité de Salud, Seguridad e Higiene',     comite_de:'del Comité de Salud, Seguridad e Higiene',   comite_sigla:'CSSH',     norma:'Reglamento de Riesgos Profesionales (Res. 45.588, CSS)', umbral:'según la empresa' },
-  cr: { pais:'Costa Rica',  regulador:'MTSS · Consejo de Salud Ocupacional', comite:'Comisión de Salud Ocupacional',            comite_de:'de la Comisión de Salud Ocupacional',        comite_sigla:'CSO',      norma:'Ley 6727 · Reglamento de Seguridad e Higiene',        umbral:'10+ trabajadores' },
-  sv: { pais:'El Salvador', regulador:'MTPS',                                comite:'Comité de Seguridad y Salud Ocupacional',  comite_de:'del Comité de Seguridad y Salud Ocupacional', comite_sigla:'CSSO',    norma:'Ley 254/2010 · Reglamentos Dec. 86 y 89 de 2012',     umbral:'15+ trabajadores' },
+  co: { pais:'Colombia',    regulador:'Ministerio del Trabajo',              comite:'COPASST',                                  comite_de:'del COPASST',                                comite_sigla:'COPASST', norma:'Decreto 1072/2015 · Res. 0312/2019',                  umbral:'—',
+        aseguradora:{ label:'ARL — Administradora de Riesgos Laborales', sigla:'ARL', a:'a la ARL', opciones:['Positiva','Sura','Colmena','Axa Colpatria','Bolívar','Liberty','La Equidad','Mapfre','Otra'] } },
+  pa: { pais:'Panamá',      regulador:'CSS · MITRADEL',                      comite:'Comité de Salud, Seguridad e Higiene',     comite_de:'del Comité de Salud, Seguridad e Higiene',   comite_sigla:'CSSH',     norma:'Reglamento de Riesgos Profesionales (Res. 45.588, CSS)', umbral:'según la empresa',
+        aseguradora:{ label:'Aseguradora — Riesgos Profesionales (CSS)', sigla:'CSS', a:'a la CSS', opciones:['CSS — Caja de Seguro Social','Otra'] } },
+  cr: { pais:'Costa Rica',  regulador:'MTSS · Consejo de Salud Ocupacional', comite:'Comisión de Salud Ocupacional',            comite_de:'de la Comisión de Salud Ocupacional',        comite_sigla:'CSO',      norma:'Ley 6727 · Reglamento de Seguridad e Higiene',        umbral:'10+ trabajadores',
+        aseguradora:{ label:'Aseguradora — Riesgos del Trabajo (INS)', sigla:'INS', a:'al INS', opciones:['INS — Instituto Nacional de Seguros','Otra'] } },
+  sv: { pais:'El Salvador', regulador:'MTPS',                                comite:'Comité de Seguridad y Salud Ocupacional',  comite_de:'del Comité de Seguridad y Salud Ocupacional', comite_sigla:'CSSO',    norma:'Ley 254/2010 · Reglamentos Dec. 86 y 89 de 2012',     umbral:'15+ trabajadores',
+        aseguradora:{ label:'Aseguradora — Riesgos Profesionales (ISSS)', sigla:'ISSS', a:'al ISSS', opciones:['ISSS — Instituto Salvadoreño del Seguro Social','Otra'] } },
 };
 
 // Localización de texto por país. Las plantillas del núcleo escriben el comité
@@ -20,10 +28,13 @@ const SST_LOCAL = {
 function skfLocalizeText(str, paisCode) {
   if (!str || str.indexOf('{') === -1) return str;
   const L = SST_LOCAL[paisCode] || SST_LOCAL.co;
+  const A = L.aseguradora || {};
   return str
     .replace(/\{comite_sigla\}/g, L.comite_sigla)
     .replace(/\{comite_de\}/g, L.comite_de)
-    .replace(/\{comite\}/g, L.comite);
+    .replace(/\{comite\}/g, L.comite)
+    .replace(/\{aseg_a\}/g, A.a || '')
+    .replace(/\{aseg_sigla\}/g, A.sigla || '');
 }
 
 // Devuelve una COPIA de la plantilla con norma, nombre y etiquetas de campo ya
@@ -35,8 +46,18 @@ function skfLocalizeTemplate(tmpl, paisCode) {
   if (L && L.norma) out.norma = L.norma;
   out.nombre = skfLocalizeText(tmpl.nombre, paisCode);
   if (Array.isArray(tmpl.campos_clave)) {
-    out.campos_clave = tmpl.campos_clave.map(c =>
-      Object.assign({}, c, { etiqueta: skfLocalizeText(c.etiqueta, paisCode) }));
+    const LOC = SST_LOCAL[paisCode] || SST_LOCAL.co;
+    out.campos_clave = tmpl.campos_clave.map(c => {
+      const nc = Object.assign({}, c, { etiqueta: skfLocalizeText(c.etiqueta, paisCode) });
+      // Campo con opciones/etiqueta propias del país (p. ej. `local:'aseguradora'`
+      // → ARL en Colombia, CSS en Panamá, INS en Costa Rica, ISSS en El Salvador).
+      const spec = c.local && LOC[c.local];
+      if (spec) {
+        if (spec.label) nc.etiqueta = spec.label;
+        if (Array.isArray(spec.opciones)) nc.opciones = spec.opciones.slice();
+      }
+      return nc;
+    });
   }
   return out;
 }
@@ -264,7 +285,7 @@ const FORM_LIBRARY = [
    campos_clave:[
     {etiqueta:'Fecha del accidente',tipo:'fecha_auto'},{etiqueta:'Hora del accidente',tipo:'hora_auto'},
     {etiqueta:'Fecha de investigación',tipo:'fecha_auto'},{etiqueta:'Trabajador accidentado',tipo:'texto'},
-    {etiqueta:'Cargo',tipo:'select'},{etiqueta:'ARL',tipo:'select',opciones:['Positiva','Sura','Colmena','Axa Colpatria','Bolívar','Liberty','Otro']},
+    {etiqueta:'Cargo',tipo:'select'},{etiqueta:'ARL',tipo:'select',local:'aseguradora',opciones:['Positiva','Sura','Colmena','Axa Colpatria','Bolívar','Liberty','Otra']},
     {etiqueta:'Días de incapacidad',tipo:'numero'},
     {etiqueta:'Descripción detallada del accidente',tipo:'textarea'},
     {etiqueta:'Causas inmediatas — actos inseguros',tipo:'textarea'},
@@ -272,7 +293,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Causas básicas — factores personales',tipo:'textarea'},
     {etiqueta:'Causas básicas — factores del trabajo',tipo:'textarea'},
     {etiqueta:'Plan de acción correctiva',tipo:'textarea'},{etiqueta:'Responsable del plan',tipo:'texto'},
-    {etiqueta:'Fecha límite de acción',tipo:'fecha_auto'},{etiqueta:'¿Se reportó a la ARL?',tipo:'si_no'},
+    {etiqueta:'Fecha límite de acción',tipo:'fecha_auto'},{etiqueta:'¿Se reportó {aseg_a}?',tipo:'si_no'},
     {etiqueta:'Fotografía de la escena',tipo:'foto'},{etiqueta:'Ubicación GPS',tipo:'ubicacion'},
     {etiqueta:'Firma del investigador',tipo:'firma'},{etiqueta:'Firma del representante legal',tipo:'firma'},
   ]},
