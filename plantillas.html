@@ -85,7 +85,15 @@
     .tcard-sector { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ok); }
     .tcard h3 { font-size: 1rem; font-weight: 800; margin: 0; }
     .tcard-count { font-size: .78rem; color: var(--mut); }
+    .tcard-local { font-size: .72rem; color: var(--pri); font-weight: 600; margin: 4px 0 2px; }
     .tcard-fields { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+    /* CTA: crea un formulario a la medida (congruente con el tono) */
+    .crear-cta { display:flex; align-items:center; gap:14px; background:var(--card); border:1px dashed var(--bor); border-radius:12px; padding:14px 18px; margin:0 0 20px; text-decoration:none; color:inherit; transition:border-color .15s, transform .12s; }
+    .crear-cta:hover { border-color:var(--pri); transform:translateY(-1px); }
+    .crear-cta .cc-ico { font-size:1.6rem; flex-shrink:0; }
+    .crear-cta .cc-body { flex:1; font-size:.88rem; color:var(--mut); line-height:1.45; }
+    .crear-cta .cc-body b { color:var(--txt); }
+    .crear-cta .cc-arr { color:var(--pri); font-weight:700; font-size:.85rem; white-space:nowrap; }
     .tfld {
       font-size: .68rem; padding: 3px 8px; border-radius: 20px;
       background: rgba(37,99,235,.12); color: #93c5fd; border: 1px solid rgba(37,99,235,.2);
@@ -133,6 +141,13 @@
     <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">✕</button>
   </div>
   <p class="search-count" id="searchCount" style="display:none"></p>
+
+  <!-- Mensaje congruente: si ninguna encaja, se crea a la medida -->
+  <a href="digitalizador.html" class="crear-cta">
+    <span class="cc-ico">🛠️</span>
+    <span class="cc-body"><b>¿Ninguna encaja con tu caso?</b> Crea un formulario a tu medida — toma una foto de tu formato, sube un PDF o escríbelo.</span>
+    <span class="cc-arr">Crear →</span>
+  </a>
 
   <div class="filters" id="filters"></div>
 
@@ -212,6 +227,7 @@ function cardHtml(t) {
       <div class="tcard-sector">${esc(VERTICAL_LABELS[t.vertical] || t.vertical)}</div>
       <h3>${esc(t.nombre)}</h3>
       <div class="tcard-count">${t.campos_clave.length} campos preconfigurados</div>
+      ${(t.localizacion && t.localizacion[_skfPaisCode]) ? `<div class="tcard-local">📍 ${esc(t.localizacion[_skfPaisCode].pais)}: ${esc(t.localizacion[_skfPaisCode].comite)}</div>` : ''}
       <div class="tcard-fields">
         ${fieldNames.map(f => `<span class="tfld">${esc(f)}</span>`).join('')}
         ${extra > 0 ? `<span class="tfld tfld-more">+${extra} más</span>` : ''}
@@ -306,6 +322,21 @@ function render() {
 }
 
 document.getElementById('searchInp').addEventListener('input', onSearchInput);
+
+// País de la organización → localización de las plantillas del núcleo SST.
+// Si no hay sesión/país, se queda en Colombia (ancla). Al resolverlo, repinta.
+let _skfPaisCode = 'co';
+(async () => {
+  try {
+    if (typeof sbLoadOrg !== 'function') return;
+    const o = await sbLoadOrg();
+    const p = (o && o.pais) ? String(o.pais).trim().toLowerCase() : '';
+    const map = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa', 'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
+    const code = map[p] || 'co';
+    if (code !== _skfPaisCode) { _skfPaisCode = code; render(); }
+  } catch {}
+})();
+
 render();
 </script>
 </body>
