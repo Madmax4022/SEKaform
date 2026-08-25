@@ -1,12 +1,45 @@
 // Catálogo compartido de plantillas — consumido por digitalizador.html (sugerencias matchTemplate) y plantillas.html (índice navegable)
 // Contexto de localización del núcleo SST — el MISMO formulario sirve en los 4
 // países; solo cambia el ente, el comité y la cita legal (verificado ago-2026).
+// `comite_de` es el nombre del comité con su artículo/contracción correctos
+// ("del COPASST", "de la Comisión…"), para que los campos localizados
+// ("Presidente {comite_de}") queden gramaticalmente bien en cada país.
 const SST_LOCAL = {
-  co: { pais:'Colombia',    regulador:'Ministerio del Trabajo',              comite:'COPASST',                                  norma:'Decreto 1072/2015 · Res. 0312/2019',                  umbral:'—' },
-  pa: { pais:'Panamá',      regulador:'CSS · MITRADEL',                      comite:'Comité de Salud, Seguridad e Higiene',     norma:'Reglamento de Riesgos Profesionales (Res. 45.588, CSS)', umbral:'según la empresa' },
-  cr: { pais:'Costa Rica',  regulador:'MTSS · Consejo de Salud Ocupacional', comite:'Comisión de Salud Ocupacional',            norma:'Ley 6727 · Reglamento de Seguridad e Higiene',        umbral:'10+ trabajadores' },
-  sv: { pais:'El Salvador', regulador:'MTPS',                                comite:'Comité de Seguridad y Salud Ocupacional',  norma:'Ley 254/2010 · Reglamentos Dec. 86 y 89 de 2012',     umbral:'15+ trabajadores' },
+  co: { pais:'Colombia',    regulador:'Ministerio del Trabajo',              comite:'COPASST',                                  comite_de:'del COPASST',                                comite_sigla:'COPASST', norma:'Decreto 1072/2015 · Res. 0312/2019',                  umbral:'—' },
+  pa: { pais:'Panamá',      regulador:'CSS · MITRADEL',                      comite:'Comité de Salud, Seguridad e Higiene',     comite_de:'del Comité de Salud, Seguridad e Higiene',   comite_sigla:'CSSH',     norma:'Reglamento de Riesgos Profesionales (Res. 45.588, CSS)', umbral:'según la empresa' },
+  cr: { pais:'Costa Rica',  regulador:'MTSS · Consejo de Salud Ocupacional', comite:'Comisión de Salud Ocupacional',            comite_de:'de la Comisión de Salud Ocupacional',        comite_sigla:'CSO',      norma:'Ley 6727 · Reglamento de Seguridad e Higiene',        umbral:'10+ trabajadores' },
+  sv: { pais:'El Salvador', regulador:'MTPS',                                comite:'Comité de Seguridad y Salud Ocupacional',  comite_de:'del Comité de Seguridad y Salud Ocupacional', comite_sigla:'CSSO',    norma:'Ley 254/2010 · Reglamentos Dec. 86 y 89 de 2012',     umbral:'15+ trabajadores' },
 };
+
+// Localización de texto por país. Las plantillas del núcleo escriben el comité
+// con tokens ({comite}, {comite_de}, {comite_sigla}); aquí se sustituyen por el
+// nombre vigente en el país de la organización. La sustitución ocurre una sola
+// vez —al precargar la plantilla en el Digitalizador— y el formulario se guarda
+// ya localizado, así que en Panamá "Acta de Reunión — COPASST" nace como
+// "Acta de Reunión — Comité de Salud, Seguridad e Higiene".
+function skfLocalizeText(str, paisCode) {
+  if (!str || str.indexOf('{') === -1) return str;
+  const L = SST_LOCAL[paisCode] || SST_LOCAL.co;
+  return str
+    .replace(/\{comite_sigla\}/g, L.comite_sigla)
+    .replace(/\{comite_de\}/g, L.comite_de)
+    .replace(/\{comite\}/g, L.comite);
+}
+
+// Devuelve una COPIA de la plantilla con norma, nombre y etiquetas de campo ya
+// localizados al país. No muta el original del catálogo.
+function skfLocalizeTemplate(tmpl, paisCode) {
+  if (!tmpl) return tmpl;
+  const out = Object.assign({}, tmpl);
+  const L = tmpl.localizacion && (tmpl.localizacion[paisCode] || tmpl.localizacion.co);
+  if (L && L.norma) out.norma = L.norma;
+  out.nombre = skfLocalizeText(tmpl.nombre, paisCode);
+  if (Array.isArray(tmpl.campos_clave)) {
+    out.campos_clave = tmpl.campos_clave.map(c =>
+      Object.assign({}, c, { etiqueta: skfLocalizeText(c.etiqueta, paisCode) }));
+  }
+  return out;
+}
 
 const FORM_LIBRARY = [
   // ── Calidad / SGC Verticales (ISO 9001:2015) ──────────────────
@@ -198,13 +231,13 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del coordinador de brigada',tipo:'firma'},
   ]},
 
-  {id:'acta_copasst',vertical:'sst',nucleo:true,freq:9,localizacion:SST_LOCAL,nombre:'Acta de Reunión COPASST',
-   keywords:['copasst','copasos','comite paritario','representante empleador','representante trabajadores','presidente copasst','secretario copasst','sgsst'],
+  {id:'acta_copasst',vertical:'sst',nucleo:true,freq:9,localizacion:SST_LOCAL,nombre:'Acta de Reunión — {comite}',
+   keywords:['copasst','copasos','comite paritario','comite de salud','comision de salud ocupacional','representante empleador','representante trabajadores','presidente copasst','secretario copasst','sgsst','sso'],
    campos_clave:[
     {etiqueta:'Número de acta',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
     {etiqueta:'Hora de inicio',tipo:'hora_auto'},{etiqueta:'Hora de finalización',tipo:'hora'},
     {etiqueta:'Tipo de reunión',tipo:'select',opciones:['Ordinaria mensual','Extraordinaria']},
-    {etiqueta:'Presidente del COPASST',tipo:'texto'},{etiqueta:'Secretario del COPASST',tipo:'texto'},
+    {etiqueta:'Presidente {comite_de}',tipo:'texto'},{etiqueta:'Secretario {comite_de}',tipo:'texto'},
     {etiqueta:'Representante del empleador',tipo:'texto'},{etiqueta:'Representante de los trabajadores',tipo:'texto'},
     {etiqueta:'Orden del día',tipo:'textarea'},{etiqueta:'Temas tratados y decisiones',tipo:'textarea'},
     {etiqueta:'Compromisos / Responsables',tipo:'textarea'},{etiqueta:'Fecha de seguimiento',tipo:'fecha_auto'},

@@ -196,8 +196,9 @@ let searchQuery = '';
 
 function matchesSearch(t, q) {
   if (!q) return true;
-  const hay = _norm(t.nombre) + ' ' + _norm(VERTICAL_LABELS[t.vertical] || t.vertical) + ' ' +
-    (t.campos_clave || []).map(c => _norm(c.etiqueta)).join(' ');
+  const _loc = (typeof skfLocalizeText === 'function') ? (s => skfLocalizeText(s, _skfPaisCode)) : (s => s);
+  const hay = _norm(_loc(t.nombre)) + ' ' + _norm(VERTICAL_LABELS[t.vertical] || t.vertical) + ' ' +
+    (t.campos_clave || []).map(c => _norm(_loc(c.etiqueta))).join(' ');
   return q.split(/\s+/).filter(Boolean).every(term => hay.includes(term));
 }
 
@@ -221,11 +222,12 @@ function toggleSection(v) {
 }
 
 function cardHtml(t) {
-  const fieldNames = t.campos_clave.slice(0, 4).map(c => c.etiqueta);
+  const _loc = (typeof skfLocalizeText === 'function') ? (s => skfLocalizeText(s, _skfPaisCode)) : (s => s);
+  const fieldNames = t.campos_clave.slice(0, 4).map(c => _loc(c.etiqueta));
   const extra = t.campos_clave.length - fieldNames.length;
   return `<div class="tcard">
       <div class="tcard-sector">${esc(VERTICAL_LABELS[t.vertical] || t.vertical)}</div>
-      <h3>${esc(t.nombre)}</h3>
+      <h3>${esc(_loc(t.nombre))}</h3>
       <div class="tcard-count">${t.campos_clave.length} campos preconfigurados</div>
       ${(t.localizacion && t.localizacion[_skfPaisCode]) ? `<div class="tcard-local">📍 ${esc(t.localizacion[_skfPaisCode].pais)}: ${esc(t.localizacion[_skfPaisCode].comite)}</div>` : ''}
       <div class="tcard-fields">
