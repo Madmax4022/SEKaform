@@ -154,15 +154,21 @@ function skfRenderSidebar() {
       </div>
     </aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="skfToggleSidebar(false)"></div>
-    <div class="skf-bottom-bar" id="skfBottomBar">
-      <a href="index.html" class="bb-btn">🏠 Inicio</a>
-      <div class="bb-auth" id="bbAuthZone">
-        <a class="bb-btn" href="login.html">☁ Iniciar sesión</a>
-      </div>
-      <button class="bb-btn" id="bbOfflineBtn" onclick="skfPrepareOffline()">📥 Sin conexión</button>
-    </div>
+    <nav class="skf-bottom-bar" id="skfBottomBar" aria-label="Navegación">
+      <a href="index.html"     class="bb-tab" data-page="index.html"><span class="bi">⛑️</span>SST</a>
+      <a href="llenar.html"    class="bb-tab" data-page="llenar.html"><span class="bi">📝</span>Llenar</a>
+      <a href="dashboard.html" class="bb-tab" data-page="dashboard.html"><span class="bi">📊</span>Panel</a>
+      <button type="button" class="bb-tab" onclick="skfToggleSidebar(true)"><span class="bi">⋯</span>Más</button>
+    </nav>
   `;
   document.body.insertAdjacentHTML('afterbegin', html);
+
+  // Marca la pestaña activa de la barra inferior según la página actual.
+  const _cur = (location.pathname.split('/').pop() || 'index.html');
+  document.querySelectorAll('#skfBottomBar .bb-tab[data-page]').forEach(t => {
+    const pg = t.getAttribute('data-page');
+    if (pg === _cur || (pg === 'index.html' && (_cur === '' || _cur === 'index.html'))) t.classList.add('active');
+  });
 
   // En páginas con barra de herramientas (llenar, digitalizador) los botones
   // de la toolbar viven arriba a la derecha, justo donde flota la barra de
