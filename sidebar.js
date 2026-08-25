@@ -197,9 +197,11 @@ function skfRenderSidebar() {
     }).catch(() => {});
   }
 
-  // Si el cache del SW ya existe, mostrar que ya está lista para sin conexión
+  // Si el cache del SW ya existe, mostrar que ya está lista para sin conexión.
+  // Se busca por prefijo y no por el nombre exacto: al bumpear CACHE_VERSION en
+  // sw.js este check quedaba mirando un cache viejo y el aviso no volvía a salir.
   if ('caches' in window) {
-    caches.has('skf-shell-v4').then(has => {
+    caches.keys().then(ks => ks.some(k => k.startsWith('skf-shell-'))).then(has => {
       if (has) {
         const btn = document.getElementById('bbOfflineBtn');
         if (btn) { btn.textContent = '✓ Lista sin conexión'; btn.classList.add('bb-offline-ready'); }

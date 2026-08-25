@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Dashboard — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="supabase-config.js"></script>
+  <script src="skf-api.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -1192,7 +1192,13 @@ function exportarPanelPDF() {
 // local (mismo equipo) + nube vía Supabase (cualquier equipo).
 // ══════════════════════════════════════════════════════════════════
 function _panelToken() {
-  return 'pnl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  // Este token es la única credencial del panel: quien lo tenga ve la foto
+  // completa. Math.random() con un prefijo de Date.now() era adivinable —
+  // el prefijo se acota sabiendo cuándo se compartió. skfUUID() usa
+  // crypto.getRandomValues (122 bits de azar), que sí aguanta ser un secreto.
+  return 'pnl_' + (typeof skfUUID === 'function'
+    ? skfUUID().replace(/-/g, '')
+    : Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
 }
 function _construirSnapshot() {
   const ds = datosFiltrados();
@@ -1232,7 +1238,7 @@ async function _compartir(modo) {
   if (typeof sbPublishPanel === 'function') { try { cloud = await sbPublishPanel(token, snap.filtro, snap); } catch {} }
   note.innerHTML = cloud
     ? '☁ <strong>Link en la nube:</strong> funciona en cualquier dispositivo. Es una foto de este momento — vuelve a compartir para actualizarla.'
-    : '💾 Guardado en <strong>este dispositivo</strong>. Para que el link abra en otros equipos, conecta tu organización a la nube (Supabase) y vuelve a compartir.';
+    : '💾 Guardado en <strong>este dispositivo</strong>. No se pudo publicar en la nube — revisa tu conexión y vuelve a compartir para que el link abra en otros equipos.';
 }
 function abrirCompartirPanel() { _compartir('estatus'); }
 function abrirCompartirCorrecciones() { _compartir('operativo'); }

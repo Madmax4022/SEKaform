@@ -1,0 +1,18 @@
+# Kanan Sentinel · SEKaform — dependencias de ejecución
+# Versiones fijadas: un despliegue debe ser reproducible aunque se reconstruya
+# la imagen meses después.
+
+Flask==3.0.3
+Flask-Login==0.6.3
+Flask-WTF==1.2.1            # CSRF en todos los formularios y peticiones de escritura
+Flask-Limiter==3.8.0        # freno a fuerza bruta en login/registro/restablecer
+Werkzeug==3.0.6
+
+psycopg2-binary==2.9.10
+
+google-cloud-storage==2.18.2    # fotos y firmas fuera de la base de datos
+google-cloud-logging==3.11.3    # logs estructurados en Cloud Logging
+
+requests==2.32.3
+python-dateutil==2.9.0.post0
+gunicorn==23.0.0

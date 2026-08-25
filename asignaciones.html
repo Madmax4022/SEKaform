@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Asignaciones — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="supabase-config.js"></script>
+  <script src="skf-api.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -253,7 +253,7 @@ async function createAsignacion() {
   const nuevas = lines.map(line => {
     const [nombre, correo] = line.split(',').map(s=>s && s.trim());
     const a = {
-      id: `asg_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+      id: skfUUID(),
       plantillaId: t.id, plantillaNombre: t.nombre, unidadId,
       nombre, correo: correo || null, creadoEn
     };

@@ -29,6 +29,33 @@
       letter-spacing: .9px; color: var(--mut); margin: 0 0 12px;
     }
 
+    /* ── SST — la estrella: recorrido guiado ───────────────────── */
+    .sst-hd { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; color: var(--ok); margin: 0 0 13px; display:flex; align-items:center; gap:8px; }
+    .sst-hd::after { content:""; flex:1; height:1px; background:var(--bor); }
+    .sst-journey { display: flex; flex-direction: column; gap: 10px; }
+    .sst-step { display: grid; grid-template-columns: 46px 1fr auto; gap: 15px; align-items: center;
+      background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 15px 17px;
+      text-decoration: none; color: inherit; min-height: 64px; transition: border-color .18s, transform .15s, box-shadow .18s; }
+    .sst-step:hover { border-color: var(--pri); transform: translateY(-2px); box-shadow: 0 10px 26px -8px rgba(0,0,0,.4); }
+    .sst-step .ico { width: 46px; height: 46px; border-radius: 12px; background: rgba(37,99,235,.1);
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .sst-step .lbl { font-size: 1.02rem; font-weight: 800; line-height: 1.2; }
+    .sst-step .num { color: var(--pri); }
+    .sst-step .sub { font-size: .82rem; color: var(--mut); margin-top: 3px; line-height: 1.4; }
+    .sst-step .arr { color: var(--mut); font-size: 1.25rem; }
+    .sst-step:hover .arr { color: var(--pri); }
+
+    /* ── Otras áreas (segundo plano, colapsable) ───────────────── */
+    details.mas { margin-top: 34px; border: 1px solid var(--bor); border-radius: 14px; background: var(--card); overflow: hidden; }
+    details.mas > summary { cursor: pointer; list-style: none; padding: 16px 18px; display: flex; align-items: center; gap: 13px; font-weight: 800; font-size: 1rem; }
+    details.mas > summary::-webkit-details-marker { display: none; }
+    details.mas > summary .plus { width: 27px; height: 27px; border-radius: 8px; background: rgba(37,99,235,.1); color: var(--pri); display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; font-size: 1.1rem; }
+    details.mas > summary .msub { display: block; font-weight: 400; color: var(--mut); font-size: .78rem; margin-top: 2px; }
+    details.mas > summary .chev { margin-left: auto; color: var(--mut); transition: transform .2s; }
+    details.mas[open] > summary .chev { transform: rotate(180deg); }
+    .mas-body { padding: 2px 18px 20px; }
+    .mas-body .tools-sep:first-child, .mas-body .sec-sep:first-of-type { margin-top: 8px; }
+
     /* ── Onboarding guiado (solo usuarios nuevos) ───────────────── */
     .onb { background: linear-gradient(135deg, rgba(37,99,235,.1), var(--card)); border: 1px solid rgba(37,99,235,.3); border-radius: 16px; padding: 22px 24px; margin-bottom: 32px; }
     .onb-h { font-size: 1.15rem; font-weight: 900; margin: 0 0 4px; }
@@ -147,14 +174,14 @@
   </style>
 </head>
 <body>
-  <script src="supabase-config.js"></script>
+  <script src="skf-api.js"></script>
   <script src="sidebar.js"></script>
 
   <div class="wrapper">
 
     <header>
-      <h1>SEKaform</h1>
-      <p>Cumple, demuéstralo y <strong style="color:var(--txt)">evita multas</strong>. Digitaliza tus inspecciones y ten la evidencia lista para cada visita — INVIMA, Trabajo, Bomberos.</p>
+      <h1>⛑️ SEKaform</h1>
+      <p>Tu <strong style="color:var(--txt)">Sistema de Gestión de SST</strong> digital. Cumple, demuéstralo y <strong style="color:var(--txt)">evita multas</strong> del Ministerio de Trabajo.</p>
     </header>
 
     <!-- ── Onboarding guiado (aparece solo mientras seas nuevo) ── -->
@@ -169,41 +196,57 @@
       <button type="button" class="onb-dismiss" onclick="ocultarOnb()">Ocultar esta guía</button>
     </section>
 
-    <!-- ── ¿Qué quieres hacer? ────────────────────────────────── -->
-    <div class="actions-hd">¿Qué quieres hacer?</div>
+    <!-- ── SST: la estrella — recorrido guiado ────────────────── -->
+    <div class="sst-hd">Tu ruta de Salud Ocupacional</div>
+    <div class="sst-journey">
+      <a href="plantillas.html?v=sst" class="sst-step">
+        <span class="ico">🗂️</span>
+        <div>
+          <div class="lbl"><span class="num">1 ·</span> Configura tu SG-SST</div>
+          <div class="sub">Matriz de peligros, política y responsable — la base que exige la ley.</div>
+        </div>
+        <span class="arr">→</span>
+      </a>
+      <a href="llenar.html" class="sst-step">
+        <span class="ico">🔎</span>
+        <div>
+          <div class="lbl"><span class="num">2 ·</span> Inspecciona</div>
+          <div class="sub">Seguridad, EPP, extintores, orden y aseo — captura desde el celular.</div>
+        </div>
+        <span class="arr">→</span>
+      </a>
+      <a href="hallazgos.html" class="sst-step">
+        <span class="ico">⚠️</span>
+        <div>
+          <div class="lbl"><span class="num">3 ·</span> Hallazgos y acciones</div>
+          <div class="sub">Corrige lo que falla y cierra el ciclo — antes de que llegue el inspector.</div>
+        </div>
+        <span class="arr">→</span>
+      </a>
+      <a href="dashboard.html" class="sst-step">
+        <span class="ico">📄</span>
+        <div>
+          <div class="lbl"><span class="num">4 ·</span> Mide y demuestra</div>
+          <div class="sub">Indicadores y carpeta de evidencia — tu defensa ante el Ministerio de Trabajo.</div>
+        </div>
+        <span class="arr">→</span>
+      </a>
+    </div>
 
-    <a href="asignaciones.html" class="action-card ac-primary">
-      <span class="ac-ico">👥</span>
-      <div class="ac-body">
-        <span class="ac-label">Asignar formularios al equipo</span>
-        <span class="ac-sub">Define quién llena qué y haz seguimiento de cumplimiento</span>
-      </div>
-      <span class="ac-arr">→</span>
-    </a>
-
-    <a href="llenar.html" class="action-card">
-      <span class="ac-ico">✏️</span>
-      <div class="ac-body">
-        <span class="ac-label">Llenar un formulario</span>
-        <span class="ac-sub">Abre, completa y envía desde tu celular o tablet</span>
-      </div>
-      <span class="ac-arr">→</span>
-    </a>
-
-    <a href="plantillas.html" class="action-card">
-      <span class="ac-ico">📋</span>
-      <div class="ac-body">
-        <span class="ac-label">Crear o buscar formulario</span>
-        <span class="ac-sub">69 plantillas listas — SST, NFPA, calidad, alimentos y más</span>
-      </div>
-      <span class="ac-arr">→</span>
-    </a>
-
-    <a href="digitalizador.html" class="ac-alt">⚡ ¿Tienes un formulario en papel o PDF? Digitalizarlo →</a>
+    <!-- ── Todo lo demás: visible pero colapsado ──────────────── -->
+    <details class="mas">
+      <summary>
+        <span class="plus">+</span>
+        <span>Otras áreas y formularios<span class="msub">Limpieza · Compras · Calidad · NFPA · Alimentos · Crear formulario</span></span>
+        <span class="chev">⌄</span>
+      </summary>
+      <div class="mas-body">
 
     <!-- ── Herramientas secundarias ───────────────────────────── -->
-    <div class="tools-sep">También</div>
+    <div class="tools-sep">Acciones</div>
     <div class="tools-row">
+      <a href="digitalizador.html" class="tool-chip">⚡ Crear formulario</a>
+      <a href="asignaciones.html" class="tool-chip">👥 Asignar al equipo</a>
       <a href="dashboard.html"  class="tool-chip">📊 Panel de control</a>
       <a href="hallazgos.html"  class="tool-chip">⚠️ Hallazgos y CAPA</a>
     </div>
@@ -326,6 +369,8 @@
       </a>
 
     </div>
+      </div><!-- /mas-body -->
+    </details>
 
     <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
   </div>

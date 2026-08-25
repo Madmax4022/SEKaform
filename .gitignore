@@ -1,0 +1,9 @@
+
+# Variables por cliente: contienen nombres de proyecto y URLs internas
+infra/cliente.tfvars
+infra/*.tfstate*
+infra/.terraform/
+__pycache__/
+*.pyc
+infra/cliente.tfvars.bak
+.claude/

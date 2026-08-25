@@ -1,0 +1,14 @@
+.git
+.github
+tests
+infra
+venv
+__pycache__
+*.pyc
+.DS_Store
+ANALISIS.md
+ESTRATEGIA.md
+GUIA-USUARIO.md
+supabase
+supabase-config.js
+supabase-schema.sql
