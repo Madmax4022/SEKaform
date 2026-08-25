@@ -46,6 +46,13 @@ html.sb-collapsed .sidebar { transform: translateX(-100%); }
 .sidebar-link { display: flex; align-items: center; gap: 10px; color: var(--mut); text-decoration: none; font-size: .86rem; font-weight: 600; padding: 10px 12px; border-radius: 8px; transition: background .15s, color .15s; }
 .sidebar-link:hover { background: var(--bor); color: var(--txt); }
 .sidebar-link.active { color: var(--pri); background: var(--pri-dim); }
+/* Menú agrupado: encabezados de grupo + grupo colapsable */
+.sidebar-group { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-group-h { font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--mut); padding: 13px 12px 5px; }
+details.sidebar-group > summary.sidebar-group-h { cursor: pointer; list-style: none; display: flex; align-items: center; }
+details.sidebar-group > summary.sidebar-group-h::-webkit-details-marker { display: none; }
+details.sidebar-group > summary.sidebar-group-h::after { content: '⌄'; margin-left: auto; color: var(--mut); font-size: .9rem; transition: transform .2s; }
+details.sidebar-group[open] > summary.sidebar-group-h::after { transform: rotate(180deg); }
 .sidebar-ico { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
 
 .sidebar-bottom { border-top: 1px solid var(--bor); padding-top: 12px; margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }

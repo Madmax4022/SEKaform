@@ -139,9 +139,35 @@ async function skfApplyRoleGating() {
 
 function skfRenderSidebar() {
   const current = (location.pathname.split('/').pop() || 'index.html');
-  const links = SKF_NAV_LINKS.map(n =>
-    `<a href="${n.href}" class="sidebar-link${current === n.href ? ' active' : ''}"><span class="sidebar-ico">${n.ico}</span>${n.label}</a>`
-  ).join('');
+  // Menú agrupado: la SST es la estrella; la configuración y las herramientas
+  // de creación quedan en un grupo colapsable ("segundo plano").
+  const GRUPOS = [
+    { h: '⛑️ Salud Ocupacional', links: [
+      { href: 'index.html',     ico: '⛑️', label: 'Centro de SST' },
+      { href: 'hallazgos.html', ico: '⚠️', label: 'Hallazgos' },
+    ]},
+    { h: 'Día a día', links: [
+      { href: 'llenar.html',    ico: '📝', label: 'Mis formularios' },
+      { href: 'dashboard.html', ico: '📊', label: 'Panel de control' },
+    ]},
+    { h: 'Configuración y más', colapsable: true, links: [
+      { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
+      { href: 'plantillas.html',    ico: '📋', label: 'Catálogo de plantillas' },
+      { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
+      { href: 'programadas.html',   ico: '📅', label: 'Programadas' },
+      { href: 'unidades.html',      ico: '🏢', label: 'Sedes y áreas' },
+      { href: 'organizacion.html',  ico: '⚙️', label: 'Organización' },
+    ]},
+  ];
+  const _sl = l => `<a href="${l.href}" class="sidebar-link${current === l.href ? ' active' : ''}"><span class="sidebar-ico">${l.ico}</span>${l.label}</a>`;
+  const links = GRUPOS.map(g => {
+    const items = g.links.map(_sl).join('');
+    if (g.colapsable) {
+      const aqui = g.links.some(l => l.href === current);
+      return `<details class="sidebar-group"${aqui ? ' open' : ''}><summary class="sidebar-group-h">${g.h}</summary>${items}</details>`;
+    }
+    return `<div class="sidebar-group"><div class="sidebar-group-h">${g.h}</div>${items}</div>`;
+  }).join('');
 
   const html = `
     <div class="skf-sync-bar" id="skfSyncBar" style="display:none"></div>
