@@ -1,4 +1,13 @@
 // Catálogo compartido de plantillas — consumido por digitalizador.html (sugerencias matchTemplate) y plantillas.html (índice navegable)
+// Contexto de localización del núcleo SST — el MISMO formulario sirve en los 4
+// países; solo cambia el ente, el comité y la cita legal (verificado ago-2026).
+const SST_LOCAL = {
+  co: { pais:'Colombia',    regulador:'Ministerio del Trabajo',              comite:'COPASST',                                  norma:'Decreto 1072/2015 · Res. 0312/2019',                  umbral:'—' },
+  pa: { pais:'Panamá',      regulador:'CSS · MITRADEL',                      comite:'Comité de Salud, Seguridad e Higiene',     norma:'Reglamento de Riesgos Profesionales (Res. 45.588, CSS)', umbral:'según la empresa' },
+  cr: { pais:'Costa Rica',  regulador:'MTSS · Consejo de Salud Ocupacional', comite:'Comisión de Salud Ocupacional',            norma:'Ley 6727 · Reglamento de Seguridad e Higiene',        umbral:'10+ trabajadores' },
+  sv: { pais:'El Salvador', regulador:'MTPS',                                comite:'Comité de Seguridad y Salud Ocupacional',  norma:'Ley 254/2010 · Reglamentos Dec. 86 y 89 de 2012',     umbral:'15+ trabajadores' },
+};
+
 const FORM_LIBRARY = [
   // ── Calidad / SGC Verticales (ISO 9001:2015) ──────────────────
   {id:'auditoria_interna_iso',vertical:'calidad',nombre:'Checklist de Auditoría Interna (ISO 9001 — Cl. 9.2)',norma:'ISO 9001:2015 — Cl. 9.2',
@@ -93,7 +102,7 @@ const FORM_LIBRARY = [
   ]},
 
   // ── SST Verticales (Decreto 1072/2015 · Res. 0312/2019 · GTC 45 · Res. 1401/2007) ──
-  {id:'inspeccion_sst',vertical:'sst',nombre:'Lista de Verificación SST',
+  {id:'inspeccion_sst',vertical:'sst',nucleo:true,freq:1,localizacion:SST_LOCAL,nombre:'Lista de Verificación SST',
    keywords:['inspeccion','verificacion','sst','seguridad','salud','trabajo','cumple','riesgo','epp','hallazgo'],
    campos_clave:[
     {etiqueta:'Empresa / Establecimiento',tipo:'texto'},{etiqueta:'Fecha de inspección',tipo:'fecha_auto'},
@@ -104,7 +113,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Fotografía de evidencia',tipo:'foto'},{etiqueta:'Firma del inspector',tipo:'firma'},
     {etiqueta:'Ubicación GPS',tipo:'ubicacion'},
   ]},
-  {id:'asistencia',vertical:'sst',nombre:'Registro de Asistencia a Capacitación',
+  {id:'asistencia',vertical:'sst',nucleo:true,freq:6,localizacion:SST_LOCAL,nombre:'Registro de Asistencia a Capacitación',
    keywords:['asistencia','capacitacion','participante','instructor','facilitador','tema','objetivo'],
    campos_clave:[
     {etiqueta:'Nombre completo del participante',tipo:'texto'},
@@ -115,7 +124,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del participante',tipo:'firma'},
     {etiqueta:'¿Completó la capacitación?',tipo:'si_no'},
   ]},
-  {id:'matriz_peligros',vertical:'sst',nombre:'Matriz de Identificación de Peligros y Valoración de Riesgos (GTC-45)',norma:'GTC 45 · Decreto 1072/2015',
+  {id:'matriz_peligros',vertical:'sst',nucleo:true,freq:13,localizacion:SST_LOCAL,nombre:'Matriz de Identificación de Peligros y Valoración de Riesgos (GTC-45)',norma:'GTC 45 · Decreto 1072/2015',
    keywords:['matriz','peligro','riesgo','gtc','valoracion','control','consecuencia','probabilidad','nivel de riesgo','intervencion'],
    campos_clave:[
     {etiqueta:'Proceso / Actividad',tipo:'texto'},{etiqueta:'Área / Lugar',tipo:'select',opciones:['Producción','Almacén','Oficinas','Mantenimiento','Exteriores','Otro']},
@@ -130,7 +139,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Ubicación GPS',tipo:'ubicacion'},{etiqueta:'Fotografía del riesgo',tipo:'foto'},
   ]},
 
-  {id:'permiso_trabajo',vertical:'sst',nombre:'Permiso de Trabajo de Alto Riesgo',
+  {id:'permiso_trabajo',vertical:'sst',nucleo:true,freq:4,localizacion:SST_LOCAL,nombre:'Permiso de Trabajo de Alto Riesgo',
    keywords:['permiso','altura','espacio confinado','electrico','caliente','riesgo','ats','atp','trabajador','petar','resolucion 4272','resolucion 0491'],
    campos_clave:[
     {etiqueta:'Número de permiso',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
@@ -142,7 +151,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del supervisor',tipo:'firma'},
   ]},
 
-  {id:'incidente_accidente',vertical:'sst',nombre:'Reporte de Incidente / Accidente Laboral',
+  {id:'incidente_accidente',vertical:'sst',nucleo:true,freq:7,localizacion:SST_LOCAL,nombre:'Reporte de Incidente / Accidente Laboral',
    keywords:['incidente','accidente','lesion','trabajador','causa','testigo','investigacion','herido','medica'],
    campos_clave:[
     {etiqueta:'Fecha del incidente',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},
@@ -154,7 +163,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del jefe inmediato',tipo:'firma'},
   ]},
 
-  {id:'autoevaluacion_res0312',vertical:'sst',nombre:'Autoevaluación de Estándares Mínimos SG-SST (Res. 0312/2019)',norma:'Resolución 0312 de 2019',
+  {id:'autoevaluacion_res0312',vertical:'sst',nucleo:true,freq:14,localizacion:SST_LOCAL,nombre:'Autoevaluación de Estándares Mínimos SG-SST (Res. 0312/2019)',norma:'Resolución 0312 de 2019',
    keywords:['estandares minimos','resolucion 0312','autoevaluacion','sgsst','plan de mejora','calificacion del sistema'],
    campos_clave:[
     {etiqueta:'Fecha de autoevaluación',tipo:'fecha_auto'},{etiqueta:'Número de trabajadores',tipo:'numero'},
@@ -165,7 +174,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma del responsable SST',tipo:'firma'},
   ]},
 
-  {id:'reporte_condicion_acto_inseguro',vertical:'sst',nombre:'Reporte de Acto y Condición Insegura',
+  {id:'reporte_condicion_acto_inseguro',vertical:'sst',nucleo:true,freq:2,localizacion:SST_LOCAL,nombre:'Reporte de Acto y Condición Insegura',
    keywords:['acto inseguro','condicion insegura','autorreporte','reporte de peligro','casi accidente','condiciones de trabajo'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Reportado por',tipo:'texto'},
@@ -177,7 +186,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Fotografía',tipo:'foto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
-  {id:'simulacro_evacuacion',vertical:'sst',nombre:'Evaluación de Simulacro de Evacuación',
+  {id:'simulacro_evacuacion',vertical:'sst',nucleo:true,freq:11,localizacion:SST_LOCAL,nombre:'Evaluación de Simulacro de Evacuación',
    keywords:['simulacro','evacuacion','punto de encuentro','brigada','tiempo de evacuacion','conteo de personal'],
    campos_clave:[
     {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de inicio',tipo:'hora_auto'},
@@ -189,7 +198,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del coordinador de brigada',tipo:'firma'},
   ]},
 
-  {id:'acta_copasst',vertical:'sst',nombre:'Acta de Reunión COPASST',
+  {id:'acta_copasst',vertical:'sst',nucleo:true,freq:9,localizacion:SST_LOCAL,nombre:'Acta de Reunión COPASST',
    keywords:['copasst','copasos','comite paritario','representante empleador','representante trabajadores','presidente copasst','secretario copasst','sgsst'],
    campos_clave:[
     {etiqueta:'Número de acta',tipo:'numero'},{etiqueta:'Fecha',tipo:'fecha_auto'},
@@ -202,7 +211,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del presidente',tipo:'firma'},{etiqueta:'Firma del secretario',tipo:'firma'},
   ]},
 
-  {id:'entrega_epp',vertical:'sst',nombre:'Entrega de Elementos de Protección Personal (EPP)',
+  {id:'entrega_epp',vertical:'sst',nucleo:true,freq:5,localizacion:SST_LOCAL,nombre:'Entrega de Elementos de Protección Personal (EPP)',
    keywords:['epp','elementos de proteccion personal','dotacion','casco','botas de seguridad','arnés','proteccion personal','kit epp','recibido conforme','entrega dotacion'],
    campos_clave:[
     {etiqueta:'Fecha de entrega',tipo:'fecha_auto'},{etiqueta:'Nombre del trabajador',tipo:'texto'},
@@ -217,7 +226,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del responsable de entrega',tipo:'firma'},
   ]},
 
-  {id:'investigacion_at',vertical:'sst',nombre:'Investigación de Accidente de Trabajo (Res. 1401/2007)',norma:'Resolución 1401 de 2007',
+  {id:'investigacion_at',vertical:'sst',nucleo:true,freq:8,localizacion:SST_LOCAL,nombre:'Investigación de Accidente de Trabajo (Res. 1401/2007)',norma:'Resolución 1401 de 2007',
    keywords:['causas basicas','causas inmediatas','accion correctiva','plan de accion','factores contribuyentes','causas raiz','resolucion 1401','investigacion de accidente'],
    campos_clave:[
     {etiqueta:'Fecha del accidente',tipo:'fecha_auto'},{etiqueta:'Hora del accidente',tipo:'hora_auto'},
@@ -235,7 +244,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del investigador',tipo:'firma'},{etiqueta:'Firma del representante legal',tipo:'firma'},
   ]},
 
-  {id:'inspeccion_botiquin',vertical:'sst',nombre:'Inspección de Botiquín y Brigada de Emergencias',
+  {id:'inspeccion_botiquin',vertical:'sst',nucleo:true,freq:10,localizacion:SST_LOCAL,nombre:'Inspección de Botiquín y Brigada de Emergencias',
    keywords:['botiquin','brigada','emergencia','extintor','primeros auxilios','camilla','kit de emergencia','evacuacion','punto de encuentro'],
    campos_clave:[
     {etiqueta:'Fecha de inspección',tipo:'fecha_auto'},{etiqueta:'Área / Ubicación',tipo:'texto'},
@@ -251,7 +260,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del inspector',tipo:'firma'},
   ]},
 
-  {id:'examen_medico_sst',vertical:'sst',nombre:'Remisión / Resultado de Examen Médico Ocupacional',
+  {id:'examen_medico_sst',vertical:'sst',nucleo:true,freq:12,localizacion:SST_LOCAL,nombre:'Remisión / Resultado de Examen Médico Ocupacional',
    keywords:['examen medico','medico ocupacional','profesiograma','aptitud','ingreso','periodico','retiro','apto','restriccion','eps'],
    campos_clave:[
     {etiqueta:'Nombre del trabajador',tipo:'texto'},{etiqueta:'Número de cédula',tipo:'numero'},
@@ -264,7 +273,7 @@ const FORM_LIBRARY = [
     {etiqueta:'Firma del trabajador',tipo:'firma'},{etiqueta:'Firma del responsable SST',tipo:'firma'},
   ]},
 
-  {id:'toma_5',vertical:'sst',nombre:'Toma 5 - Análisis Pre-Tarea de Trabajo de Alto Riesgo',
+  {id:'toma_5',vertical:'sst',nucleo:true,freq:3,localizacion:SST_LOCAL,nombre:'Toma 5 - Análisis Pre-Tarea de Trabajo de Alto Riesgo',
    keywords:['toma 5','toma cinco','take five','pre tarea','pretarea','analisis de riesgo','altura','espacio confinado','trabajo en caliente','chispa','autorizacion de trabajo','permiso','checklist de seguridad'],
    campos_clave:[
     {etiqueta:'Área / lugar de trabajo',tipo:'texto'},{etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora',tipo:'hora_auto'},

@@ -227,7 +227,10 @@ function cardHtml(t) {
 function render() {
   renderFilters();
   const active = currentFilter();
-  const list = active === 'todas' ? FORM_LIBRARY : FORM_LIBRARY.filter(t => t.vertical === active);
+  // Núcleo SST ordenado por frecuencia de uso (los más usados primero); el
+  // resto conserva su orden. .slice() para no mutar el catálogo compartido.
+  const list = (active === 'todas' ? FORM_LIBRARY.slice() : FORM_LIBRARY.filter(t => t.vertical === active))
+    .sort((a, b) => (a.freq || 99) - (b.freq || 99));
 
   if (active === 'calidad') {
     document.getElementById('pgTag').textContent = 'Sistema de Gestión de Calidad';
