@@ -99,6 +99,17 @@ html.sb-collapsed .sidebar { transform: translateX(-100%); }
   transition: background .15s, color .15s; white-space: nowrap; flex-shrink: 0;
 }
 .bb-btn:hover, .bb-btn:active { background: var(--bor); color: var(--txt); }
+/* Barra inferior tipo pestañas (SST · Llenar · Panel · Más) — ícono sobre etiqueta */
+.bb-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; height: 100%; min-width: 0;
+  font-size: .62rem; font-weight: 600; color: var(--mut);
+  background: none; border: none; cursor: pointer; font-family: inherit; text-decoration: none;
+  padding: 4px 2px; white-space: nowrap; transition: color .15s;
+}
+.bb-tab .bi { font-size: 1.3rem; line-height: 1; }
+.bb-tab.active { color: var(--pri); }
+.bb-tab:active { color: var(--txt); }
 .bb-auth {
   flex: 1; display: flex; justify-content: center; overflow: hidden; min-width: 0;
 }
