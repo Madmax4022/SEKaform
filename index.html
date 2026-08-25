@@ -378,12 +378,13 @@
     // hay sesión o conexión, la ruta se queda con su texto guía — sin romperse.
     (async function sstEstado() {
       if (typeof sbLoadHallazgos !== 'function') return;
-      let hz = null, env = null, acc = null;
+      let hz = null, env = null, acc = null, plt = null;
       try {
-        [hz, env, acc] = await Promise.all([
+        [hz, env, acc, plt] = await Promise.all([
           sbLoadHallazgos().catch(() => null),
           (typeof sbLoadEnvios === 'function' ? sbLoadEnvios() : Promise.resolve(null)).catch(() => null),
           (typeof sbLoadAccionesCorrectivas === 'function' ? sbLoadAccionesCorrectivas() : Promise.resolve(null)).catch(() => null),
+          (typeof sbLoadPlantillas === 'function' ? sbLoadPlantillas() : Promise.resolve(null)).catch(() => null),
         ]);
       } catch { return; }
       const setStat = (href, html, cls) => {
@@ -395,6 +396,11 @@
         el.className = 'st-stat ' + (cls || '');
         el.innerHTML = html;
       };
+      // Paso 1 — configuración: cuántos formularios/plantillas listos.
+      if (Array.isArray(plt)) {
+        if (plt.length > 0) setStat('plantillas.html?v=sst', `✓ ${plt.length} formulario${plt.length !== 1 ? 's' : ''} listo${plt.length !== 1 ? 's' : ''}`, 'ok');
+        else setStat('plantillas.html?v=sst', '▸ Empieza aquí', 'warn');
+      }
       const n = Array.isArray(env) ? env.length : null;
       if (n !== null) setStat('llenar.html', `📋 ${n} inspeccion${n !== 1 ? 'es' : 'ón'} capturada${n !== 1 ? 's' : ''}`, 'neutral');
       if (Array.isArray(hz)) {
@@ -408,6 +414,10 @@
         }).length;
         if (abiertos.length === 0) setStat('hallazgos.html', '✓ Al día — sin hallazgos abiertos', 'ok');
         else setStat('hallazgos.html', `⚠ ${abiertos.length} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · ${venc} vencido${venc !== 1 ? 's' : ''}` : ''}`, venc ? 'risk' : 'warn');
+        // Paso 4 — mide y demuestra: qué tanto has cerrado (o evidencia lista).
+        const totalHz = hz.length, cerrados = totalHz - abiertos.length;
+        if (totalHz > 0) setStat('dashboard.html', `${cerrados}/${totalHz} hallazgo${totalHz !== 1 ? 's' : ''} cerrado${cerrados !== 1 ? 's' : ''}`, cerrados === totalHz ? 'ok' : 'neutral');
+        else if (n && n > 0) setStat('dashboard.html', '📄 Evidencia lista', 'ok');
         const hs = document.getElementById('sstStatus');
         if (hs) {
           hs.innerHTML = `${n !== null ? n + ' inspecciones · ' : ''}${abiertos.length} hallazgo${abiertos.length !== 1 ? 's' : ''} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · <b>${venc} vencido${venc !== 1 ? 's' : ''}</b>` : ''}`;
