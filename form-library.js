@@ -10,12 +10,16 @@
 // sus opciones según el país de la organización.
 const SST_LOCAL = {
   co: { pais:'Colombia',    regulador:'Ministerio del Trabajo',              comite:'COPASST',                                  comite_de:'del COPASST',                                comite_sigla:'COPASST', norma:'Decreto 1072/2015 · Res. 0312/2019',                  umbral:'—',
+        doc_id:'cédula', prov_salud:{ label:'IPS / Médico ocupacional' },
         aseguradora:{ label:'ARL — Administradora de Riesgos Laborales', sigla:'ARL', a:'a la ARL', opciones:['Positiva','Sura','Colmena','Axa Colpatria','Bolívar','Liberty','La Equidad','Mapfre','Otra'] } },
   pa: { pais:'Panamá',      regulador:'CSS · MITRADEL',                      comite:'Comité de Salud, Seguridad e Higiene',     comite_de:'del Comité de Salud, Seguridad e Higiene',   comite_sigla:'CSSH',     norma:'Reglamento de Riesgos Profesionales (Res. 45.588, CSS)', umbral:'según la empresa',
+        doc_id:'cédula', prov_salud:{ label:'Clínica / Médico ocupacional' },
         aseguradora:{ label:'Aseguradora — Riesgos Profesionales (CSS)', sigla:'CSS', a:'a la CSS', opciones:['CSS — Caja de Seguro Social','Otra'] } },
   cr: { pais:'Costa Rica',  regulador:'MTSS · Consejo de Salud Ocupacional', comite:'Comisión de Salud Ocupacional',            comite_de:'de la Comisión de Salud Ocupacional',        comite_sigla:'CSO',      norma:'Ley 6727 · Reglamento de Seguridad e Higiene',        umbral:'10+ trabajadores',
+        doc_id:'cédula', prov_salud:{ label:'Clínica / Médico ocupacional' },
         aseguradora:{ label:'Aseguradora — Riesgos del Trabajo (INS)', sigla:'INS', a:'al INS', opciones:['INS — Instituto Nacional de Seguros','Otra'] } },
   sv: { pais:'El Salvador', regulador:'MTPS',                                comite:'Comité de Seguridad y Salud Ocupacional',  comite_de:'del Comité de Seguridad y Salud Ocupacional', comite_sigla:'CSSO',    norma:'Ley 254/2010 · Reglamentos Dec. 86 y 89 de 2012',     umbral:'15+ trabajadores',
+        doc_id:'DUI', prov_salud:{ label:'Clínica / Médico ocupacional' },
         aseguradora:{ label:'Aseguradora — Riesgos Profesionales (ISSS)', sigla:'ISSS', a:'al ISSS', opciones:['ISSS — Instituto Salvadoreño del Seguro Social','Otra'] } },
 };
 
@@ -34,7 +38,8 @@ function skfLocalizeText(str, paisCode) {
     .replace(/\{comite_de\}/g, L.comite_de)
     .replace(/\{comite\}/g, L.comite)
     .replace(/\{aseg_a\}/g, A.a || '')
-    .replace(/\{aseg_sigla\}/g, A.sigla || '');
+    .replace(/\{aseg_sigla\}/g, A.sigla || '')
+    .replace(/\{doc_id\}/g, L.doc_id || 'documento');
 }
 
 // Devuelve una COPIA de la plantilla con norma, nombre y etiquetas de campo ya
@@ -317,10 +322,10 @@ const FORM_LIBRARY = [
   {id:'examen_medico_sst',vertical:'sst',nucleo:true,freq:12,localizacion:SST_LOCAL,nombre:'Remisión / Resultado de Examen Médico Ocupacional',
    keywords:['examen medico','medico ocupacional','profesiograma','aptitud','ingreso','periodico','retiro','apto','restriccion','eps'],
    campos_clave:[
-    {etiqueta:'Nombre del trabajador',tipo:'texto'},{etiqueta:'Número de cédula',tipo:'numero'},
+    {etiqueta:'Nombre del trabajador',tipo:'texto'},{etiqueta:'Número de {doc_id}',tipo:'texto'},
     {etiqueta:'Cargo',tipo:'select'},{etiqueta:'Área',tipo:'select'},
     {etiqueta:'Tipo de examen',tipo:'select',opciones:['Ingreso','Periódico','Retiro','Post-incapacidad','Reubicación laboral','Cambio de cargo']},
-    {etiqueta:'Fecha de remisión',tipo:'fecha_auto'},{etiqueta:'IPS / Médico ocupacional',tipo:'texto'},
+    {etiqueta:'Fecha de remisión',tipo:'fecha_auto'},{etiqueta:'IPS / Médico ocupacional',tipo:'texto',local:'prov_salud'},
     {etiqueta:'Resultado',tipo:'select',opciones:['Apto','Apto con restricciones','No apto temporalmente','No apto permanentemente']},
     {etiqueta:'Restricciones / Recomendaciones médicas',tipo:'textarea'},
     {etiqueta:'Fecha del próximo examen',tipo:'fecha'},
