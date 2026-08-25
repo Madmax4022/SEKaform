@@ -44,6 +44,14 @@
     .sst-step .sub { font-size: .82rem; color: var(--mut); margin-top: 3px; line-height: 1.4; }
     .sst-step .arr { color: var(--mut); font-size: 1.25rem; }
     .sst-step:hover .arr { color: var(--pri); }
+    /* estado vivo por paso (datos reales del SG-SST) */
+    .sst-status { display: none; font-size: .8rem; color: var(--mut); font-weight: 600; margin: -4px 0 14px; }
+    .sst-status b { color: var(--err); }
+    .st-stat { margin-top: 8px; display: inline-flex; align-items: center; font-size: .74rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+    .st-stat.neutral { background: rgba(37,99,235,.12); color: var(--pri); }
+    .st-stat.ok { background: rgba(26,188,156,.14); color: var(--ok); }
+    .st-stat.warn { background: rgba(217,138,31,.16); color: var(--warn, #d98a1f); }
+    .st-stat.risk { background: rgba(239,68,68,.13); color: var(--err); }
 
     /* ── Otras áreas (segundo plano, colapsable) ───────────────── */
     details.mas { margin-top: 34px; border: 1px solid var(--bor); border-radius: 14px; background: var(--card); overflow: hidden; }
@@ -184,20 +192,9 @@
       <p>Tu <strong style="color:var(--txt)">Sistema de Gestión de SST</strong> digital. Cumple, demuéstralo y <strong style="color:var(--txt)">evita multas</strong> del Ministerio de Trabajo.</p>
     </header>
 
-    <!-- ── Onboarding guiado (aparece solo mientras seas nuevo) ── -->
-    <section class="onb" id="onbCard" style="display:none">
-      <h2 class="onb-h">👋 Bienvenido a SEKaform</h2>
-      <p class="onb-sub">Ten la prueba de que cumples, lista para cualquier inspección — para que una visita no se vuelva una multa. Empieza en 3 pasos (o prueba con un ejemplo listo):</p>
-      <div class="onb-steps" id="onbSteps"></div>
-      <div class="onb-btns">
-        <a href="digitalizador.html" class="onb-btn prim">⚡ Crear mi primer formulario</a>
-        <button type="button" class="onb-btn sec" onclick="cargarEjemplo()">🧪 Probar con un ejemplo</button>
-      </div>
-      <button type="button" class="onb-dismiss" onclick="ocultarOnb()">Ocultar esta guía</button>
-    </section>
-
     <!-- ── SST: la estrella — recorrido guiado ────────────────── -->
     <div class="sst-hd">Tu ruta de Salud Ocupacional</div>
+    <div class="sst-status" id="sstStatus"></div>
     <div class="sst-journey">
       <a href="plantillas.html?v=sst" class="sst-step">
         <span class="ico">🗂️</span>
@@ -376,68 +373,48 @@
   </div>
 
   <script>
-    // Onboarding guiado: acompaña al usuario nuevo hasta que crea un formulario,
-    // captura un registro y ve su panel. Desaparece solo cuando completa los 3
-    // pasos (o si lo oculta). Todo es local; no estorba a un usuario que vuelve.
-    function _lsArr(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } }
-    function estadoOnb() {
-      return {
-        tieneForm: _lsArr('skf_plantillas').length > 0,
-        tieneEnvio: _lsArr('skf_envios').length > 0,
-        vioPanel: localStorage.getItem('skf_onb_panel') === '1',
-      };
-    }
-    function renderOnb() {
-      if (localStorage.getItem('skf_onb_hide') === '1') return;
-      const st = estadoOnb();
-      if (st.tieneForm && st.tieneEnvio && st.vioPanel) return; // ya se graduó
-      const steps = [
-        { done: st.tieneForm,  lbl: 'Crea tu primer formulario',  href: 'digitalizador.html' },
-        { done: st.tieneEnvio, lbl: 'Captura tu primer registro',  href: 'llenar.html' },
-        { done: st.vioPanel,   lbl: 'Mira tu panel de control',    href: 'dashboard.html', panel: true },
-      ];
-      document.getElementById('onbSteps').innerHTML = steps.map((s, i) => `
-        <a href="${s.href}" class="onb-step${s.done ? ' done' : ''}"${s.panel ? ' data-panel="1"' : ''}>
-          <span class="onb-num">${s.done ? '✓' : i + 1}</span>
-          <span class="onb-lbl">${s.lbl}</span>
-          <span class="onb-arr">→</span>
-        </a>`).join('');
-      document.querySelectorAll('.onb-step[data-panel]').forEach(a =>
-        a.addEventListener('click', () => localStorage.setItem('skf_onb_panel', '1')));
-      document.getElementById('onbCard').style.display = 'block';
-    }
-    function ocultarOnb() {
-      localStorage.setItem('skf_onb_hide', '1');
-      document.getElementById('onbCard').style.display = 'none';
-    }
-    // Carga un formulario de ejemplo (una sola vez) y lo abre para llenarlo, así
-    // el usuario ve el flujo completo — incluido el hallazgo automático al poner
-    // una temperatura fuera de rango.
-    function cargarEjemplo() {
+    // Estado vivo del SG-SST: al cargar, trae hallazgos, envíos y acciones del
+    // backend (skf-api) y pinta el estado real en cada paso de la ruta. Si no
+    // hay sesión o conexión, la ruta se queda con su texto guía — sin romperse.
+    (async function sstEstado() {
+      if (typeof sbLoadHallazgos !== 'function') return;
+      let hz = null, env = null, acc = null;
       try {
-        const list = _lsArr('skf_plantillas');
-        let ej = list.find(t => t._ejemplo);
-        if (!ej) {
-          ej = {
-            id: 'tmpl_ejemplo_' + Date.now(), nombre: 'Ejemplo — Control de nevera',
-            codigo: 'EJ-001', descripcion: 'Formulario de ejemplo para probar SEKaform',
-            _ejemplo: true, favorito: false, actualizadoEn: new Date().toISOString(),
-            campos: [
-              { id: 'e_fecha',    tipo: 'fecha_auto', etiqueta: 'Fecha', requerido: false },
-              { id: 'e_local',    tipo: 'texto',      etiqueta: 'Nombre del local', requerido: true },
-              { id: 'e_temp',     tipo: 'numero',     etiqueta: 'Temperatura de la nevera (°C)', requerido: true, rangoMin: 0, rangoMax: 8, severidad: 'mayor' },
-              { id: 'e_limpieza', tipo: 'si_no',      etiqueta: '¿Cumple limpieza?', requerido: true, severidad: 'critico' },
-              { id: 'e_obs',      tipo: 'textarea',   etiqueta: 'Observaciones', requerido: false },
-            ],
-          };
-          list.push(ej);
-          localStorage.setItem('skf_plantillas', JSON.stringify(list));
-          if (typeof skfSyncOrQueue === 'function') { try { skfSyncOrQueue('plantilla', ej); } catch {} }
+        [hz, env, acc] = await Promise.all([
+          sbLoadHallazgos().catch(() => null),
+          (typeof sbLoadEnvios === 'function' ? sbLoadEnvios() : Promise.resolve(null)).catch(() => null),
+          (typeof sbLoadAccionesCorrectivas === 'function' ? sbLoadAccionesCorrectivas() : Promise.resolve(null)).catch(() => null),
+        ]);
+      } catch { return; }
+      const setStat = (href, html, cls) => {
+        const step = document.querySelector('.sst-step[href="' + href + '"]');
+        if (!step) return;
+        const body = step.querySelector('div'); if (!body) return;
+        let el = body.querySelector('.st-stat');
+        if (!el) { el = document.createElement('div'); body.appendChild(el); }
+        el.className = 'st-stat ' + (cls || '');
+        el.innerHTML = html;
+      };
+      const n = Array.isArray(env) ? env.length : null;
+      if (n !== null) setStat('llenar.html', `📋 ${n} inspeccion${n !== 1 ? 'es' : 'ón'} capturada${n !== 1 ? 's' : ''}`, 'neutral');
+      if (Array.isArray(hz)) {
+        const abiertos = hz.filter(h => (h.estado || 'abierto') !== 'cerrado');
+        const ids = new Set(abiertos.map(h => h.id));
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        let venc = 0;
+        if (Array.isArray(acc)) venc = acc.filter(a => {
+          const fl = a.fecha_limite || a.fechaLimite;
+          return (a.estado || '') !== 'completada' && ids.has(a.hallazgo_id || a.hallazgoId) && fl && new Date(fl) < hoy;
+        }).length;
+        if (abiertos.length === 0) setStat('hallazgos.html', '✓ Al día — sin hallazgos abiertos', 'ok');
+        else setStat('hallazgos.html', `⚠ ${abiertos.length} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · ${venc} vencido${venc !== 1 ? 's' : ''}` : ''}`, venc ? 'risk' : 'warn');
+        const hs = document.getElementById('sstStatus');
+        if (hs) {
+          hs.innerHTML = `${n !== null ? n + ' inspecciones · ' : ''}${abiertos.length} hallazgo${abiertos.length !== 1 ? 's' : ''} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · <b>${venc} vencido${venc !== 1 ? 's' : ''}</b>` : ''}`;
+          hs.style.display = 'block';
         }
-        location.href = 'llenar.html?tmpl=' + encodeURIComponent(ej.id);
-      } catch (e) { location.href = 'llenar.html'; }
-    }
-    renderOnb();
+      }
+    })();
   </script>
 </body>
 </html>
