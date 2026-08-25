@@ -281,3 +281,10 @@ footer { text-align: center; font-size: .82rem; color: var(--mut); border-top: 1
 .skf-lector .sidebar-link[href="digitalizador.html"] { display: none !important; }
 
 .skf-lector .hz-estado-sel { pointer-events: none; opacity: .6; }
+
+/* Eyebrow de contexto sobre el título de página — mismo grupo que el menú,
+   para reforzar la jerarquía (dónde estás) de forma consistente. */
+.pg-eyebrow {
+  font-size: .66rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .09em; color: var(--pri); margin-bottom: 8px;
+}
