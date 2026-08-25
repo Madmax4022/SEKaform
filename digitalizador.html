@@ -2060,6 +2060,19 @@ const _accountEmailReady = (async () => {
 // defecto, pero vuelve a la lista de Mis Formularios en vez de mandar
 // directo a llenarlo — para quien administra formularios pero no es quien
 // los llena, y solo quiere tenerlo listo en su repositorio.
+// País de la organización → clave de localización ('co'|'pa'|'cr'|'sv').
+// Si no hay sesión/país, cae a Colombia (ancla). Se usa para que una plantilla
+// del núcleo SST muestre la norma y el comité correctos del país de la empresa.
+async function _paisCode() {
+  try {
+    const o = (typeof sbLoadOrg === 'function') ? await sbLoadOrg() : null;
+    const p = (o && o.pais) ? String(o.pais).trim().toLowerCase() : '';
+    const map = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa',
+      'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
+    return map[p] || 'co';
+  } catch { return 'co'; }
+}
+
 async function loadPreset(presetId, editMode, archiveOnly) {
   const t = FORM_LIBRARY.find(x => x.id === presetId);
   if (!t) return false;
@@ -2075,7 +2088,10 @@ async function loadPreset(presetId, editMode, archiveOnly) {
   }));
   const fNomEl = document.getElementById('fNom');
   if (fNomEl) fNomEl.value = t.nombre;
-  tmpl.norma = t.norma || '';
+  // Norma localizada al país de la organización (núcleo SST). Sin localización
+  // o sin país conocido, usa la norma por defecto de la plantilla.
+  const _pais = await _paisCode();
+  tmpl.norma = (t.localizacion && t.localizacion[_pais] && t.localizacion[_pais].norma) || t.norma || '';
   const fNormaEl = document.getElementById('fNorma');
   if (fNormaEl) fNormaEl.value = tmpl.norma;
 
