@@ -215,7 +215,10 @@ function clearSearch() {
 }
 
 // ── Secciones colapsables ─────────────────────────────────────────
-const openSections = new Set();
+// SST abierto por defecto: es el núcleo (ya localizado al país de la
+// organización) y el foco del usuario en campo. El resto de las áreas quedan
+// colapsadas debajo para no obligar a hacer scroll hasta lo que de verdad usa.
+const openSections = new Set(['sst']);
 function toggleSection(v) {
   if (openSections.has(v)) openSections.delete(v); else openSections.add(v);
   render();
@@ -306,12 +309,18 @@ function render() {
   }
 
   // ── "Todas": secciones colapsables por vertical ──
+  // SST primero y abierto (núcleo localizado al país = lo que el usuario en
+  // campo usa a diario); las demás áreas conservan su orden, colapsadas debajo.
   grid.className = '';
-  const verticals = [...new Set(FORM_LIBRARY.map(t => t.vertical))];
+  const allV = [...new Set(FORM_LIBRARY.map(t => t.vertical))];
+  const verticals = ['sst', ...allV.filter(v => v !== 'sst')];
+  const L = (typeof SST_LOCAL !== 'undefined') ? SST_LOCAL[_skfPaisCode] : null;
   grid.innerHTML = verticals.map(v => {
-    const items = FORM_LIBRARY.filter(t => t.vertical === v);
+    let items = FORM_LIBRARY.filter(t => t.vertical === v);
+    if (v === 'sst') items = items.slice().sort((a, b) => (a.freq || 99) - (b.freq || 99));
     const open = openSections.has(v);
-    const lbl = VERTICAL_LABELS[v] || v;
+    let lbl = VERTICAL_LABELS[v] || v;
+    if (v === 'sst' && L) lbl = `SST — 📍 ${L.pais} · ${L.comite}`;
     return `<div class="cat-section">
       <button class="cat-head${open?' open':''}" onclick="toggleSection('${v}')">
         <span class="cat-chevron">▶</span>
