@@ -307,7 +307,7 @@
 • QR: genera un link y código QR para que otras personas lo llenen desde su celular, sin necesidad de cuenta.
 • Historial: muestra todos los envíos recibidos.
 • Si dejas un formulario a medias, se guarda solo como borrador — al volver a abrirlo te preguntará si quieres continuarlo.">?</button></h1>
-    <p class="pg-sub">Selecciona una plantilla para llenar, o crea una nueva digitalizando un documento.</p>
+    <p class="pg-sub">Selecciona un formulario para llenar, o crea uno nuevo digitalizando un documento.</p>
     <div class="filters" id="tmplFilters"></div>
     <div id="tmplList"></div>
   </div>
@@ -735,10 +735,10 @@ function renderList() {
   if (!list.length) {
     el.innerHTML = `<div class="empty-state">
       <span class="es-ico">📭</span>
-      <h2>Sin plantillas todavía</h2>
-      <p>Ve al catálogo de plantillas para agregar tu primer formulario.</p>
+      <h2>Sin formularios todavía</h2>
+      <p>Ve a «Formularios listos» para agregar tu primer formulario.</p>
       <div style="margin-top:20px">
-        <a href="plantillas.html" class="btn btn-pri" style="text-decoration:none;display:inline-flex">Ver catálogo de plantillas →</a>
+        <a href="plantillas.html" class="btn btn-pri" style="text-decoration:none;display:inline-flex">Ver formularios listos →</a>
       </div>
     </div>`;
     return;
