@@ -75,6 +75,35 @@
     }
     @media (max-width: 700px) { .cat-body { grid-template-columns: 1fr; } }
 
+    /* ── Jerarquía: SST es la punta de lanza; el resto, un complemento ── */
+    /* Chip de SST destacado; los de otras áreas, apagados y detrás de una etiqueta */
+    .filt-sst { background: var(--pri-dim) !important; border-color: var(--pri) !important; color: var(--pri) !important; }
+    .filt-sst.active { background: var(--pri) !important; border-color: var(--pri) !important; color: #fff !important; }
+    .filt-otras-btn { align-self: center; background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: .72rem; font-weight: 800; color: var(--mut);
+      text-transform: uppercase; letter-spacing: .04em; padding: 6px 4px; }
+    .filt-otras-btn:hover { color: var(--txt); }
+    .ot-chev { display: inline-block; transition: transform .2s; font-size: .8rem; }
+    .filt-otras { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; margin-top: 2px; }
+    .filt-otras[hidden] { display: none; }
+    .filt-alt { opacity: .78; font-weight: 600; }
+    .filt-alt.active { opacity: 1; }
+    /* Sección héroe de SST */
+    .cat-head-hero { background: var(--pri-dim); border: 2px solid var(--pri); padding: 18px; }
+    .cat-head-hero:hover { border-color: var(--pri); }
+    .cat-hero-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .cat-hero-kicker { font-size: .68rem; font-weight: 800; color: var(--pri); text-transform: uppercase; letter-spacing: .05em; }
+    .cat-head-hero .cat-label { font-size: 1.06rem; }
+    .cat-head-hero.open { border-bottom-color: transparent; }
+    /* Separador "otras áreas — un complemento" */
+    .cat-otras-hd { margin: 28px 0 14px; padding-top: 18px; border-top: 1px solid var(--bor);
+      font-size: .78rem; font-weight: 800; color: var(--mut); text-transform: uppercase; letter-spacing: .04em; }
+    .cat-otras-hd span { font-weight: 500; text-transform: none; letter-spacing: 0; opacity: .8; }
+    /* Secciones de otras áreas: apagadas y más chicas que la de SST */
+    .cat-head-alt { padding: 12px 16px; opacity: .92; }
+    .cat-head-alt .cat-label { font-size: .92rem; font-weight: 700; color: var(--mut); }
+    .cat-badge-alt { color: var(--mut); background: var(--bor); border-color: var(--bor); }
+
     .grid-t { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     @media (max-width: 700px) { .grid-t { grid-template-columns: 1fr; } }
 
@@ -145,16 +174,16 @@
   </div>
   <p class="search-count" id="searchCount" style="display:none"></p>
 
-  <!-- Mensaje congruente: si ninguna encaja, se crea a la medida -->
+  <div class="filters" id="filters"></div>
+
+  <div class="grid-t" id="grid"></div>
+
+  <!-- Escape congruente al final: si ninguna encaja, se crea a la medida -->
   <a href="digitalizador.html" class="crear-cta">
     <span class="cc-ico">🛠️</span>
     <span class="cc-body"><b>¿Ninguna encaja con tu caso?</b> Crea un formulario a tu medida — toma una foto de tu formato, sube un PDF o escríbelo.</span>
     <span class="cc-arr">Crear →</span>
   </a>
-
-  <div class="filters" id="filters"></div>
-
-  <div class="grid-t" id="grid"></div>
 
   <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
 </div>
@@ -185,12 +214,27 @@ function setFilter(v) {
 }
 
 function renderFilters() {
-  const verticals = ['todas', ...new Set(FORM_LIBRARY.map(t => t.vertical))];
+  // La SST es la punta de lanza: chip destacado y primero. El resto de las
+  // áreas van detrás de una etiqueta "otras áreas", apagadas, como complemento.
   const active = currentFilter();
-  document.getElementById('filters').innerHTML = verticals.map(v => {
-    const lbl = v === 'todas' ? 'Todas' : (VERTICAL_LABELS[v] || v);
-    return `<button class="filt-btn${v===active?' active':''}" onclick="setFilter('${v}')">${esc(lbl)}</button>`;
-  }).join('');
+  const others = [...new Set(FORM_LIBRARY.map(t => t.vertical))].filter(v => v !== 'sst');
+  const chip = (v, lbl, cls) =>
+    `<button class="filt-btn ${cls}${v===active?' active':''}" onclick="setFilter('${v}')">${esc(lbl)}</button>`;
+  // Los chips de otras áreas quedan plegados tras "+ otras áreas" para que no
+  // empujen al héroe SST. Se despliegan solos si hay un área de esas activa.
+  const otrasOpen = !(active === 'todas' || active === 'sst');
+  document.getElementById('filters').innerHTML =
+    chip('todas', 'Todas', '') +
+    chip('sst', '⛑️ SST', 'filt-sst') +
+    `<button type="button" class="filt-otras-btn" onclick="toggleOtrasFiltros()">+ otras áreas <span class="ot-chev"${otrasOpen?' style="transform:rotate(180deg)"':''}>⌄</span></button>` +
+    `<span class="filt-otras" id="filtOtras"${otrasOpen?'':' hidden'}>${others.map(v => chip(v, VERTICAL_LABELS[v] || v, 'filt-alt')).join('')}</span>`;
+}
+function toggleOtrasFiltros() {
+  const el = document.getElementById('filtOtras');
+  if (!el) return;
+  el.hidden = !el.hidden;
+  const ch = document.querySelector('.ot-chev');
+  if (ch) ch.style.transform = el.hidden ? '' : 'rotate(180deg)';
 }
 
 // ── Búsqueda ──────────────────────────────────────────────────────
@@ -314,28 +358,32 @@ function render() {
     return;
   }
 
-  // ── "Todas": secciones colapsables por vertical ──
-  // SST primero y abierto (núcleo localizado al país = lo que el usuario en
-  // campo usa a diario); las demás áreas conservan su orden, colapsadas debajo.
+  // ── "Todas": la SST es el héroe; las otras áreas, un complemento ──
   grid.className = '';
-  const allV = [...new Set(FORM_LIBRARY.map(t => t.vertical))];
-  const verticals = ['sst', ...allV.filter(v => v !== 'sst')];
   const L = (typeof SST_LOCAL !== 'undefined') ? SST_LOCAL[_skfPaisCode] : null;
-  grid.innerHTML = verticals.map(v => {
+  const secHtml = (v, cls, headCls, lbl, badgeCls) => {
     let items = FORM_LIBRARY.filter(t => t.vertical === v);
     if (v === 'sst') items = items.slice().sort((a, b) => (a.freq || 99) - (b.freq || 99));
     const open = openSections.has(v);
-    let lbl = VERTICAL_LABELS[v] || v;
-    if (v === 'sst' && L) lbl = `SST — 📍 ${L.pais} · ${L.comite}`;
-    return `<div class="cat-section">
-      <button class="cat-head${open?' open':''}" onclick="toggleSection('${v}')">
+    const inner = v === 'sst'
+      ? `<span class="cat-hero-txt"><span class="cat-hero-kicker">⛑️ Tu núcleo — la punta de lanza</span><span class="cat-label">${esc(lbl)}</span></span>`
+      : `<span class="cat-label">${esc(lbl)}</span>`;
+    return `<div class="cat-section ${cls}">
+      <button class="cat-head ${headCls}${open?' open':''}" onclick="toggleSection('${v}')">
         <span class="cat-chevron">▶</span>
-        <span class="cat-label">${esc(lbl)}</span>
-        <span class="cat-badge">${items.length}</span>
+        ${inner}
+        <span class="cat-badge ${badgeCls}">${items.length}</span>
       </button>
       ${open ? `<div class="cat-body">${items.map(cardHtml).join('')}</div>` : ''}
     </div>`;
-  }).join('');
+  };
+
+  const sstLbl = L ? `SST — 📍 ${L.pais} · ${L.comite}` : (VERTICAL_LABELS.sst || 'SST');
+  const others = [...new Set(FORM_LIBRARY.map(t => t.vertical))].filter(v => v !== 'sst');
+  grid.innerHTML =
+    secHtml('sst', 'cat-hero', 'cat-head-hero', sstLbl, '') +
+    `<div class="cat-otras-hd">➕ Otras áreas <span>— un complemento, por si tu empresa también las necesita</span></div>` +
+    others.map(v => secHtml(v, 'cat-alt', 'cat-head-alt', VERTICAL_LABELS[v] || v, 'cat-badge-alt')).join('');
 }
 
 document.getElementById('searchInp').addEventListener('input', onSearchInput);
