@@ -94,9 +94,10 @@ details.sidebar-group[open] > summary.sidebar-group-h::after { transform: rotate
     display: flex; align-items: center; justify-content: space-between;
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
     background: var(--card); border-top: 1px solid var(--bor);
-    padding: 0 8px; height: 54px; gap: 4px;
+    /* Respeta la franja del gesto/home indicator en iPhone (safe-area). */
+    padding: 0 8px env(safe-area-inset-bottom, 0px); height: 54px; gap: 4px;
   }
-  body { padding-bottom: 54px; }
+  body { padding-bottom: calc(54px + env(safe-area-inset-bottom, 0px)); }
 }
 .bb-btn {
   display: flex; align-items: center; gap: 4px;
@@ -136,8 +137,12 @@ details.sidebar-group[open] > summary.sidebar-group-h::after { transform: rotate
    (digitalizador, llenar) ya despejan el botón en la propia toolbar, así
    que su .wrap se restaura a su padding original. */
 @media (max-width: 860px) {
-  body .wrap, body .wrapper { padding-top: 60px; }
-  body .page-toolbar ~ .wrap { padding-top: 28px; }
+  /* En móvil la barra inferior ("Más") es la ÚNICA entrada al menú: el botón
+     flotante ☰ duplicaba esa acción y además comía espacio del título. Se
+     oculta, y el contenido ya no necesita despejarlo. */
+  .sidebar-toggle { display: none; }
+  body .wrap, body .wrapper { padding-top: 16px; }
+  body .page-toolbar ~ .wrap { padding-top: 20px; }
 }
 
 body { padding-left: 232px; transition: padding-left .25s ease; }
@@ -164,11 +169,8 @@ html.sb-collapsed body { padding-left: 0; }
 .topbar-title { font-size: .95rem; font-weight: 700; color: var(--txt); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-/* el botón de la barra lateral es fixed y siempre flota encima — se le
-   da espacio al inicio de la toolbar de página para que no la tape */
-@media (max-width: 860px) {
-  .page-toolbar { padding-left: 62px; }
-}
+/* En móvil el botón ☰ está oculto (la barra inferior lo reemplaza), así que
+   la toolbar recupera su padding normal y el título deja de truncarse. */
 .topbar-back { color: var(--mut); text-decoration: none; font-size: .85rem; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 6px; transition: background .15s, color .15s; cursor: pointer; background: none; border: none; font-family: inherit; }
 .topbar-back:hover { background: var(--bor); color: var(--txt); }
 

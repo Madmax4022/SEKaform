@@ -427,7 +427,7 @@ Respeta el periodo y la unidad que elijas arriba.">?</button></h2>
         <button class="btn-export" style="margin-left:auto" onclick="exportCSVLargo()">⬇ Datos para Power BI / Excel</button>
       </div>
       <div id="explBody"></div>
-      <div class="pbi-note">💡 <strong>Conecta Power BI, Excel o Google Data Studio.</strong> El botón de arriba descarga <strong>todos</strong> los datos filtrados en «formato largo» (una fila por respuesta) — se importa y grafica sin arreglar nada. Para conexión <strong>en vivo</strong>, tus datos viven en una base de datos real (Supabase/Postgres) y hay una vista lista, <code>vista_respuestas</code> — ver «Conectar Power BI» en Organización.</div>
+      <div class="pbi-note">💡 <strong>Conecta Power BI, Excel o Google Data Studio.</strong> El botón de arriba descarga <strong>todos</strong> los datos filtrados en «formato largo» (una fila por respuesta) — se importa y grafica sin arreglar nada. Para conexión <strong>en vivo</strong>, tus datos viven en una base de datos real (PostgreSQL) y hay una vista lista, <code>vista_respuestas</code> — ver «Conectar Power BI» en Organización.</div>
     </div>
     </div><!-- /dash-adv -->
 
@@ -444,7 +444,7 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
         </div>
         <div class="audit-btns">
           <button class="btn-export" onclick="reporteConsolidado()" title="Tu defensa ante una inspección: resumen, hallazgos y evidencia lista para entregar">📄 Carpeta de evidencia (PDF)</button>
-          <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla (CSV)</button>
+          <button class="btn-export" onclick="exportCSV()">⬇ Descargar tabla (Excel)</button>
         </div>
       </div>
       <div class="audit-title">Hallazgos y su cierre <span class="mut" id="auditCount"></span></div>
@@ -616,6 +616,7 @@ function buildDailyChart(envios) {
     labels.push(i===0 ? 'Hoy' : `${d.getDate()} ${MONTHS_ES[d.getMonth()]}`);
     counts.push(envios.filter(e => {
       const ed = new Date(e.enviado_en||e.enviadoEn||e.creadoEn);
+      if (isNaN(ed.getTime())) return false; // fecha ausente/ilegible: no tumba la gráfica
       return ed.toISOString().slice(0,10) === key;
     }).length);
   }
@@ -1772,7 +1773,7 @@ async function init() {
   const { plantillas, envios, hallazgos, acciones, asignaciones, unidades, fromCloud } = await loadData();
 
   const badge = document.getElementById('srcBadge');
-  badge.textContent = fromCloud ? '☁ Datos en la nube (Supabase)' : '💾 Solo en este dispositivo';
+  badge.textContent = fromCloud ? '☁ Datos en la nube' : '💾 Solo en este dispositivo';
   badge.className   = 'src-badge' + (fromCloud ? ' cloud' : '');
   badge.style.display = 'inline-flex';
   if (!fromCloud) document.getElementById('setupBanner').classList.add('on');
