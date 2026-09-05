@@ -12,18 +12,6 @@
 //  página (evita el "flash" de la barra abriéndose/cerrándose al cargar).
 // ─────────────────────────────────────────────────────────────
 
-const SKF_NAV_LINKS = [
-  { href: 'plantillas.html',    ico: '📋', label: 'Plantillas' },
-  { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
-  { href: 'llenar.html',        ico: '📝', label: 'Mis formularios' },
-  { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
-  { href: 'programadas.html',   ico: '📅', label: 'Programadas' },
-  { href: 'unidades.html',      ico: '🏢', label: 'Sedes y áreas' },
-  { href: 'hallazgos.html',     ico: '⚠️', label: 'Hallazgos' },
-  { href: 'dashboard.html',     ico: '📊', label: 'Dashboard' },
-  { href: 'organizacion.html',  ico: '⚙️', label: 'Organización' }
-];
-
 function _skfEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
 function skfToggleSidebar(forceOpen) {
