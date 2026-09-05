@@ -49,6 +49,14 @@ jobs:
             CREATE ROLE skf_app   LOGIN NOBYPASSRLS PASSWORD 'a';"
           psql -h localhost -U postgres -d skf -q -c "
             GRANT CREATE, USAGE ON SCHEMA public TO skf_owner;"
+          # Las extensiones las instala normalmente 000_roles.sql como admin de
+          # la instancia (skf_owner no tiene privilegio para crearlas). Como este
+          # job crea los roles a mano y no corre 000_roles.sql, se crean aquí,
+          # como el superusuario postgres, antes de migrar — si no, 001_core.sql
+          # aborta con "Faltan las extensiones pgcrypto y/o citext".
+          psql -h localhost -U postgres -d skf -q -c "
+            CREATE EXTENSION IF NOT EXISTS pgcrypto;
+            CREATE EXTENSION IF NOT EXISTS citext;"
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/001_core.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/002_auth_functions.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/003_super_admin_invitacion.sql
