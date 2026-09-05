@@ -212,7 +212,14 @@
       .ref-side{display:none;}
     }
     @media(max-width:400px){
-      .src-tab-lbl{display:none;}
+      /* En celular el usuario no técnico NO puede decodificar íconos sueltos:
+         mantenemos la etiqueta visible y solo la achicamos para que quepa. */
+      .src-tab-lbl{font-size:.66rem;}
+      .src-tab{padding:12px 4px;}
+      .src-tab-ico{font-size:1.5rem;}
+      /* Que los 3 pasos del asistente quepan sin cortarse ("Revisar y guar…"). */
+      .wizard{padding:0 8px;}
+      .wz{padding:11px 8px;font-size:.72rem;gap:5px;}
     }
     .qual-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--warn);margin-top:9px;}
     .qual-warn.qual-bad{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--err);}
@@ -270,11 +277,11 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
     <div class="src-tabs">
       <button class="src-tab active" id="tab-img" onclick="selectSrc('img')">
         <span class="src-tab-ico">📸</span>
-        <span class="src-tab-lbl">Imagen / Scan</span>
+        <span class="src-tab-lbl">Foto / Escaneo</span>
       </button>
       <button class="src-tab" id="tab-url" onclick="selectSrc('url')">
         <span class="src-tab-ico">🌐</span>
-        <span class="src-tab-lbl">URL web</span>
+        <span class="src-tab-lbl">Enlace web</span>
       </button>
       <button class="src-tab" id="tab-pdf" onclick="selectSrc('pdf')">
         <span class="src-tab-ico">📄</span>
@@ -282,7 +289,7 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
       </button>
       <button class="src-tab" id="tab-man" onclick="selectSrc('man')">
         <span class="src-tab-ico">✍️</span>
-        <span class="src-tab-lbl">Manual</span>
+        <span class="src-tab-lbl">Escribir</span>
       </button>
       <button class="src-tab" id="tab-html" onclick="selectSrc('html')">
         <span class="src-tab-ico">🗂️</span>

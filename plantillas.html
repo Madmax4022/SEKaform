@@ -99,20 +99,23 @@
       background: rgba(37,99,235,.12); color: #93c5fd; border: 1px solid rgba(37,99,235,.2);
     }
     .tfld-more { background: transparent; color: var(--mut); border-color: var(--bor); }
-    .tcard-ctas { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+    /* Una sola acción principal por tarjeta (menos decisión, tarjetas más
+       cortas): "Usar" domina; personalizar/guardar quedan como fila discreta. */
+    .tcard-ctas { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
     .tcard-cta {
-      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      background: var(--pri); color: #fff; padding: 10px 18px;
-      border-radius: 8px; font-weight: 700; font-size: .85rem; text-decoration: none;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      background: var(--pri); color: #fff; padding: 11px 18px; width: 100%;
+      border-radius: 8px; font-weight: 700; font-size: .9rem; text-decoration: none;
       transition: background .2s;
     }
     .tcard-cta:hover { background: var(--pri-h); }
-    .tcard-cta-sec {
-      background: transparent; color: var(--mut); border: 1px solid var(--bor);
-      padding: 9px 14px; border-radius: 8px; font-weight: 700; font-size: .85rem;
-      text-decoration: none; transition: all .2s;
+    .tcard-cta-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .tcard-cta-min {
+      color: var(--mut); font-size: .78rem; font-weight: 600; text-decoration: none;
+      padding: 5px 8px; border-radius: 6px; transition: color .15s, background .15s;
     }
-    .tcard-cta-sec:hover { color: var(--txt); border-color: var(--mut); }
+    .tcard-cta-min:hover { color: var(--txt); background: var(--bor); }
+    .tcard-cta-dot { color: var(--bor); }
 
     .empty-state { text-align:center; padding: 60px 20px; color: var(--mut); }
 
@@ -239,8 +242,11 @@ function cardHtml(t) {
       </div>
       <div class="tcard-ctas">
         <a class="tcard-cta" href="digitalizador.html?preset=${encodeURIComponent(t.id)}">Usar esta plantilla →</a>
-        <a class="tcard-cta-sec" href="digitalizador.html?preset=${encodeURIComponent(t.id)}&archive=1" title="Lo guarda en tu repositorio sin llenarlo, para llenarlo después o mandarlo en blanco">📥 Agregar a mi repositorio</a>
-        <a class="tcard-cta-sec" href="digitalizador.html?preset=${encodeURIComponent(t.id)}&edit=1">✎ Personalizar</a>
+        <div class="tcard-cta-row">
+          <a class="tcard-cta-min" href="digitalizador.html?preset=${encodeURIComponent(t.id)}&edit=1">✎ Personalizar</a>
+          <span class="tcard-cta-dot">·</span>
+          <a class="tcard-cta-min" href="digitalizador.html?preset=${encodeURIComponent(t.id)}&archive=1" title="La guarda en tu biblioteca sin llenarla, para llenarla después o enviarla en blanco">📥 Guardar en blanco</a>
+        </div>
       </div>
     </div>`;
 }
