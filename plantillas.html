@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>Catálogo de Plantillas — SEKaform</title>
+  <title>Formularios listos — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
@@ -130,12 +130,12 @@
 
 <div class="wrapper">
   <header class="pg-hd">
-    <div class="pg-tag" id="pgTag">Repositorio de plantillas</div>
+    <div class="pg-tag" id="pgTag">Formularios listos</div>
     <h1 class="pg-title" id="pgTitle"><span id="pgTitleTxt">Formularios disponibles</span><button class="skf-help" data-help-t="¿Cómo uso esta página?" data-help="• Escribe en el buscador el nombre del formulario o el tema que necesitas (por ejemplo «extintores»).
 • O toca una categoría para abrirla y ver sus formularios.
-• «Usar esta plantilla» te lleva directo a activarla y empezar a llenarla.
+• «Usar este formulario» te lleva directo a activarlo y empezar a llenarlo.
 • «✎ Personalizar» te deja cambiar sus campos antes, si necesitas algo distinto.">?</button></h1>
-    <p class="pg-sub" id="pgSub">Cada plantilla ya está lista para usar: elige una y empieza a llenarla de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.</p>
+    <p class="pg-sub" id="pgSub">Cada formulario ya está listo para usar: elige uno y empieza a llenarlo de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.</p>
   </header>
 
   <div class="search-wrap">
@@ -167,7 +167,7 @@ const VERTICAL_LABELS = {
   construccion: 'Construcción',
   alimentos: 'Alimentos & Restaurantes',
   salud: 'Salud — Clínicas & Laboratorios',
-  general: 'Plantillas generales'
+  general: 'Formularios generales'
 };
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
@@ -241,7 +241,7 @@ function cardHtml(t) {
         ${extra > 0 ? `<span class="tfld tfld-more">+${extra} más</span>` : ''}
       </div>
       <div class="tcard-ctas">
-        <a class="tcard-cta" href="digitalizador.html?preset=${encodeURIComponent(t.id)}">Usar esta plantilla →</a>
+        <a class="tcard-cta" href="digitalizador.html?preset=${encodeURIComponent(t.id)}">Usar este formulario →</a>
         <div class="tcard-cta-row">
           <a class="tcard-cta-min" href="digitalizador.html?preset=${encodeURIComponent(t.id)}&edit=1">✎ Personalizar</a>
           <span class="tcard-cta-dot">·</span>
@@ -266,7 +266,7 @@ function render() {
   } else if (active === 'sst') {
     document.getElementById('pgTag').textContent = 'Salud Ocupacional';
     document.getElementById('pgTitleTxt').textContent = 'SST — Seguridad y Salud en el Trabajo';
-    document.getElementById('pgSub').textContent = 'Plantillas preconfiguradas según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007 — listas para usar tal cual.';
+    document.getElementById('pgSub').textContent = 'Formularios preconfigurados según Ley 1562/2012, Decreto 1072/2015 y Res. 1401/2007 — listos para usar tal cual.';
   } else if (active === 'construccion') {
     document.getElementById('pgTag').textContent = 'Construcción';
     document.getElementById('pgTitleTxt').textContent = 'Construcción — Seguridad en obra y control de avance';
@@ -284,9 +284,9 @@ function render() {
     document.getElementById('pgTitleTxt').textContent = 'Inmuebles — Mantenimiento y seguridad de edificios';
     document.getElementById('pgSub').textContent = 'Cuartos eléctricos, extintores, alarmas, bombas contra incendio, ascensores y aseo de áreas comunes — checklists alineados con NFPA, listos para usar tal cual.';
   } else {
-    document.getElementById('pgTag').textContent = 'Repositorio de plantillas';
+    document.getElementById('pgTag').textContent = 'Formularios listos';
     document.getElementById('pgTitleTxt').textContent = 'Formularios disponibles';
-    document.getElementById('pgSub').textContent = 'Cada plantilla ya está lista para usar: elige una y empieza a llenarla de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.';
+    document.getElementById('pgSub').textContent = 'Cada formulario ya está listo para usar: elige uno y empieza a llenarlo de inmediato. Solo si necesitas algo distinto, personaliza sus campos primero.';
   }
 
   const grid = document.getElementById('grid');
@@ -310,7 +310,7 @@ function render() {
     grid.className = 'grid-t';
     grid.innerHTML = list.length
       ? list.map(cardHtml).join('')
-      : `<div class="empty-state">No hay plantillas en esta categoría todavía.</div>`;
+      : `<div class="empty-state">No hay formularios en esta categoría todavía.</div>`;
     return;
   }
 

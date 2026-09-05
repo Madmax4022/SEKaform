@@ -140,7 +140,7 @@ function skfRenderSidebar() {
     ]},
     { h: 'Configuración y más', colapsable: true, links: [
       { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
-      { href: 'plantillas.html',    ico: '📋', label: 'Catálogo de plantillas' },
+      { href: 'plantillas.html',    ico: '📋', label: 'Formularios listos' },
       { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
       { href: 'programadas.html',   ico: '📅', label: 'Programadas' },
       { href: 'unidades.html',      ico: '🏢', label: 'Sedes y áreas' },

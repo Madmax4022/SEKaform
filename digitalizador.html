@@ -1992,7 +1992,7 @@ function save(){
   const listToStore=list.map(p=>p.id===tmpl.id?toStore:p);
   try{localStorage.setItem('skf_plantillas',JSON.stringify(listToStore));}
   catch(e){toast('Guardado sin imagen (localStorage lleno)','wa');}
-  toast('Plantilla guardada ✓','ok');
+  toast('Formulario guardado ✓','ok');
   // Non-blocking cloud sync (encola si falla o no hay conexión)
   skfSyncOrQueue('plantilla', tmpl);
 }
@@ -2119,7 +2119,7 @@ async function loadPreset(presetId, editMode, archiveOnly) {
 
   renderSuggList();
   goPg(2);
-  toast(`Plantilla "${t.nombre}" cargada — revisa y ajusta los campos`, 'ok');
+  toast(`Formulario "${t.nombre}" cargado — revisa y ajusta los campos`, 'ok');
   return true;
 }
 
