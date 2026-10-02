@@ -67,6 +67,42 @@ function skfLocalizeTemplate(tmpl, paisCode) {
   return out;
 }
 
+// ── Principios universales de SST ────────────────────────────────────────────
+// Reconocidos por la OIT (Convenios fundamentales 155 y 187) e ISO 45001, y
+// exigidos por la ley (en Colombia: Decreto 1072/2015 · Res. 0312/2019).
+// `cobertura`: 'eje' = SEKaform es el mecanismo con el que se cumple;
+//             'evidencia' = SEKaform deja la prueba verificable de que se cumple.
+const SST_PRINCIPIOS = [
+  { id:'prevencion',      num:1, nombre:'Prevención',                    cobertura:'eje',       desc:'Eliminar el peligro y reducir el riesgo antes de que ocurra el daño.' },
+  { id:'responsabilidad', num:2, nombre:'Responsabilidad del empleador', cobertura:'eje',       desc:'El empleador garantiza la seguridad y salud — y debe poder demostrarlo.' },
+  { id:'cooperacion',     num:3, nombre:'Cooperación',                   cobertura:'evidencia', desc:'Estado, empleadores y trabajadores comparten la responsabilidad.' },
+  { id:'capacitacion',    num:4, nombre:'Información y capacitación',    cobertura:'evidencia', desc:'Formación permanente y clara sobre los riesgos y las medidas.' },
+  { id:'gestion',         num:5, nombre:'Gestión integral',              cobertura:'eje',       desc:'La SST se gestiona como parte de todos los procesos de la empresa.' },
+  { id:'salud',           num:6, nombre:'Atención integral de la salud', cobertura:'evidencia', desc:'Proteger la salud física, mental y social del trabajador.' },
+  { id:'participacion',   num:7, nombre:'Consulta y participación',      cobertura:'eje',       desc:'Los trabajadores participan en las decisiones de SST.' },
+  { id:'realidad',        num:8, nombre:'Primacía de la realidad',       cobertura:'eje',       desc:'Predomina lo que ocurre de verdad en el trabajo, no el papel.' },
+  { id:'proteccion',      num:9, nombre:'Protección',                    cobertura:'evidencia', desc:'Derechos sin discriminación; amparar a los más expuestos.' },
+];
+
+// Qué principio(s) satisface cada formulario del núcleo SST. Lo usa el "Mapa de
+// cumplimiento" para cruzarlos con la evidencia real de la organización.
+const SST_PRINCIPIO_MAP = {
+  inspeccion_sst:                  ['prevencion','realidad'],
+  reporte_condicion_acto_inseguro: ['prevencion','participacion','realidad'],
+  toma_5:                          ['prevencion'],
+  permiso_trabajo:                 ['proteccion','prevencion'],
+  entrega_epp:                     ['proteccion'],
+  asistencia:                      ['capacitacion'],
+  incidente_accidente:             ['salud','realidad'],
+  investigacion_at:                ['salud','responsabilidad'],
+  acta_copasst:                    ['cooperacion','participacion'],
+  inspeccion_botiquin:             ['salud','prevencion'],
+  simulacro_evacuacion:            ['prevencion','salud'],
+  examen_medico_sst:               ['salud','proteccion'],
+  matriz_peligros:                 ['prevencion','gestion'],
+  autoevaluacion_res0312:          ['gestion','responsabilidad'],
+};
+
 const FORM_LIBRARY = [
   // ── Calidad / SGC Verticales (ISO 9001:2015) ──────────────────
   {id:'auditoria_interna_iso',vertical:'calidad',nombre:'Checklist de Auditoría Interna (ISO 9001 — Cl. 9.2)',norma:'ISO 9001:2015 — Cl. 9.2',

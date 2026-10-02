@@ -44,6 +44,17 @@
     .sst-step .sub { font-size: .82rem; color: var(--mut); margin-top: 3px; line-height: 1.4; }
     .sst-step .arr { color: var(--mut); font-size: 1.25rem; }
     .sst-step:hover .arr { color: var(--pri); }
+    /* Enlace al mapa de cumplimiento — mismo lenguaje que la ruta, con acento SST */
+    .sst-maplink { display: grid; grid-template-columns: 46px 1fr auto; gap: 15px; align-items: center;
+      background: var(--pri-dim, rgba(37,99,235,.08)); border: 1px solid var(--pri); border-radius: 14px;
+      padding: 15px 17px; margin-top: 14px; text-decoration: none; color: inherit; min-height: 64px;
+      transition: transform .15s, box-shadow .18s; }
+    .sst-maplink:hover { transform: translateY(-2px); box-shadow: 0 10px 26px -8px rgba(0,0,0,.4); }
+    .sst-maplink .ico { width: 46px; height: 46px; border-radius: 12px; background: rgba(37,99,235,.16);
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .sst-maplink .lbl { font-size: 1.02rem; font-weight: 800; line-height: 1.2; }
+    .sst-maplink .sub { font-size: .82rem; color: var(--mut); margin-top: 3px; line-height: 1.4; }
+    .sst-maplink .arr { color: var(--pri); font-size: 1.25rem; }
     /* estado vivo por paso (datos reales del SG-SST) */
     .sst-status { display: none; font-size: .8rem; color: var(--mut); font-weight: 600; margin: -4px 0 14px; }
     .sst-status b { color: var(--err); }
@@ -229,6 +240,16 @@
         <span class="arr">→</span>
       </a>
     </div>
+
+    <!-- ── Mapa de cumplimiento: los 9 principios universales ──── -->
+    <a href="cumplimiento.html" class="sst-maplink">
+      <span class="ico">🎯</span>
+      <div>
+        <div class="lbl">Tu mapa de cumplimiento</div>
+        <div class="sub">Los 9 principios universales de SST (OIT · ISO 45001) que la ley exige, y tu evidencia frente a cada uno.</div>
+      </div>
+      <span class="arr">→</span>
+    </a>
 
     <!-- ── Todo lo demás: visible pero colapsado ──────────────── -->
     <details class="mas">

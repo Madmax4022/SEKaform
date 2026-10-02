@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Mapa de cumplimiento — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 20px; line-height: 1.6; max-width: 640px; }
+    .pais-nota { font-size: .8rem; color: var(--mut); margin-bottom: 22px; }
+    .pais-nota b { color: var(--txt); }
+
+    .cmp-resumen { background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 20px 22px; margin-bottom: 22px; }
+    .cmp-r-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .cmp-r-big { font-size: 1.6rem; font-weight: 800; }
+    .cmp-r-big b { color: var(--ok); }
+    .cmp-r-sub { font-size: .82rem; color: var(--mut); }
+    .cmp-bar { height: 10px; border-radius: 6px; background: var(--bor); overflow: hidden; margin-top: 14px; display: flex; }
+    .cmp-bar span { height: 100%; display: block; }
+    .cmp-bar .b-ok { background: var(--ok); }
+    .cmp-bar .b-warn { background: var(--warn); }
+    .cmp-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: .76rem; color: var(--mut); }
+    .cmp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.pend { background: var(--mut); opacity: .5; }
+
+    .pcard { background: var(--card); border: 1px solid var(--bor); border-left: 4px solid var(--bor); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; }
+    .pcard.st-ok { border-left-color: var(--ok); }
+    .pcard.st-warn { border-left-color: var(--warn); }
+    .pcard.st-pend { border-left-color: var(--mut); }
+    .pc-top { display: flex; align-items: flex-start; gap: 12px; }
+    .pc-num { font-size: 1.3rem; font-weight: 800; color: var(--mut); opacity: .45; min-width: 1.3em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .pc-name { font-size: 1.05rem; font-weight: 800; flex: 1; min-width: 0; line-height: 1.2; }
+    .pc-cob { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px; border-radius: 20px; background: var(--pri-dim); color: var(--pri); white-space: nowrap; align-self: center; }
+    .pc-status { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; align-self: center; }
+    .pc-status.st-ok { background: var(--ok-dim); color: var(--ok); }
+    .pc-status.st-warn { background: rgba(245,158,11,.15); color: var(--warn); }
+    .pc-status.st-pend { background: var(--bor); color: var(--mut); }
+    .pc-desc { font-size: .87rem; color: var(--mut); margin: 8px 0 0 calc(1.3em + 12px); line-height: 1.5; }
+    .pc-body { margin: 12px 0 0 calc(1.3em + 12px); }
+    .pc-lbl { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); margin-bottom: 7px; }
+    .pc-forms { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pc-chip { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 5px 10px; font-size: .8rem; color: var(--txt); text-decoration: none; transition: border-color .15s, color .15s; }
+    .pc-chip:hover { border-color: var(--pri); color: var(--pri); }
+    .pc-chip.done { border-color: rgba(26,188,156,.4); }
+    .pc-chip .ck { color: var(--ok); font-weight: 800; }
+    .pc-ev { font-size: .78rem; color: var(--mut); margin-top: 11px; }
+    .pc-ev b { color: var(--txt); font-weight: 600; }
+    @media (max-width: 560px) { .pc-desc, .pc-body { margin-left: 0; } .pc-top { flex-wrap: wrap; } }
+
+    .cmp-cta { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px dashed var(--bor); border-radius: 12px; padding: 16px 18px; margin-top: 22px; text-decoration: none; color: inherit; }
+    .cmp-cta:hover { border-color: var(--pri); }
+    .cmp-cta .cc-b { flex: 1; font-size: .86rem; color: var(--mut); }
+    .cmp-cta .cc-b b { color: var(--txt); }
+    .cmp-cta .cc-a { color: var(--pri); font-weight: 700; font-size: .85rem; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="pg-eyebrow">⛑️ Salud Ocupacional</div>
+  <h1 class="pg-h">Mapa de cumplimiento</h1>
+  <p class="pg-sub">Los <b>9 principios universales de SST</b> (OIT · ISO 45001) que la ley exige — y tu evidencia real frente a cada uno. Lo que un inspector viene a verificar, en una sola vista.</p>
+  <div class="pais-nota" id="paisNota"></div>
+
+  <div class="cmp-resumen" id="resumen" hidden>
+    <div class="cmp-r-top">
+      <div class="cmp-r-big"><b id="rOk">0</b> de 9 principios con evidencia al día</div>
+      <div class="cmp-r-sub" id="rSub"></div>
+    </div>
+    <div class="cmp-bar" id="rBar"></div>
+    <div class="cmp-legend">
+      <span><span class="dot ok"></span> Al día — evidencia reciente</span>
+      <span><span class="dot warn"></span> Atrasado — evidencia vencida</span>
+      <span><span class="dot pend"></span> Pendiente — sin evidencia todavía</span>
+    </div>
+  </div>
+
+  <div id="lista"></div>
+
+  <a class="cmp-cta" href="plantillas.html?v=sst">
+    <span style="font-size:1.5rem">⛑️</span>
+    <span class="cc-b"><b>¿Un principio en pendiente o atrasado?</b> Abre el formulario que lo cubre y captura la evidencia desde el celular.</span>
+    <span class="cc-a">Ver formularios SST →</span>
+  </a>
+</div>
+
+<script>
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function _norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+
+// "Al día" = evidencia en los últimos 180 días (SST es mayormente periódica);
+// más vieja = atrasado; ninguna = pendiente.
+var VENTANA_DIAS = 180;
+var _pais = 'co';
+var PAIS_MAP = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa', 'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
+
+// Nombre localizado de cada formulario del núcleo -> id, para reconocer un
+// envío por su nombre y saber qué principios acredita.
+function _nombreIndex(paisCode){
+  var idx = {};
+  FORM_LIBRARY.forEach(function(t){
+    if (!SST_PRINCIPIO_MAP[t.id]) return;
+    idx[_norm(skfLocalizeText(t.nombre, paisCode))] = t.id;
+  });
+  return idx;
+}
+function _fecha(e){ return e.enviado_en || e.enviadoEn || e.creado_en || e.creadoEn || null; }
+function _diasDesde(iso){
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+async function init(){
+  var org = null, envios = [], plts = [];
+  try { org = (typeof sbLoadOrg === 'function') ? await sbLoadOrg() : null; } catch (e) {}
+  _pais = PAIS_MAP[(org && org.pais) ? String(org.pais).trim().toLowerCase() : ''] || 'co';
+
+  var L = SST_LOCAL[_pais] || SST_LOCAL.co;
+  document.getElementById('paisNota').innerHTML =
+    'Según <b>' + esc(L.pais) + '</b> · ' + esc(L.regulador) + ' · <b>' + esc(L.norma) + '</b>. Principios universales; el mismo núcleo cumple también en los otros países.';
+
+  try { if (typeof sbLoadEnvios === 'function') envios = await sbLoadEnvios(); } catch (e) {}
+  try { if (typeof sbLoadPlantillas === 'function') plts = await sbLoadPlantillas(); } catch (e) {}
+  if (!Array.isArray(envios)) envios = [];
+  if (!Array.isArray(plts)) plts = [];
+
+  var idx = _nombreIndex(_pais);
+  var evidencia = {}; // principioId -> { dias, formNombre }
+  envios.forEach(function(e){
+    var nom = e.plantilla_nombre || e.plantillaNombre || '';
+    var tid = idx[_norm(nom)];
+    if (!tid) return;
+    var dias = _diasDesde(_fecha(e));
+    if (dias === null) return;
+    (SST_PRINCIPIO_MAP[tid] || []).forEach(function(pid){
+      if (!evidencia[pid] || dias < evidencia[pid].dias) evidencia[pid] = { dias: dias, formNombre: nom };
+    });
+  });
+
+  var tiene = {};
+  plts.forEach(function(pl){ tiene[_norm(pl.nombre)] = true; });
+  render(evidencia, tiene);
+}
+
+function render(evidencia, tiene){
+  var stLbl = { ok:'Al día', warn:'Atrasado', pend:'Pendiente' };
+  var cobLbl = { eje:'Eje', evidencia:'Evidencia' };
+  var n = { ok:0, warn:0, pend:0 };
+
+  var html = SST_PRINCIPIOS.map(function(pr){
+    var ev = evidencia[pr.id];
+    var st = !ev ? 'pend' : (ev.dias <= VENTANA_DIAS ? 'ok' : 'warn');
+    n[st]++;
+
+    var forms = FORM_LIBRARY.filter(function(t){ return (SST_PRINCIPIO_MAP[t.id] || []).indexOf(pr.id) !== -1; })
+      .map(function(t){
+        var nom = skfLocalizeText(t.nombre, _pais);
+        var done = !!tiene[_norm(nom)];
+        return '<a class="pc-chip' + (done ? ' done' : '') + '" href="plantillas.html?v=sst" title="' +
+          (done ? 'Ya está en tu repositorio' : 'Agrégalo desde el catálogo') + '">' +
+          (done ? '<span class="ck">✓</span> ' : '') + esc(nom) + '</a>';
+      }).join('');
+
+    var evLine = ev
+      ? '<div class="pc-ev">Última evidencia: <b>hace ' + ev.dias + ' día' + (ev.dias !== 1 ? 's' : '') + '</b> · ' + esc(ev.formNombre) + '</div>'
+      : '<div class="pc-ev">Sin evidencia registrada todavía — captura un formulario que cubra este principio.</div>';
+
+    return '<div class="pcard st-' + st + '">' +
+      '<div class="pc-top">' +
+        '<span class="pc-num">' + pr.num + '</span>' +
+        '<span class="pc-name">' + esc(pr.nombre) + '</span>' +
+        '<span class="pc-cob">' + cobLbl[pr.cobertura] + '</span>' +
+        '<span class="pc-status st-' + st + '">' + stLbl[st] + '</span>' +
+      '</div>' +
+      '<div class="pc-desc">' + esc(pr.desc) + '</div>' +
+      '<div class="pc-body"><div class="pc-lbl">Formularios que lo cubren</div>' +
+        '<div class="pc-forms">' + forms + '</div>' + evLine + '</div>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('lista').innerHTML = html;
+  document.getElementById('rOk').textContent = n.ok;
+  document.getElementById('rSub').textContent = (n.warn ? n.warn + ' atrasado' + (n.warn !== 1 ? 's' : '') + ' · ' : '') + n.pend + ' pendiente' + (n.pend !== 1 ? 's' : '');
+  var pct = function(v){ return (v / 9 * 100).toFixed(2) + '%'; };
+  document.getElementById('rBar').innerHTML =
+    '<span class="b-ok" style="width:' + pct(n.ok) + '"></span><span class="b-warn" style="width:' + pct(n.warn) + '"></span>';
+  document.getElementById('resumen').hidden = false;
+}
+
+init();
+</script>
+</body>
+</html>
