@@ -39,6 +39,7 @@ PAGINAS = {
     "programadas.html": "programadas.html",
     "unidades.html": "unidades.html",
     "hallazgos.html": "hallazgos.html",
+    "cumplimiento.html": "cumplimiento.html",
     "dashboard.html": "dashboard.html",
     "organizacion.html": "organizacion.html",
 }

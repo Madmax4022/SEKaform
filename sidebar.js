@@ -131,8 +131,9 @@ function skfRenderSidebar() {
   // de creación quedan en un grupo colapsable ("segundo plano").
   const GRUPOS = [
     { h: '⛑️ Salud Ocupacional', links: [
-      { href: 'index.html',     ico: '⛑️', label: 'Centro de SST' },
-      { href: 'hallazgos.html', ico: '⚠️', label: 'Hallazgos' },
+      { href: 'index.html',        ico: '⛑️', label: 'Centro de SST' },
+      { href: 'cumplimiento.html', ico: '🎯', label: 'Mapa de cumplimiento' },
+      { href: 'hallazgos.html',    ico: '⚠️', label: 'Hallazgos' },
     ]},
     { h: 'Día a día', links: [
       { href: 'llenar.html',    ico: '📝', label: 'Mis formularios' },
