@@ -428,7 +428,7 @@
         else setStat('plantillas.html?v=sst', '▸ Empieza aquí', 'warn');
       }
       const n = Array.isArray(env) ? env.length : null;
-      if (n !== null) setStat('llenar.html', `📋 ${n} inspeccion${n !== 1 ? 'es' : 'ón'} capturada${n !== 1 ? 's' : ''}`, 'neutral');
+      if (n !== null) setStat('llenar.html', `📋 ${n} ${n !== 1 ? 'inspecciones capturadas' : 'inspección capturada'}`, 'neutral');
       if (Array.isArray(hz)) {
         const abiertos = hz.filter(h => (h.estado || 'abierto') !== 'cerrado');
         const ids = new Set(abiertos.map(h => h.id));
@@ -446,7 +446,7 @@
         else if (n && n > 0) setStat('dashboard.html', '📄 Evidencia lista', 'ok');
         const hs = document.getElementById('sstStatus');
         if (hs) {
-          hs.innerHTML = `${n !== null ? n + ' inspecciones · ' : ''}${abiertos.length} hallazgo${abiertos.length !== 1 ? 's' : ''} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · <b>${venc} vencido${venc !== 1 ? 's' : ''}</b>` : ''}`;
+          hs.innerHTML = `${n !== null ? n + (n !== 1 ? ' inspecciones' : ' inspección') + ' · ' : ''}${abiertos.length} hallazgo${abiertos.length !== 1 ? 's' : ''} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · <b>${venc} vencido${venc !== 1 ? 's' : ''}</b>` : ''}`;
           hs.style.display = 'block';
         }
       }
