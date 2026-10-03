@@ -53,6 +53,11 @@
     .tt-item.hecho { color: var(--mut); }
     .tt-item a { color: var(--pri); font-weight: 700; text-decoration: none; margin-left: auto; font-size: .8rem; white-space: nowrap; }
 
+    .om-lista { background: var(--card); border: 1px solid var(--bor); border-radius: 12px; overflow: hidden; }
+    .om-fila { padding: 11px 16px; border-bottom: 1px solid var(--bor); border-left: 4px solid var(--warn); }
+    .om-fila:last-child { border-bottom: none; }
+    .om-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .om-falta { font-size: .8rem; color: var(--mut); margin-top: 3px; line-height: 1.4; }
     .tn-vacio { background: var(--card); border: 1px dashed var(--bor); border-radius: 14px; padding: 26px 22px; text-align: center; }
     .tn-vacio .ic { font-size: 2.2rem; }
     .tn-vacio h2 { font-size: 1.1rem; margin: 8px 0 6px; }
@@ -179,8 +184,9 @@ function pintarVista(){
     var pill = { completo:'Completo', en_curso:'En curso', omitido:'Omitido', sin_esperado:'Sin definir' }[x.estado];
     var items = x.esperado.map(function(id){
       var hecho = x.hechos.indexOf(id) !== -1;
-      var link = (!hecho && x.estado !== 'omitido') ? '<a href="llenar.html?tmpl=' + encodeURIComponent(id) + '">Llenar →</a>'
-               : (!hecho ? '<a href="llenar.html?tmpl=' + encodeURIComponent(id) + '">Llenar →</a>' : '');
+      // «Llenar» solo mientras el turno está en curso: un registro hecho tarde cuenta
+      // para el turno actual y no corrige un turno que ya terminó.
+      var link = (!hecho && x.estado === 'en_curso') ? '<a href="llenar.html?tmpl=' + encodeURIComponent(id) + '">Llenar →</a>' : '';
       return '<div class="tt-item ' + (hecho ? 'hecho' : 'falta') + '"><span class="mk">' + (hecho ? '✓' : '') + '</span><span>' + esc(nombreForm(id)) + '</span>' + link + '</div>';
     }).join('');
     return '<div class="tcard-t st-' + x.estado + '"><div class="tt-top"><span class="tt-name">' + esc(x.turno.nombre) + '</span>' +
@@ -189,11 +195,21 @@ function pintarVista(){
       (items ? '<div class="tt-items">' + items + '</div>' : '') + '</div>';
   }
 
+  function fila(x){
+    var faltan = x.faltan.map(nombreForm).join(', ');
+    return '<div class="om-fila"><div class="om-top"><span class="tt-name">' + esc(x.turno.nombre) + '</span>' +
+      '<span class="tt-when">' + esc(etiquetaDia(x.inicio)) + ' · ' + hhmm(x.inicio) + '–' + hhmm(x.fin) + '</span></div>' +
+      '<div class="om-falta">Faltó: ' + esc(faltan) + '</div></div>';
+  }
+
   var hoy = est.filter(function(x){ return x.inicio >= inicioHoy || x.fin > ahora; });
   html += '<div class="tn-sec">Hoy</div>' + (hoy.length ? hoy.map(tarjeta).join('') : '<div class="cfg-hint">Todavía no empieza ningún turno hoy.</div>');
 
-  html += '<div class="tn-sec">Omitidos · últimos 7 días</div>' +
-    (omitidos.length ? omitidos.map(tarjeta).join('') : '<div class="cfg-hint">✓ Ningún turno quedó sin cumplir. Buen trabajo.</div>');
+  // Omitidos de días anteriores (los de hoy ya se ven arriba), en lista compacta.
+  var previos = omitidos.filter(function(x){ return hoy.indexOf(x) === -1; });
+  html += '<div class="tn-sec">Omitidos · días anteriores</div>' +
+    (previos.length ? '<div class="om-lista">' + previos.map(fila).join('') + '</div>'
+                    : '<div class="cfg-hint">✓ Ningún turno anterior quedó sin cumplir. Buen trabajo.</div>');
   host.innerHTML = html;
   if (typeof skfGlosar === 'function') skfGlosar(host);
 }

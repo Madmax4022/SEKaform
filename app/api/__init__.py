@@ -297,8 +297,19 @@ def bootstrap():
         )
         programadas = cur.fetchall()
 
-        cur.execute("SELECT id, nombre, logo_url, pais, plan, turnos_config FROM organizations WHERE id = %s",
-                    (current_user.org_id,))
+        # turnos_config llega con la migración 006, que se corre aparte del
+        # despliegue. Si el código se publica antes, la columna no existe: sin esta
+        # tolerancia /api/bootstrap fallaría y la app entera dejaría de abrir.
+        # El SAVEPOINT evita que el error aborte la transacción (y con ella las
+        # variables de RLS que fija sesion_usuario).
+        cur.execute("SAVEPOINT sp_org")
+        try:
+            cur.execute("SELECT id, nombre, logo_url, pais, plan, turnos_config FROM organizations WHERE id = %s",
+                        (current_user.org_id,))
+        except psycopg2.errors.UndefinedColumn:
+            cur.execute("ROLLBACK TO SAVEPOINT sp_org")
+            cur.execute("SELECT id, nombre, logo_url, pais, plan FROM organizations WHERE id = %s",
+                        (current_user.org_id,))
         organizacion = cur.fetchone()
 
     return jsonify({
