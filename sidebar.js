@@ -60,7 +60,7 @@ function _skfUpdateBottomAuth(user) {
 function _skfCloseHelp() {
   const pop = document.getElementById('skfHelpPop');
   if (pop) pop.remove();
-  document.querySelectorAll('.skf-help.on').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.skf-help.on, .skf-term.on').forEach(b => b.classList.remove('on'));
 }
 
 function _skfOpenHelp(btn) {
@@ -92,7 +92,7 @@ function _skfOpenHelp(btn) {
 }
 
 document.addEventListener('click', e => {
-  const btn = e.target.closest('.skf-help');
+  const btn = e.target.closest('.skf-help, .skf-term');
   if (btn) {
     e.preventDefault(); e.stopPropagation();
     if (btn.classList.contains('on')) _skfCloseHelp();
@@ -100,6 +100,67 @@ document.addEventListener('click', e => {
     return;
   }
   if (!e.target.closest('#skfHelpPop')) _skfCloseHelp();
+});
+
+
+// ── Glosario: términos de SST tocables ───────────────────────────────────────
+// Un usuario nuevo no tiene por qué saber qué es un COPASST o un hallazgo. Cada
+// término se subraya con puntitos la PRIMERA vez que aparece en la pantalla y,
+// al tocarlo, abre el mismo popover que el «?». Se llama a skfGlosar(raíz)
+// después de pintar (también tras renders dinámicos).
+const SKF_GLOSARIO = [
+  { re: /\bSG-SST\b/, t: 'SG-SST',
+    d: 'Sistema de Gestión de Seguridad y Salud en el Trabajo: el conjunto de cosas que tu empresa organiza para evitar accidentes y enfermedades laborales — identificar peligros, inspeccionar, capacitar y corregir.\n\nEn Colombia es obligatorio para todo empleador (Decreto 1072 de 2015).' },
+  { re: /\bCOPASST\b/, t: 'COPASST',
+    d: 'Comité Paritario de Seguridad y Salud en el Trabajo: un grupo con representantes del empleador y de los trabajadores que se reúne cada mes para vigilar que la empresa cumpla con SST.\n\nEn otros países se llama Comité o Comisión de Salud y Seguridad Ocupacional.' },
+  { re: /\bhallazgos?\b/i, t: 'Hallazgo',
+    d: 'Algo que no cumple y se encontró al inspeccionar: un extintor vencido, una salida bloqueada, un trabajador sin casco.\n\nCada hallazgo se corrige con una acción correctiva, con responsable y fecha límite.' },
+  { re: /\bacciones? correctivas?\b/i, t: 'Acción correctiva',
+    d: 'Lo que se hace para arreglar un hallazgo y evitar que se repita: quién lo hace y para cuándo. Al cerrarla queda como evidencia de que corregiste.' },
+  { re: /\bEPP\b/, t: 'EPP',
+    d: 'Elementos de Protección Personal: casco, guantes, gafas, botas, tapabocas, arnés. La empresa debe entregarlos y dejar constancia firmada.' },
+  { re: /\bGTC[ -]?45\b/, t: 'GTC 45',
+    d: 'Guía técnica colombiana para identificar los peligros de cada actividad y valorar qué tan graves son sus riesgos. Con ella se arma la matriz de peligros.' },
+  { re: /\bmatriz de peligros\b/i, t: 'Matriz de peligros',
+    d: 'Una tabla donde la empresa lista los peligros de cada actividad (caídas, ruido, químicos…), qué tan graves son y qué hace para controlarlos. Es la base de todo el SG-SST.' },
+  { re: /\bARL\b/, t: 'ARL',
+    d: 'Administradora de Riesgos Laborales: la aseguradora que cubre a tus trabajadores si sufren un accidente o una enfermedad por el trabajo. El empleador debe afiliarlos.' },
+  { re: /\bRes(?:olución|\.)?\s?0312\b/, t: 'Resolución 0312 de 2019',
+    d: 'Define los estándares mínimos del SG-SST que debe cumplir una empresa. Cuántos le exigen depende de su tamaño y del nivel de riesgo de su actividad.' },
+];
+
+function skfGlosar(root) {
+  root = root || document.body;
+  if (!root || !root.querySelectorAll) return;
+  const OMITIR = new Set(['SCRIPT','STYLE','BUTTON','INPUT','TEXTAREA','SELECT','OPTION','H1']);
+  const yaEnPantalla = new Set(Array.from(document.querySelectorAll('.skf-term')).map(el => el.dataset.helpT));
+  SKF_GLOSARIO.forEach(g => {
+    if (yaEnPantalla.has(g.t)) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        for (let p = n.parentNode; p && p !== root.parentNode; p = p.parentNode) {
+          if (p.nodeType === 1 && (OMITIR.has(p.tagName) || p.classList.contains('skf-term') || p.classList.contains('skf-help') || p.id === 'skfHelpPop')) return NodeFilter.FILTER_REJECT;
+        }
+        return g.re.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    const nodo = w.nextNode();
+    if (!nodo) return;
+    const m = nodo.nodeValue.match(g.re);
+    const resto = nodo.splitText(m.index);
+    resto.splitText(m[0].length);
+    const span = document.createElement('span');
+    span.className = 'skf-term';
+    span.dataset.helpT = g.t;
+    span.dataset.help = g.d;
+    span.setAttribute('role', 'button');
+    span.setAttribute('tabindex', '0');
+    span.textContent = m[0];
+    resto.parentNode.replaceChild(span, resto);
+  });
+}
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('skf-term')) { e.preventDefault(); e.target.click(); }
 });
 
 // ── Rol de solo lectura ──────────────────────────────────────────────────────

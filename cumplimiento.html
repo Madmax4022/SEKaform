@@ -71,9 +71,17 @@
 </head>
 <body>
 
+<script src="sidebar.js"></script>
+
 <div class="wrap">
   <div class="pg-eyebrow">⛑️ Salud Ocupacional</div>
-  <h1 class="pg-h">Mapa de cumplimiento</h1>
+  <h1 class="pg-h">Mapa de cumplimiento<button class="skf-help" data-help-t="¿Cómo leo este mapa?" data-help="Los 9 principios de abajo son la base de toda norma de SST en el mundo (OIT, ISO 45001) y la ley colombiana los exige.
+
+• Verde «Al día»: tienes evidencia de los últimos 6 meses.
+• Ámbar «Atrasado»: tu última evidencia es más vieja — renuévala.
+• Gris «Pendiente»: aún no hay evidencia.
+
+La evidencia sale sola de los formularios que llenas: no tienes que registrar nada aparte. Toca un formulario para abrirlo y llenarlo.">?</button></h1>
   <p class="pg-sub">Los <b>9 principios universales de SST</b> (OIT · ISO 45001) que la ley exige — y tu evidencia real frente a cada uno. Lo que un inspector viene a verificar, en una sola vista.</p>
   <div class="pais-nota" id="paisNota"></div>
 
@@ -170,6 +178,7 @@ function render(evidencia, tiene){
   document.getElementById('rBar').innerHTML =
     '<span class="b-ok" style="width:' + pct(n.ok) + '"></span><span class="b-warn" style="width:' + pct(n.warn) + '"></span>';
   document.getElementById('resumen').hidden = false;
+  if (typeof skfGlosar === 'function') skfGlosar(document.querySelector('.wrap'));
 }
 
 init();

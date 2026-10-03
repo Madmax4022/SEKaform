@@ -7,7 +7,7 @@
 // skf-api.js ya las encola para reintentarlas al volver la conexión (ver
 // SKF_QUEUE_KEY).
 
-const CACHE_VERSION = 'skf-shell-v30';
+const CACHE_VERSION = 'skf-shell-v32';
 
 const SHELL_ASSETS = [
   'index.html',
