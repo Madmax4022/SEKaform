@@ -149,6 +149,67 @@ function skfPerfilSet(email, p){
   try { localStorage.setItem('skf_perfil:' + (email || ''), JSON.stringify(p)); } catch (e) {}
 }
 
+// ── Kits de inicio por actividad ─────────────────────────────────────────────
+// El producto es SST primero; estas áreas son un complemento. Cada una trae 3
+// formularios para empezar a usarla sin recorrer el catálogo. «Agregar el kit»
+// los deja en el repositorio del usuario de un toque.
+const AREA_KITS = [
+  { id:'alimentos',    ico:'🍽️', nombre:'Cocina o alimentos',      desc:'Temperatura, limpieza y control de plagas',        vertical:'alimentos',
+    forms:['control_temperatura_haccp','limpieza_desinfeccion','control_plagas'] },
+  { id:'inmuebles',    ico:'🏢', nombre:'Edificio e instalaciones', desc:'Extintores, salidas de emergencia y alarma',        vertical:'inmuebles',
+    forms:['inspeccion_extintores','inspeccion_salidas_emergencia','inspeccion_alarma_incendio'] },
+  { id:'construccion', ico:'🏗️', nombre:'Obra o construcción',      desc:'Ingreso a obra, trabajo en alturas e inspección',   vertical:'construccion',
+    forms:['control_acceso_obra','permiso_altura_obra','inspeccion_seguridad_obra'] },
+  { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia y rondas',      desc:'Ronda de vigilancia, salidas y extintores',          vertical:'inmuebles',
+    forms:['ronda_vigilancia','inspeccion_salidas_emergencia','inspeccion_extintores'],
+    extra:{ label:'Programar mi ronda', href:'programadas.html' } },
+  { id:'calidad',      ico:'🏆', nombre:'Calidad ISO 9001',         desc:'Auditoría interna, no conformidad y acción correctiva', vertical:'calidad',
+    forms:['auditoria_interna_iso','no_conformidad_iso','capa_iso'] },
+  { id:'salud',        ico:'🏥', nombre:'Clínica o laboratorio',    desc:'Triage, consentimiento y evento adverso',           vertical:'salud',
+    forms:['triage_urgencias','consentimiento_informado','reporte_evento_adverso'] },
+];
+
+function _skfPlantillasLocal(){ try { return JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch (e) { return []; } }
+
+// Formularios del kit que el usuario todavía no tiene (se compara por nombre localizado).
+function skfKitFaltantes(kit, paisCode){
+  var tiene = {}; _skfPlantillasLocal().forEach(function(p){ tiene[_skfNorm(p.nombre)] = true; });
+  return kit.forms.filter(function(id){
+    var t = FORM_LIBRARY.find(function(x){ return x.id === id; });
+    return t && !tiene[_skfNorm(skfLocalizeText(t.nombre, paisCode))];
+  });
+}
+
+// Crea en el repositorio del usuario los formularios que falten del kit, con la
+// misma estructura que guarda el Digitalizador. Devuelve cuántos agregó.
+async function skfAgregarKit(kit, paisCode, correo){
+  var faltan = skfKitFaltantes(kit, paisCode);
+  if (!faltan.length) return 0;
+  var lista = _skfPlantillasLocal();
+  var max = 0; lista.forEach(function(p){ var m = /^FORM-(\d+)$/.exec(p.codigo || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  var conOpciones = function(tipo){ return typeof fieldNeedsOptions === 'function' ? fieldNeedsOptions(tipo) : ['select','radio','checkbox_multi'].indexOf(tipo) !== -1; };
+  var nuevos = [];
+  faltan.forEach(function(id){
+    var base = FORM_LIBRARY.find(function(x){ return x.id === id; });
+    var t = skfLocalizeTemplate(base, paisCode);
+    var ahora = new Date().toISOString();
+    max++;
+    nuevos.push({
+      id: skfUUID(), nombre: t.nombre, descripcion: '', codigo: 'FORM-' + String(max).padStart(4, '0'),
+      norma: t.norma || '', imagen: null, sourceUrl: null, version: '1.0', logo: null, favorito: false,
+      publica: true, shareToken: (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)),
+      correoNotificacion: correo || '', creadoEn: ahora, actualizadoEn: ahora,
+      campos: t.campos_clave.map(function(f, i){ return {
+        id: 'c' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
+        tipo: f.tipo, etiqueta: f.etiqueta, placeholder: '', requerido: f.tipo !== 'separador',
+        opciones: conOpciones(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined, _quality: 'ok' }; }),
+    });
+  });
+  try { localStorage.setItem('skf_plantillas', JSON.stringify(lista.concat(nuevos))); } catch (e) { return 0; }
+  for (var k = 0; k < nuevos.length; k++) { try { await skfSyncOrQueue('plantilla', nuevos[k]); } catch (e) {} }
+  return nuevos.length;
+}
+
 const FORM_LIBRARY = [
   // ── Calidad / SGC Verticales (ISO 9001:2015) ──────────────────
   {id:'auditoria_interna_iso',vertical:'calidad',nombre:'Checklist de Auditoría Interna (ISO 9001 — Cl. 9.2)',norma:'ISO 9001:2015 — Cl. 9.2',

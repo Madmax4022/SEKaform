@@ -45,6 +45,22 @@
     .demo-link { display: block; width: 100%; margin: -8px 0 22px; padding: 11px 14px; background: none; border: 1px dashed var(--bor);
       border-radius: 12px; color: var(--mut); font-size: .84rem; font-family: inherit; cursor: pointer; text-align: center; line-height: 1.4; }
     .demo-link:hover { border-color: var(--pri); color: var(--txt); }
+    .areas-list { display: flex; flex-direction: column; gap: 10px; }
+    .area-card { display: grid; grid-template-columns: 42px 1fr auto; gap: 13px; align-items: center; background: var(--card);
+      border: 1px solid var(--bor); border-radius: 14px; padding: 13px 15px; }
+    .area-card .ico { width: 42px; height: 42px; border-radius: 11px; background: rgba(37,99,235,.1); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+    .area-card .t { font-weight: 800; font-size: .96rem; line-height: 1.2; }
+    .area-card .s { font-size: .78rem; color: var(--mut); margin-top: 2px; line-height: 1.35; }
+    .area-card .s a { color: var(--pri); text-decoration: none; font-weight: 700; }
+    .area-btn { background: var(--pri); color: #fff; border: none; border-radius: 9px; padding: 9px 13px; font-size: .8rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .area-btn.ok { background: var(--ok-dim); color: var(--ok); border: 1px solid rgba(26,188,156,.35); text-decoration: none; display: inline-block; }
+    .area-btn[disabled] { opacity: .6; cursor: default; }
+    .area-add { margin-top: 10px; background: none; border: 1px dashed var(--bor); color: var(--mut); border-radius: 10px; padding: 9px 14px; font-size: .82rem; font-family: inherit; cursor: pointer; width: 100%; }
+    .area-add:hover { border-color: var(--pri); color: var(--txt); }
+    .opts-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .opts-pick[hidden] { display: none; }
+    .opts-pick button { background: var(--card); border: 1px solid var(--bor); color: var(--txt); border-radius: 20px; padding: 8px 14px; font-size: .82rem; font-family: inherit; cursor: pointer; }
+    .opts-pick button:hover { border-color: var(--pri); }
     .sst-hd { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; color: var(--ok); margin: 0 0 13px; display:flex; align-items:center; gap:8px; }
     .sst-hd::after { content:""; flex:1; height:1px; background:var(--bor); }
     .sst-journey { display: flex; flex-direction: column; gap: 10px; }
@@ -285,6 +301,18 @@
       <span class="arr">→</span>
     </a>
 
+    <!-- ── Tus áreas: solo las que eligió, con su kit de inicio ───── -->
+    <div id="tusAreas" hidden>
+      <div class="sst-hd" style="margin-top:26px">Tus otras áreas<button class="skf-help" data-help-t="¿Qué son las otras áreas?" data-help="La SST es el centro de la app. Si tu empresa también tiene cocina, obra, edificio, clínica o vigilancia, aquí tienes un kit de 3 formularios para empezar con cada una.
+
+• «Agregar el kit» los deja en «Mis formularios» de un toque.
+• Cuando los tengas, ábrelos desde ahí para llenarlos.
+• Esta parte es un complemento: no hace falta para cumplir con SST.">?</button></div>
+      <div id="areasList" class="areas-list"></div>
+      <button type="button" class="area-add" id="areaAdd">＋ Agregar otra área</button>
+      <div class="opts-pick" id="areaPick" hidden></div>
+    </div>
+
     <!-- ── Todo lo demás: visible pero colapsado ──────────────── -->
     <details class="mas">
       <summary>
@@ -478,6 +506,39 @@
       }
 
       const pc = ({ co:'co', pa:'pa', cr:'cr', sv:'sv' })[String((org && org.pais) || '').toLowerCase()] || 'co';
+
+      // ── Tus áreas (kits de inicio) ────────────────────────────────────
+      const kitDe = id => AREA_KITS.find(k => k.id === id);
+      const areasSel = () => ((skfPerfilGet(email) || {}).areas || []).map(kitDe).filter(Boolean);
+      function pintarAreas() {
+        const sel = areasSel();
+        const cont = document.getElementById('tusAreas');
+        const lista = document.getElementById('areasList');
+        // Visible si eligió áreas o si quiere agregar una (siempre ofrecemos el selector).
+        cont.hidden = false;
+        lista.innerHTML = sel.map(k => {
+          const falta = skfKitFaltantes(k, pc).length;
+          const extra = k.extra ? ` · <a href="${k.extra.href}">${k.extra.label}</a>` : '';
+          return `<div class="area-card" data-id="${k.id}">
+            <span class="ico">${k.ico}</span>
+            <div><div class="t">${k.nombre}</div><div class="s">${falta ? 'Kit de inicio: ' + falta + ' formulario' + (falta !== 1 ? 's' : '') + ' por agregar' : 'Kit listo en «Mis formularios»'}${falta ? '' : extra}</div></div>
+            ${falta ? '<button class="area-btn" data-kit="' + k.id + '">Agregar kit</button>' : '<a class="area-btn ok" href="llenar.html">Abrir</a>'}
+          </div>`;
+        }).join('');
+        const libres = AREA_KITS.filter(k => !sel.some(s => s.id === k.id));
+        document.getElementById('areaAdd').hidden = !libres.length;
+        document.getElementById('areaPick').innerHTML = libres.map(k => `<button type="button" data-pick="${k.id}">${k.ico} ${k.nombre}</button>`).join('');
+        if (typeof skfGlosar === 'function') skfGlosar(cont);
+      }
+      document.getElementById('tusAreas').addEventListener('click', async e => {
+        const kb = e.target.closest('[data-kit]');
+        if (kb) { kb.disabled = true; kb.textContent = 'Agregando…'; await skfAgregarKit(kitDe(kb.dataset.kit), pc, email); pintarAreas(); return; }
+        const pk = e.target.closest('[data-pick]');
+        if (pk) { const p = skfPerfilGet(email) || {}; p.areas = (p.areas || []).concat(pk.dataset.pick); skfPerfilSet(email, p); document.getElementById('areaPick').hidden = true; pintarAreas(); return; }
+        if (e.target.closest('#areaAdd')) { const pkEl = document.getElementById('areaPick'); pkEl.hidden = !pkEl.hidden; }
+      });
+      pintarAreas();
+      const kitPendiente = areasSel().find(k => skfKitFaltantes(k, pc).length > 0);
       const abiertos = hz.filter(h => (h.estado || 'abierto') !== 'cerrado');
       const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
       const ids = new Set(abiertos.map(h => h.id));
@@ -495,6 +556,7 @@
       else if (env.length === 0) paso = { ico:'🔎', t:'Haz tu primera inspección', s:'Toma 2 minutos y ya tendrás evidencia de que cumples.', href: plt.length ? 'llenar.html' : 'digitalizador.html?preset=inspeccion_sst' };
       else if (venc > 0) paso = { ico:'⏰', t: venc + ' acción' + (venc !== 1 ? 'es' : '') + ' correctiva' + (venc !== 1 ? 's' : '') + ' vencida' + (venc !== 1 ? 's' : ''), s:'Ciérralas antes de que lo vea el inspector.', href:'hallazgos.html', cls:'warn' };
       else if (abiertos.length > 0) paso = { ico:'⚠️', t:'Cierra ' + abiertos.length + ' hallazgo' + (abiertos.length !== 1 ? 's' : '') + ' abierto' + (abiertos.length !== 1 ? 's' : ''), s:'Asigna un responsable y una fecha límite a cada uno.', href:'hallazgos.html', cls:'warn' };
+      else if (kitPendiente) paso = { ico: kitPendiente.ico, t:'Agrega tu kit de «' + kitPendiente.nombre + '»', s: skfKitFaltantes(kitPendiente, pc).length + ' formularios para empezar, en un toque.', href:'#tusAreas' };
       else if (atras.length > 0) paso = { ico:'🔄', t:'Renueva la evidencia de «' + atras[0].p.nombre + '»', s:'La última tiene ' + atras[0].ev.dias + ' días. ' + (atras.length > 1 ? 'Y ' + (atras.length - 1) + ' principio' + (atras.length > 2 ? 's' : '') + ' más atrasado' + (atras.length > 2 ? 's' : '') + '.' : 'Ábrelo en tu mapa de cumplimiento.'), href:'cumplimiento.html', cls:'warn' };
       else if (pend.length > 0) paso = { ico:'🎯', t:'Te falta evidencia de «' + pend[0].p.nombre + '»', s:'Llevas ' + (9 - pend.length) + ' de 9 principios con evidencia. Mira qué formulario lo cubre.', href:'cumplimiento.html' };
       else paso = { ico:'✅', t:'Todo al día', s:'Tienes evidencia reciente de los 9 principios. Revisa tu mapa de cumplimiento.', href:'cumplimiento.html', cls:'ok' };
