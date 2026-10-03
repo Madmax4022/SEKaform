@@ -34,6 +34,9 @@
     .opt small { display: block; font-weight: 500; color: var(--mut); font-size: .72rem; margin-top: 3px; }
     .opt.sel { border-color: var(--pri); background: var(--pri-dim); }
     .opts.one { grid-template-columns: 1fr; }
+    .opts.multi .opt { position: relative; padding-right: 44px; }
+    .opts.multi .opt::after { content: ''; position: absolute; right: 14px; top: 50%; width: 20px; height: 20px; margin-top: -10px; border-radius: 6px; border: 2px solid var(--bor); }
+    .opts.multi .opt.sel::after { background: var(--pri); border-color: var(--pri); content: '✓'; color: #fff; font-size: .8rem; line-height: 16px; text-align: center; font-weight: 800; }
     .opts.one .opt { text-align: left; padding: 14px 16px; }
     .resp { margin-top: 20px; background: var(--ok-dim); border: 1px solid rgba(26,188,156,.3); border-radius: 12px; padding: 14px 16px; font-size: .88rem; line-height: 1.55; }
     .resp b { color: var(--ok); }
@@ -52,7 +55,7 @@
     <div class="bv-brand">SEK<span>a</span>form</div>
     <button class="bv-skip" id="skip" type="button">Ahora no</button>
   </div>
-  <div class="bv-prog" id="prog"><i></i><i></i><i></i></div>
+  <div class="bv-prog" id="prog"><i></i><i></i><i></i><i></i></div>
   <div class="bv-step-n" id="stepN"></div>
 
   <!-- 1 · Tu empresa -->
@@ -93,8 +96,20 @@
     <div class="bv-nav"><button class="btn btn-pri" id="to2" type="button">Continuar →</button></div>
   </section>
 
-  <!-- 2 · Tus lugares -->
+  <!-- 2 · Qué más hay en tu empresa -->
   <section id="s2" hidden>
+    <h1>¿Qué más hay en tu empresa?</h1>
+    <p class="lead">La SST ya es lo tuyo. Si además tienes alguna de estas actividades, te dejamos <b>3 formularios listos</b> para empezar con cada una. Es opcional.</p>
+    <div class="opts one multi" id="optAreas"></div>
+    <div class="hint">Puedes agregar o quitar áreas más adelante desde el inicio.</div>
+    <div class="bv-nav">
+      <button class="btn btn-sec" id="back2" type="button">← Atrás</button>
+      <button class="btn btn-pri" id="to3" type="button">Continuar →</button>
+    </div>
+  </section>
+
+  <!-- 3 · Tus lugares -->
+  <section id="s3" hidden>
     <h1>¿Dónde trabajas?</h1>
     <p class="lead">Una <b>sede</b> es un lugar de trabajo: una oficina, una bodega, una obra. Sirve para saber en cuál ocurrió cada inspección y comparar entre ellas.</p>
 
@@ -103,13 +118,13 @@
     <div class="hint">Si tienes más de una, las agregas después en «Sedes y áreas». Para empezar basta una.</div>
 
     <div class="bv-nav">
-      <button class="btn btn-sec" id="back2" type="button">← Atrás</button>
-      <button class="btn btn-pri" id="to3" type="button">Continuar →</button>
+      <button class="btn btn-sec" id="back3" type="button">← Atrás</button>
+      <button class="btn btn-pri" id="to4" type="button">Continuar →</button>
     </div>
   </section>
 
-  <!-- 3 · Listo -->
-  <section id="s3" hidden>
+  <!-- 4 · Listo -->
+  <section id="s4" hidden>
     <h1>¡Todo listo! Ahora tu primera inspección</h1>
     <p class="lead" id="listoLead"></p>
     <ul class="done-list" id="doneList"></ul>
@@ -121,7 +136,7 @@
 </div>
 
 <script>
-var state = { trab: null, riesgo: null, email: '' };
+var state = { trab: null, riesgo: null, email: '', areas: [] };
 var step = 1;
 
 function $(id){ return document.getElementById(id); }
@@ -135,6 +150,16 @@ function pick(groupId, key){
   });
 }
 pick('optTrab', 'trab'); pick('optRiesgo', 'riesgo');
+
+// Áreas opcionales (kits de inicio): chips de selección múltiple.
+$('optAreas').innerHTML = AREA_KITS.map(function(k){
+  return '<button type="button" class="opt" data-id="' + k.id + '">' + k.ico + ' ' + k.nombre + '<small>' + k.desc + '</small></button>';
+}).join('');
+$('optAreas').addEventListener('click', function(e){
+  var b = e.target.closest('.opt'); if (!b) return;
+  b.classList.toggle('sel');
+  state.areas = [].filter.call($('optAreas').children, function(c){ return c.classList.contains('sel'); }).map(function(c){ return c.dataset.id; });
+});
 
 function paisCode(){ var v = $('pais').value; return ({CO:'co',PA:'pa',CR:'cr',SV:'sv'})[v] || null; }
 
@@ -158,11 +183,11 @@ $('pais').addEventListener('change', actualizarResp);
 
 function irA(n){
   step = n;
-  [1,2,3].forEach(function(i){ $('s'+i).hidden = (i !== n); });
+  [1,2,3,4].forEach(function(i){ $('s'+i).hidden = (i !== n); });
   [].forEach.call($('prog').children, function(el, i){
     el.className = i + 1 < n ? 'done' : (i + 1 === n ? 'on' : '');
   });
-  $('stepN').textContent = 'Paso ' + n + ' de 3';
+  $('stepN').textContent = 'Paso ' + n + ' de 4';
   window.scrollTo(0, 0);
 }
 
@@ -174,6 +199,8 @@ $('to2').addEventListener('click', function(){
   irA(2);
 });
 $('back2').addEventListener('click', function(){ irA(1); });
+$('to3').addEventListener('click', function(){ irA(3); });
+$('back3').addEventListener('click', function(){ irA(2); });
 
 function guardarTodo(){
   var nombre = $('nombre').value.trim();
@@ -193,10 +220,10 @@ function guardarTodo(){
       skfSyncOrQueue('unidad', u);
     }
   }
-  skfPerfilSet(state.email, { completo: true, trabajadores: state.trab, riesgo: state.riesgo, pais: pais, en: new Date().toISOString() });
+  skfPerfilSet(state.email, { completo: true, trabajadores: state.trab, riesgo: state.riesgo, pais: pais, areas: state.areas.slice(), en: new Date().toISOString() });
 }
 
-$('to3').addEventListener('click', function(){
+$('to4').addEventListener('click', async function(){
   guardarTodo();
   var items = ['<li><span class="ck">✓</span><span>Empresa <b>' + $('nombre').value.trim().replace(/</g,'&lt;') + '</b> configurada</span></li>'];
   if ($('pais').value === 'CO') {
@@ -204,10 +231,17 @@ $('to3').addEventListener('click', function(){
     items.push('<li><span class="ck">✓</span><span><b>' + e.n + ' estándares mínimos</b> de la Res. 0312 identificados para tu empresa</span></li>');
   }
   if ($('sede').value.trim()) items.push('<li><span class="ck">✓</span><span>Sede <b>' + $('sede').value.trim().replace(/</g,'&lt;') + '</b> creada</span></li>');
+  // Kits de inicio de las áreas elegidas
+  for (var i = 0; i < state.areas.length; i++) {
+    var kit = AREA_KITS.find(function(k){ return k.id === state.areas[i]; });
+    if (!kit) continue;
+    var n = await skfAgregarKit(kit, paisCode() || 'co', state.email);
+    items.push('<li><span class="ck">✓</span><span>Kit <b>' + kit.nombre + '</b>: ' + (n ? n + ' formulario' + (n !== 1 ? 's' : '') + ' agregado' + (n !== 1 ? 's' : '') : 'ya lo tenías') + '</span></li>');
+  }
   items.push('<li><span class="ck">→</span><span>Solo falta tu primera inspección: toma 2 minutos y ya tendrás evidencia.</span></li>');
   $('doneList').innerHTML = items.join('');
   $('listoLead').textContent = 'Hicimos lo difícil. Abre la Lista de Verificación SST y llénala con lo que ves hoy en tu lugar de trabajo.';
-  irA(3);
+  irA(4);
 });
 
 $('go').addEventListener('click', function(){ location.href = 'digitalizador.html?preset=inspeccion_sst'; });
