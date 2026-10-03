@@ -40,6 +40,7 @@ PAGINAS = {
     "unidades.html": "unidades.html",
     "hallazgos.html": "hallazgos.html",
     "cumplimiento.html": "cumplimiento.html",
+    "bienvenida.html": "bienvenida.html",
     "dashboard.html": "dashboard.html",
     "organizacion.html": "organizacion.html",
 }
