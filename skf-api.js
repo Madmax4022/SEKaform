@@ -681,6 +681,132 @@ document.addEventListener('DOMContentLoaded', () => {
   if (navigator.onLine) skfProcessQueue();
 });
 
+
+// ══════════════════════════════════════════════════════════════════════════
+//  MODO EJEMPLO — ver la app "llena" antes de capturar datos reales
+//
+//  Garantía central: NADA de lo de ejemplo puede llegar a la nube ni a la
+//  Carpeta de evidencia (sería evidencia falsa ante un inspector). Por eso:
+//   1. Al entrar se respalda todo skf_* local y se reemplaza por el ejemplo.
+//   2. Durante el modo, skfSyncOrQueue/skfProcessQueue no envían nada.
+//   3. Al salir se borra lo de ejemplo y se restaura el respaldo tal cual.
+// ══════════════════════════════════════════════════════════════════════════
+const SKF_DEMO_FLAG = 'skf_demo';
+const SKF_DEMO_BACKUP = 'skf_demo_backup';
+function skfDemoActivo() { try { return localStorage.getItem(SKF_DEMO_FLAG) === '1'; } catch (e) { return false; } }
+
+function _skfDemoClaves() {
+  const keep = ['skf_sidebar_collapsed', SKF_DEMO_FLAG, SKF_DEMO_BACKUP, 'skf_org'];
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.indexOf('skf_') === 0 && keep.indexOf(k) === -1 && k.indexOf('skf_perfil:') !== 0) out.push(k);
+  }
+  return out;
+}
+
+function _skfDemoDatos() {
+  const DIA = 86400000, hace = d => new Date(Date.now() - d * DIA).toISOString();
+  const futuro = d => new Date(Date.now() + d * DIA).toISOString().slice(0, 10);
+  const pasado = d => new Date(Date.now() - d * DIA).toISOString().slice(0, 10);
+  const F = {
+    lista:   { id: 'demo-f1', nombre: 'Lista de Verificación SST', n: 10 },
+    epp:     { id: 'demo-f2', nombre: 'Entrega de Elementos de Protección Personal (EPP)', n: 12 },
+    asist:   { id: 'demo-f3', nombre: 'Registro de Asistencia a Capacitación', n: 8 },
+    acta:    { id: 'demo-f4', nombre: 'Acta de Reunión — COPASST', n: 15 },
+    acto:    { id: 'demo-f5', nombre: 'Reporte de Acto y Condición Insegura', n: 10 },
+    botiquin:{ id: 'demo-f6', nombre: 'Inspección de Botiquín y Brigada de Emergencias', n: 14 },
+  };
+  const plantillas = Object.keys(F).map((k, i) => ({
+    id: F[k].id, nombre: F[k].nombre, codigo: 'FORM-' + String(i + 1).padStart(4, '0'), publica: false,
+    campos: Array.from({ length: F[k].n }, (_, c) => ({ id: 'c' + c, tipo: 'texto', etiqueta: 'Campo ' + (c + 1) })),
+    creado_en: hace(120), creadoEn: hace(120), actualizado_en: hace(10), actualizadoEn: hace(10),
+  }));
+  // [formulario, hace cuántos días, quién, sede]. Cubre principios al día, un atrasado
+  // (capacitación) y deja otros pendientes, para que el mapa muestre de todo un poco.
+  const filas = [
+    ['lista', 3, 'Juan Pérez', 'demo-u1'], ['lista', 18, 'Juan Pérez', 'demo-u1'], ['lista', 40, 'María López', 'demo-u2'], ['lista', 75, 'Juan Pérez', 'demo-u1'],
+    ['epp', 7, 'María López', 'demo-u2'], ['epp', 30, 'María López', 'demo-u2'], ['epp', 90, 'Juan Pérez', 'demo-u1'],
+    ['asist', 200, 'Carlos Ruiz', 'demo-u1'], ['asist', 260, 'Carlos Ruiz', 'demo-u1'],
+    ['acta', 35, 'Ana Gómez', 'demo-u1'],
+    ['acto', 9, 'Pedro Díaz', 'demo-u2'], ['acto', 22, 'Pedro Díaz', 'demo-u2'],
+    ['botiquin', 12, 'María López', 'demo-u2'],
+  ];
+  const envios = filas.map((r, i) => ({
+    id: 'demo-e' + (i + 1), numero: i + 1, plantilla_id: F[r[0]].id, plantillaId: F[r[0]].id,
+    plantilla_nombre: F[r[0]].nombre, plantillaNombre: F[r[0]].nombre, plantillaCodigo: '', plantilla_codigo: '',
+    unidad_id: r[3], unidadId: r[3], estado: 'enviado', datos: {},
+    llenado_por: r[2], llenadoPor: r[2], llenado_correo: null, llenadoCorreo: null,
+    creado_en: hace(r[1]), creadoEn: hace(r[1]), enviado_en: hace(r[1]), enviadoEn: hace(r[1]),
+  }));
+  const hz = (id, sev, desc, campo, dias, estado, uid) => ({
+    id, envio_id: 'demo-e1', envioId: 'demo-e1', plantilla_id: F.lista.id, plantillaId: F.lista.id,
+    plantilla_nombre: F.lista.nombre, plantillaNombre: F.lista.nombre, campo_etiqueta: campo, campoEtiqueta: campo,
+    origen: 'formulario', severidad: sev, descripcion: desc, estado, unidad_id: uid, unidadId: uid,
+    reportado_por: 'Juan Pérez', reportadoPor: 'Juan Pérez', creado_en: hace(dias), creadoEn: hace(dias),
+  });
+  const hallazgos = [
+    hz('demo-h1', 'critico', 'Extintor de la bodega con la recarga vencida.', 'Extintor cercano y vigente', 6, 'abierto', 'demo-u1'),
+    hz('demo-h2', 'mayor', 'Falta señalización de la salida de emergencia en el segundo piso.', 'Señalización de salida', 14, 'abierto', 'demo-u2'),
+    hz('demo-h3', 'menor', 'Botiquín sin gasas suficientes (ya repuestas).', 'Vendas y gasas', 40, 'cerrado', 'demo-u2'),
+  ];
+  const acciones = [
+    { id: 'demo-a1', hallazgo_id: 'demo-h1', hallazgoId: 'demo-h1', responsable: 'Carlos Ruiz', correo: null, fecha_limite: pasado(2), fechaLimite: pasado(2), estado: 'pendiente', creado_en: hace(5), creadoEn: hace(5) },
+    { id: 'demo-a2', hallazgo_id: 'demo-h2', hallazgoId: 'demo-h2', responsable: 'Ana Gómez', correo: null, fecha_limite: futuro(10), fechaLimite: futuro(10), estado: 'en_progreso', creado_en: hace(12), creadoEn: hace(12) },
+  ];
+  const unidades = [
+    { id: 'demo-u1', nombre: 'Sede Principal (ejemplo)', tipo: 'sede', padre_id: null, padreId: null, creado_en: hace(100), creadoEn: hace(100) },
+    { id: 'demo-u2', nombre: 'Bodega Norte (ejemplo)', tipo: 'sede', padre_id: null, padreId: null, creado_en: hace(100), creadoEn: hace(100) },
+  ];
+  return { plantillas, envios, hallazgos, acciones, unidades };
+}
+
+function skfDemoEntrar() {
+  if (skfDemoActivo()) return true;
+  try {
+    const backup = {};
+    _skfDemoClaves().forEach(k => { backup[k] = localStorage.getItem(k); });
+    localStorage.setItem(SKF_DEMO_BACKUP, JSON.stringify(backup));   // si no cabe, falla ANTES de tocar nada
+    Object.keys(backup).forEach(k => localStorage.removeItem(k));
+    const d = _skfDemoDatos();
+    localStorage.setItem('skf_plantillas', JSON.stringify(d.plantillas));
+    localStorage.setItem('skf_envios', JSON.stringify(d.envios));
+    localStorage.setItem('skf_hallazgos', JSON.stringify(d.hallazgos));
+    localStorage.setItem('skf_acciones_correctivas', JSON.stringify(d.acciones));
+    localStorage.setItem('skf_unidades', JSON.stringify(d.unidades));
+    localStorage.setItem(SKF_DEMO_FLAG, '1');
+    return true;
+  } catch (e) {
+    try { localStorage.removeItem(SKF_DEMO_BACKUP); } catch (e2) {}
+    return false;
+  }
+}
+
+function skfDemoSalir() {
+  try {
+    _skfDemoClaves().forEach(k => localStorage.removeItem(k));        // fuera todo lo de ejemplo
+    const backup = JSON.parse(localStorage.getItem(SKF_DEMO_BACKUP) || '{}');
+    Object.keys(backup).forEach(k => { if (backup[k] != null) localStorage.setItem(k, backup[k]); });
+    localStorage.removeItem(SKF_DEMO_BACKUP);
+    localStorage.removeItem(SKF_DEMO_FLAG);
+  } catch (e) {}
+  location.href = 'index.html';
+}
+
+if (skfDemoActivo()) {
+  const _d = _skfDemoDatos();
+  // Lecturas: siempre el ejemplo. Escrituras: ninguna sale del dispositivo.
+  sbLoadPlantillas = async () => _d.plantillas;
+  sbLoadEnvios = async () => _d.envios;
+  sbLoadInspecciones = async () => _d.envios;
+  sbLoadHallazgos = async () => _d.hallazgos;
+  sbLoadAccionesCorrectivas = async () => _d.acciones;
+  sbLoadUnidades = async () => _d.unidades;
+  sbLoadAsignaciones = async () => [];
+  skfSyncOrQueue = async () => true;
+  skfProcessQueue = async () => {};
+}
+
 setInterval(() => { if (navigator.onLine) skfProcessQueue(); }, 60000);
 
 if ('serviceWorker' in navigator) {

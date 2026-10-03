@@ -239,6 +239,14 @@ function skfRenderSidebar() {
   `;
   document.body.insertAdjacentHTML('afterbegin', html);
 
+
+  // Modo ejemplo: aviso permanente para que NUNCA se confunda con datos reales.
+  if (typeof skfDemoActivo === 'function' && skfDemoActivo()) {
+    document.body.insertAdjacentHTML('afterbegin',
+      '<div class="skf-demo-bar" role="status"><span>🧪 <b>Datos de ejemplo</b> — nada de esto es real y no se guarda.</span>' +
+      '<button type="button" onclick="skfDemoSalir()">Salir del ejemplo</button></div>');
+  }
+
   // Marca la pestaña activa de la barra inferior según la página actual.
   const _cur = (location.pathname.split('/').pop() || 'index.html');
   document.querySelectorAll('#skfBottomBar .bb-tab[data-page]').forEach(t => {

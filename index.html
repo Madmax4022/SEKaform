@@ -42,6 +42,9 @@
     .next-step .ns-t { font-size: 1.12rem; font-weight: 800; line-height: 1.25; margin-top: 2px; }
     .next-step .ns-s { font-size: .84rem; opacity: .92; margin-top: 3px; line-height: 1.4; }
     .next-step .ns-arr { font-size: 1.5rem; font-weight: 700; }
+    .demo-link { display: block; width: 100%; margin: -8px 0 22px; padding: 11px 14px; background: none; border: 1px dashed var(--bor);
+      border-radius: 12px; color: var(--mut); font-size: .84rem; font-family: inherit; cursor: pointer; text-align: center; line-height: 1.4; }
+    .demo-link:hover { border-color: var(--pri); color: var(--txt); }
     .sst-hd { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; color: var(--ok); margin: 0 0 13px; display:flex; align-items:center; gap:8px; }
     .sst-hd::after { content:""; flex:1; height:1px; background:var(--bor); }
     .sst-journey { display: flex; flex-direction: column; gap: 10px; }
@@ -227,6 +230,8 @@
       </div>
       <span class="ns-arr">→</span>
     </a>
+
+    <button type="button" class="demo-link" id="demoBtn" hidden>🧪 Probar con datos de ejemplo — ver la app llena antes de capturar los tuyos</button>
 
     <div class="sst-hd">Tu ruta de Salud Ocupacional<button class="skf-help" data-help-t="¿Cómo uso esta pantalla?" data-help="Esta es tu base de operaciones de SST (Seguridad y Salud en el Trabajo).
 
@@ -501,6 +506,12 @@
       document.getElementById('nsT').textContent = paso.t;
       document.getElementById('nsS').textContent = paso.s;
       card.hidden = false;
+      // Ofrecer el ejemplo mientras la cuenta tenga poco que mostrar (nunca dentro del propio ejemplo).
+      if (!skfDemoActivo() && env.length < 3) {
+        const db = document.getElementById('demoBtn');
+        db.hidden = false;
+        db.onclick = () => { if (skfDemoEntrar()) location.reload(); else alert('No se pudo preparar el ejemplo en este dispositivo.'); };
+      }
       if (typeof skfGlosar === 'function') skfGlosar(document.querySelector('.wrapper'));
     })();
   </script>
