@@ -62,6 +62,7 @@ jobs:
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/003_super_admin_invitacion.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/004_publico.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/005_paneles.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/006_turnos.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -q -c "
             GRANT USAGE ON SCHEMA public TO skf_app;
             GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO skf_app;
@@ -84,6 +85,10 @@ jobs:
         env: { PGPASSWORD: a }
         run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/paneles_test.sql
 
+      - name: Turnos (edición solo admin, aislamiento)
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/turnos_test.sql
+
       - name: Idempotencia de migraciones
         env: { PGPASSWORD: o }
         run: |
@@ -92,6 +97,7 @@ jobs:
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/003_super_admin_invitacion.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/004_publico.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/005_paneles.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/006_turnos.sql
 
   desplegar:
     needs: pruebas
