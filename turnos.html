@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Control por turnos — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+    .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
+    .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 22px; line-height: 1.6; max-width: 640px; }
+
+    /* Resumen */
+    .tn-resumen { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .tn-stat { flex: 1 1 140px; background: var(--card); border: 1px solid var(--bor); border-radius: 12px; padding: 14px 16px; }
+    .tn-stat .n { font-size: 1.6rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .tn-stat .l { font-size: .78rem; color: var(--mut); margin-top: 5px; }
+    .tn-stat.ok .n { color: var(--ok); } .tn-stat.warn .n { color: var(--warn); }
+
+    .tn-sec { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--mut); margin: 26px 0 11px; display: flex; align-items: center; gap: 8px; }
+    .tn-sec::after { content: ""; flex: 1; height: 1px; background: var(--bor); }
+
+    /* Tarjeta de turno */
+    .tcard-t { background: var(--card); border: 1px solid var(--bor); border-left: 4px solid var(--bor); border-radius: 12px; padding: 15px 18px; margin-bottom: 10px; }
+    .tcard-t.st-completo { border-left-color: var(--ok); }
+    .tcard-t.st-en_curso { border-left-color: var(--pri); }
+    .tcard-t.st-omitido { border-left-color: var(--warn); }
+    .tt-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .tt-name { font-weight: 800; font-size: 1rem; }
+    .tt-when { font-size: .78rem; color: var(--mut); flex: 1; min-width: 0; }
+    .tt-pill { font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+    .tt-pill.completo { background: var(--ok-dim); color: var(--ok); }
+    .tt-pill.en_curso { background: var(--pri-dim); color: var(--pri); }
+    .tt-pill.omitido { background: rgba(245,158,11,.15); color: var(--warn); }
+    .tt-pill.sin_esperado { background: var(--bor); color: var(--mut); }
+    .tt-items { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+    .tt-item { display: flex; align-items: center; gap: 9px; font-size: .86rem; }
+    .tt-item .mk { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; border: 2px solid var(--bor); color: var(--mut); }
+    .tt-item.hecho .mk { background: var(--ok); border-color: var(--ok); color: #06281f; }
+    .tt-item.falta .mk { border-color: var(--warn); }
+    .tt-item.hecho { color: var(--mut); }
+    .tt-item a { color: var(--pri); font-weight: 700; text-decoration: none; margin-left: auto; font-size: .8rem; white-space: nowrap; }
+
+    .tn-vacio { background: var(--card); border: 1px dashed var(--bor); border-radius: 14px; padding: 26px 22px; text-align: center; }
+    .tn-vacio .ic { font-size: 2.2rem; }
+    .tn-vacio h2 { font-size: 1.1rem; margin: 8px 0 6px; }
+    .tn-vacio p { color: var(--mut); font-size: .88rem; line-height: 1.55; max-width: 460px; margin: 0 auto 16px; }
+
+    /* Configuración */
+    details.tn-cfg { background: var(--card); border: 1px solid var(--bor); border-radius: 14px; margin-top: 26px; }
+    details.tn-cfg > summary { cursor: pointer; padding: 15px 18px; font-weight: 800; font-size: .95rem; list-style: none; display: flex; align-items: center; gap: 10px; }
+    details.tn-cfg > summary::-webkit-details-marker { display: none; }
+    details.tn-cfg > summary::after { content: "⌄"; margin-left: auto; color: var(--mut); transition: transform .2s; }
+    details.tn-cfg[open] > summary::after { transform: rotate(180deg); }
+    .cfg-body { padding: 0 18px 18px; }
+    .cfg-lbl { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); margin: 16px 0 8px; }
+    .cfg-row { display: grid; grid-template-columns: 1fr 98px 98px 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .cfg-row input { width: 100%; background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 8px; padding: 10px; font-size: .92rem; font-family: inherit; outline: none; }
+    .cfg-row input:focus { border-color: var(--pri); }
+    .cfg-row .rm { background: none; border: 1px solid var(--bor); color: var(--err); border-radius: 8px; height: 38px; cursor: pointer; font-family: inherit; }
+    .cfg-head { display: grid; grid-template-columns: 1fr 98px 98px 36px; gap: 8px; font-size: .7rem; color: var(--mut); margin-bottom: 4px; }
+    .cfg-chk { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--bor); font-size: .9rem; cursor: pointer; }
+    .cfg-chk:last-child { border-bottom: none; }
+    .cfg-chk input { width: 18px; height: 18px; accent-color: var(--pri); }
+    .cfg-hint { font-size: .78rem; color: var(--mut); line-height: 1.5; margin-top: 8px; }
+    .cfg-hint a { color: var(--pri); }
+    .cfg-acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .cfg-msg { font-size: .84rem; margin-top: 12px; }
+    .cfg-msg.er { color: var(--err); } .cfg-msg.ok { color: var(--ok); }
+    .cfg-ro { background: var(--bg); border: 1px solid var(--bor); border-radius: 10px; padding: 11px 14px; font-size: .82rem; color: var(--mut); margin-bottom: 14px; }
+    @media (max-width: 520px) {
+      .cfg-row, .cfg-head { grid-template-columns: 1fr 84px 84px 34px; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <div class="pg-eyebrow">🔄 Complemento · Vigilancia y operación</div>
+  <h1 class="pg-h">Control por turnos<button class="skf-help" data-help-t="¿Cómo funciona el control por turnos?" data-help="Defines los turnos de tu empresa (por ejemplo Mañana, Tarde y Noche) y qué formularios debe llenar cada turno.
+
+• La app asigna cada registro a su turno solo, según la hora en que se envía.
+• Un turno que cruza la medianoche cuenta completo: lo de las 2 a. m. es de la noche que empezó el día anterior.
+• Un turno está «En curso» mientras no termine, «Completo» si se llenó todo lo esperado, y «Omitido» si terminó y faltó algo.
+
+Solo un administrador puede cambiar los turnos; los demás los ven.">?</button></h1>
+  <p class="pg-sub">Qué turnos cumplieron lo que se espera de ellos, y cuáles dejaron algo sin hacer. La entrega de turno y los checklists que ya usas, ahora con orden.</p>
+
+  <div id="vista"></div>
+
+  <details class="tn-cfg" id="cfg">
+    <summary>⚙️ Configurar mis turnos</summary>
+    <div class="cfg-body">
+      <div class="cfg-ro" id="cfgRo" hidden>👁️ Solo un administrador de la organización puede cambiar los turnos. Tú los puedes ver.</div>
+
+      <div class="cfg-lbl">Mis turnos</div>
+      <div class="cfg-head"><span>Nombre</span><span>Empieza</span><span>Termina</span><span></span></div>
+      <div id="cfgTurnos"></div>
+      <div class="cfg-acts" style="margin-top:6px">
+        <button type="button" class="btn btn-sec btn-sm" id="addTurno">＋ Agregar turno</button>
+        <button type="button" class="btn btn-sec btn-sm" id="preset">Usar Mañana · Tarde · Noche</button>
+      </div>
+
+      <div class="cfg-lbl">Qué se espera en cada turno</div>
+      <div id="cfgForms"></div>
+      <div class="cfg-hint" id="cfgFormsHint"></div>
+
+      <div class="cfg-acts"><button type="button" class="btn btn-pri" id="guardar">Guardar turnos</button></div>
+      <div class="cfg-msg" id="cfgMsg" role="status"></div>
+    </div>
+  </details>
+</div>
+
+<script>
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+var $ = function(id){ return document.getElementById(id); };
+
+var cfg = { turnos: [], esperado: [] };   // lo que se edita en pantalla
+var guardada = { turnos: [], esperado: [] }; // lo que está guardado
+var formularios = [];                     // formularios del usuario [{id,nombre}]
+var envios = [];
+var puedeEscribir = true;
+
+var DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+function pad(n){ return String(n).padStart(2, '0'); }
+function hhmm(d){ return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function etiquetaDia(d){
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var dif = Math.round((hoy - dd) / 86400000);
+  return dif === 0 ? 'hoy' : dif === 1 ? 'ayer' : DIAS[dd.getDay()] + ' ' + dd.getDate();
+}
+function nombreForm(id){ var f = formularios.find(function(x){ return x.id === id; }); return f ? f.nombre : '(formulario eliminado)'; }
+
+function copiar(c){ return JSON.parse(JSON.stringify(c || { turnos: [], esperado: [] })); }
+
+/* ────────────────────────── Vista de cumplimiento ───────────────────────── */
+function pintarVista(){
+  var host = $('vista');
+  var conf = guardada;
+  if (!conf.turnos.length) {
+    host.innerHTML = '<div class="tn-vacio"><div class="ic">🔄</div><h2>Aún no has definido tus turnos</h2>' +
+      '<p>Dinos cuándo empieza y termina cada turno de tu empresa y qué debe llenar cada uno. Con eso te mostramos qué turnos cumplieron y cuáles no.</p>' +
+      '<button type="button" class="btn btn-pri" id="vacioCfg">Configurar mis turnos</button></div>';
+    $('vacioCfg').onclick = function(){ $('cfg').open = true; $('cfg').scrollIntoView({ behavior: 'smooth' }); };
+    return;
+  }
+  var ahora = new Date();
+  var est = skfEstadoTurnos(conf, envios, ahora, 7);
+  var inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  var terminados = est.filter(function(x){ return x.estado === 'completo' || x.estado === 'omitido'; });
+  var completos = terminados.filter(function(x){ return x.estado === 'completo'; }).length;
+  var omitidos = est.filter(function(x){ return x.estado === 'omitido'; });
+
+  var html = '';
+  if (!conf.esperado.length) {
+    html += '<div class="cfg-ro">Ya tienes turnos, pero falta decir <b>qué se espera en cada uno</b>. Ábrelo en «Configurar mis turnos».</div>';
+  } else {
+    html += '<div class="tn-resumen">' +
+      '<div class="tn-stat ok"><div class="n">' + completos + '<span style="font-size:1rem;color:var(--mut)"> / ' + terminados.length + '</span></div><div class="l">turnos completos (últimos 7 días)</div></div>' +
+      '<div class="tn-stat ' + (omitidos.length ? 'warn' : '') + '"><div class="n">' + omitidos.length + '</div><div class="l">turnos omitidos</div></div></div>';
+  }
+
+  function tarjeta(x){
+    var pill = { completo:'Completo', en_curso:'En curso', omitido:'Omitido', sin_esperado:'Sin definir' }[x.estado];
+    var items = x.esperado.map(function(id){
+      var hecho = x.hechos.indexOf(id) !== -1;
+      var link = (!hecho && x.estado !== 'omitido') ? '<a href="llenar.html?tmpl=' + encodeURIComponent(id) + '">Llenar →</a>'
+               : (!hecho ? '<a href="llenar.html?tmpl=' + encodeURIComponent(id) + '">Llenar →</a>' : '');
+      return '<div class="tt-item ' + (hecho ? 'hecho' : 'falta') + '"><span class="mk">' + (hecho ? '✓' : '') + '</span><span>' + esc(nombreForm(id)) + '</span>' + link + '</div>';
+    }).join('');
+    return '<div class="tcard-t st-' + x.estado + '"><div class="tt-top"><span class="tt-name">' + esc(x.turno.nombre) + '</span>' +
+      '<span class="tt-when">' + esc(etiquetaDia(x.inicio)) + ' · ' + hhmm(x.inicio) + '–' + hhmm(x.fin) + '</span>' +
+      '<span class="tt-pill ' + x.estado + '">' + pill + '</span></div>' +
+      (items ? '<div class="tt-items">' + items + '</div>' : '') + '</div>';
+  }
+
+  var hoy = est.filter(function(x){ return x.inicio >= inicioHoy || x.fin > ahora; });
+  html += '<div class="tn-sec">Hoy</div>' + (hoy.length ? hoy.map(tarjeta).join('') : '<div class="cfg-hint">Todavía no empieza ningún turno hoy.</div>');
+
+  html += '<div class="tn-sec">Omitidos · últimos 7 días</div>' +
+    (omitidos.length ? omitidos.map(tarjeta).join('') : '<div class="cfg-hint">✓ Ningún turno quedó sin cumplir. Buen trabajo.</div>');
+  host.innerHTML = html;
+  if (typeof skfGlosar === 'function') skfGlosar(host);
+}
+
+/* ───────────────────────────── Configuración ────────────────────────────── */
+function pintarConfig(){
+  $('cfgTurnos').innerHTML = cfg.turnos.map(function(t, i){
+    return '<div class="cfg-row" data-i="' + i + '">' +
+      '<input type="text" data-f="nombre" value="' + esc(t.nombre) + '" placeholder="Ej. Mañana" maxlength="40" aria-label="Nombre del turno">' +
+      '<input type="time" data-f="inicio" value="' + esc(t.inicio) + '" aria-label="Hora de inicio">' +
+      '<input type="time" data-f="fin" value="' + esc(t.fin) + '" aria-label="Hora de fin">' +
+      '<button type="button" class="rm" data-rm="' + i + '" aria-label="Quitar turno">✕</button></div>';
+  }).join('') || '<div class="cfg-hint">Sin turnos todavía. Agrega uno o usa el ejemplo.</div>';
+
+  if (!formularios.length) {
+    $('cfgForms').innerHTML = '';
+    $('cfgFormsHint').innerHTML = 'Aún no tienes formularios. Agrega el kit de <b>Vigilancia, rondas y turnos</b> desde el inicio, o elige uno en <a href="plantillas.html">Formularios listos</a>.';
+  } else {
+    $('cfgForms').innerHTML = formularios.map(function(f){
+      return '<label class="cfg-chk"><input type="checkbox" data-form="' + esc(f.id) + '"' + (cfg.esperado.indexOf(f.id) !== -1 ? ' checked' : '') + '><span>' + esc(f.nombre) + '</span></label>';
+    }).join('');
+    $('cfgFormsHint').textContent = 'Marca lo que debe llenarse en cada turno (por ejemplo, la Entrega de Turno). Es lo mismo para todos los turnos.';
+  }
+  var ro = !puedeEscribir;
+  $('cfgRo').hidden = !ro;
+  ['addTurno','preset','guardar'].forEach(function(id){ $(id).disabled = ro; });
+  [].forEach.call(document.querySelectorAll('#cfg input'), function(el){ el.disabled = ro; });
+}
+
+$('cfgTurnos').addEventListener('input', function(e){
+  var row = e.target.closest('.cfg-row'); if (!row) return;
+  cfg.turnos[Number(row.dataset.i)][e.target.dataset.f] = e.target.value;
+});
+$('cfgTurnos').addEventListener('click', function(e){
+  var rm = e.target.closest('[data-rm]'); if (!rm) return;
+  cfg.turnos.splice(Number(rm.dataset.rm), 1); pintarConfig();
+});
+$('cfgForms').addEventListener('change', function(e){
+  var id = e.target.dataset.form; if (!id) return;
+  cfg.esperado = cfg.esperado.filter(function(x){ return x !== id; });
+  if (e.target.checked) cfg.esperado.push(id);
+});
+$('addTurno').onclick = function(){
+  if (cfg.turnos.length >= 8) { msg('Máximo 8 turnos.', 'er'); return; }
+  cfg.turnos.push({ id: 't' + Date.now().toString(36), nombre: '', inicio: '06:00', fin: '14:00' }); pintarConfig();
+};
+$('preset').onclick = function(){
+  cfg.turnos = [
+    { id: 'tm', nombre: 'Mañana', inicio: '06:00', fin: '14:00' },
+    { id: 'tt', nombre: 'Tarde',  inicio: '14:00', fin: '22:00' },
+    { id: 'tn', nombre: 'Noche',  inicio: '22:00', fin: '06:00' },
+  ]; pintarConfig();
+};
+function msg(t, cls){ var m = $('cfgMsg'); m.textContent = t; m.className = 'cfg-msg ' + (cls || ''); }
+
+$('guardar').onclick = async function(){
+  msg('');
+  if (typeof skfDemoActivo === 'function' && skfDemoActivo()) { msg('En el modo ejemplo no se guardan cambios.', 'er'); return; }
+  if (!cfg.turnos.length) { msg('Agrega al menos un turno.', 'er'); return; }
+  for (var i = 0; i < cfg.turnos.length; i++) {
+    var t = cfg.turnos[i];
+    if (!String(t.nombre).trim()) { msg('Cada turno necesita un nombre.', 'er'); return; }
+    if (!t.inicio || !t.fin) { msg('El turno «' + t.nombre + '» necesita hora de inicio y de fin.', 'er'); return; }
+    if (t.inicio === t.fin) { msg('El turno «' + t.nombre + '» no puede empezar y terminar a la misma hora.', 'er'); return; }
+  }
+  var limpio = { turnos: cfg.turnos.map(function(t){ return { id: t.id, nombre: String(t.nombre).trim(), inicio: t.inicio, fin: t.fin }; }), esperado: cfg.esperado.slice() };
+  var btn = $('guardar'); btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await _enviarUna('org', { turnos_config: limpio });
+    guardada = copiar(limpio); cfg = copiar(limpio);
+    try { localStorage.setItem('skf_turnos_cfg', JSON.stringify(limpio)); } catch (e) {}
+    msg('✓ Turnos guardados.', 'ok');
+    pintarVista(); pintarConfig();
+  } catch (e) {
+    if (e.reintentable === false) msg(e.message, 'er');
+    else msg('Sin conexión: no se pudo guardar. Inténtalo de nuevo cuando vuelva la señal.', 'er');
+  }
+  btn.disabled = !puedeEscribir; btn.textContent = 'Guardar turnos';
+};
+
+/* ─────────────────────────────── Arranque ───────────────────────────────── */
+(async function init(){
+  var org = null;
+  try { org = await sbLoadOrg(); } catch (e) {}
+  var cloud = org && org.turnosConfig && org.turnosConfig.turnos ? org.turnosConfig : null;
+  var local = null; try { local = JSON.parse(localStorage.getItem('skf_turnos_cfg') || 'null'); } catch (e) {}
+  guardada = copiar(cloud || local || { turnos: [], esperado: [] });
+  guardada.turnos = guardada.turnos || []; guardada.esperado = guardada.esperado || [];
+  cfg = copiar(guardada);
+
+  // Cambiar turnos es solo de dueño/admin (política org_upd); los demás los ven.
+  try { var rol = await skfRol(); puedeEscribir = !rol || rol === 'dueno' || rol === 'admin'; } catch (e) { puedeEscribir = true; }
+  try { var e1 = await sbLoadEnvios(); envios = Array.isArray(e1) ? e1 : []; } catch (e) {}
+  var plts = [];
+  try { plts = await sbLoadPlantillas(); } catch (e) {}
+  if (!Array.isArray(plts) || !plts.length) { try { plts = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch (e) { plts = []; } }
+  formularios = plts.map(function(p){ return { id: p.id, nombre: p.nombre }; });
+
+  $('cfg').open = !guardada.turnos.length;
+  pintarVista(); pintarConfig();
+})();
+</script>
+</body>
+</html>

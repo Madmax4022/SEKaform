@@ -160,9 +160,9 @@ const AREA_KITS = [
     forms:['inspeccion_extintores','inspeccion_salidas_emergencia','inspeccion_alarma_incendio'] },
   { id:'construccion', ico:'🏗️', nombre:'Obra o construcción',      desc:'Ingreso a obra, trabajo en alturas e inspección',   vertical:'construccion',
     forms:['control_acceso_obra','permiso_altura_obra','inspeccion_seguridad_obra'] },
-  { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia y rondas',      desc:'Ronda de vigilancia, salidas y extintores',          vertical:'inmuebles',
-    forms:['ronda_vigilancia','inspeccion_salidas_emergencia','inspeccion_extintores'],
-    extra:{ label:'Programar mi ronda', href:'programadas.html' } },
+  { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia, rondas y turnos', desc:'Entrega de turno, ronda de vigilancia y salidas',   vertical:'inmuebles',
+    forms:['entrega_turno','ronda_vigilancia','inspeccion_salidas_emergencia'],
+    extra:{ label:'Control por turnos', href:'turnos.html' } },
   { id:'calidad',      ico:'🏆', nombre:'Calidad ISO 9001',         desc:'Auditoría interna, no conformidad y acción correctiva', vertical:'calidad',
     forms:['auditoria_interna_iso','no_conformidad_iso','capa_iso'] },
   { id:'salud',        ico:'🏥', nombre:'Clínica o laboratorio',    desc:'Triage, consentimiento y evento adverso',           vertical:'salud',
@@ -996,6 +996,19 @@ const FORM_LIBRARY = [
   ]},
 
   // ── General (formatos administrativos genéricos, sin vertical específica) ──
+  {id:'entrega_turno',vertical:'general',nombre:'Entrega de Turno',
+   keywords:['entrega de turno','cambio de turno','novedades','pendientes','relevo','bitacora de turno','turno'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de la entrega',tipo:'hora_auto'},
+    {etiqueta:'Turno que entrega',tipo:'select',opciones:['Mañana','Tarde','Noche','Otro']},
+    {etiqueta:'Nombre de quien entrega',tipo:'texto'},{etiqueta:'Nombre de quien recibe',tipo:'texto'},
+    {etiqueta:'Estado de instalaciones y equipos',tipo:'select',opciones:['Todo normal','Con novedades']},
+    {etiqueta:'Novedades del turno',tipo:'textarea'},
+    {etiqueta:'Pendientes para el siguiente turno',tipo:'textarea'},
+    {etiqueta:'¿Hubo algún incidente?',tipo:'si_no'},
+    {etiqueta:'Foto (opcional)',tipo:'foto'},
+    {etiqueta:'Firma de quien entrega',tipo:'firma'},{etiqueta:'Firma de quien recibe',tipo:'firma'},
+  ]},
   {id:'acta_reunion',vertical:'general',nombre:'Acta de Reunión',
    keywords:['reunion','acta','acuerdo','compromiso','asistente','orden del dia','seguimiento','responsable'],
    campos_clave:[
