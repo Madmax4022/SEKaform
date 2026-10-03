@@ -53,7 +53,7 @@
     .tmpl-ico { font-size: 2rem; flex-shrink: 0; }
     .tmpl-logo { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; border-radius: 6px; background: #fff; padding: 3px; }
     .tmpl-info { flex: 1; min-width: 0; }
-    .tmpl-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tmpl-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; line-height: 1.25; overflow-wrap: anywhere; }
     .tmpl-meta { color: var(--mut); font-size: 0.78rem; line-height: 1.5; }
     .tmpl-cod { color: var(--pri); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
     .tmpl-acts { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; flex-shrink: 0; align-items: flex-start; justify-content: flex-end; }
@@ -281,8 +281,10 @@
          texto en pantallas angostas — el ✕ se salía del borde. Se baja a
          una fila propia de ancho completo debajo del nombre. */
       .tmpl-card { flex-wrap: wrap; align-items: center; }
-      .tmpl-acts { flex-basis: 100%; width: 100%; justify-content: flex-start; flex-wrap: wrap; }
-      .tmpl-acts .btn { flex: 1 1 auto; }
+      /* Una sola fila: ★ [Llenar] [QR] [Historial] ✕ — sin que el ✕ quede huérfano. */
+      .tmpl-acts { flex-basis: 100%; width: 100%; justify-content: flex-start; flex-wrap: nowrap; align-items: stretch; gap: 5px; }
+      .tmpl-acts .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; font-size: .76rem; white-space: nowrap; }
+      .tmpl-acts .btn-fav, .tmpl-acts .btn-danger { flex: 0 0 auto; }
       .form-footer .btn-sec { flex: 0 0 auto; padding: 12px 16px; }
     }
   </style>
