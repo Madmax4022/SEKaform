@@ -7,11 +7,10 @@
 // skf-api.js ya las encola para reintentarlas al volver la conexión (ver
 // SKF_QUEUE_KEY).
 
-const CACHE_VERSION = 'skf-shell-v25';
+const CACHE_VERSION = 'skf-shell-v26';
 
 const SHELL_ASSETS = [
   'index.html',
-  'login.html',
   'plantillas.html',
   'digitalizador.html',
   'llenar.html',
@@ -34,8 +33,18 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Se precachea asset por asset y SOLO respuestas directas (200, sin redirección).
+  // Si la sesión no es válida, Flask redirige a /login: guardar esa respuesta
+  // redirigida y servirla luego para una navegación hace que el navegador
+  // falle con ERR_FAILED en todas las páginas.
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_VERSION).then((cache) =>
+      Promise.all(SHELL_ASSETS.map((a) =>
+        fetch(a, { cache: 'reload' })
+          .then((res) => { if (res.ok && !res.redirected) return cache.put(a, res); })
+          .catch(() => {})
+      ))
+    )
   );
   self.skipWaiting();
 });
@@ -60,18 +69,28 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin')
       || ['/login','/logout','/registro','/recuperar'].includes(url.pathname)) return;
 
+  const guardar = (res) => {
+    if (res.ok && !res.redirected) {
+      const copy = res.clone();
+      caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy));
+    }
+    return res;
+  };
+  const cacheado = () => caches.match(req).then((c) => (c && !c.redirected ? c : null));
+
+  // Páginas (HTML): red primero, para que la sesión y el despliegue vigente
+  // siempre manden; la caché solo cubre el modo sin conexión.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).then(guardar).catch(() =>
+        cacheado().then((c) => c || caches.match('index.html')).then((c) => c || Response.error())
+      )
+    );
+    return;
+  }
+
+  // Assets (JS/CSS/íconos): caché primero.
   event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match('index.html'));
-    })
+    cacheado().then((c) => c || fetch(req).then(guardar)).catch(() => caches.match('index.html'))
   );
 });
