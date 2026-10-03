@@ -103,6 +103,7 @@ jobs:
 
       - uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ secrets.GCP_PROJECT }}
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.DEPLOY_SA }}
 
@@ -110,17 +111,19 @@ jobs:
 
       - name: Construir y publicar la imagen
         run: |
-          IMAGEN="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.AR_REPO }}/sekaform:${GITHUB_SHA::12}"
-          gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-          docker build -t "$IMAGEN" .
-          docker push "$IMAGEN"
-          echo "IMAGEN=$IMAGEN" >> $GITHUB_ENV
+          TAG_IMAGEN="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.AR_REPO }}/sekaform:${GITHUB_SHA::12}"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build --platform linux/amd64 -t "$TAG_IMAGEN" .
+          docker push "$TAG_IMAGEN"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$TAG_IMAGEN" 2>/dev/null || echo "$TAG_IMAGEN")
+          echo "IMAGEN_DEPLOY=$DIGEST" >> $GITHUB_ENV
 
       # Se despliega por digest inmutable, no por etiqueta: garantiza que lo
       # que corre es exactamente lo que se probó.
       - name: Desplegar
         run: |
           gcloud run deploy ${{ secrets.RUN_SERVICE }} \
-            --image "$IMAGEN" \
+            --image "$IMAGEN_DEPLOY" \
             --region "$REGION" \
+            --project "${{ secrets.GCP_PROJECT }}" \
             --quiet
