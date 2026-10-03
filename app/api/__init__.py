@@ -94,6 +94,35 @@ PROHIBIDOS = {"org_id", "numero", "autor_id", "es_catalogo", "creado_en",
               "recibido_en", "enviado_en", "actualizado_en"}
 
 
+_HORA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def _validar_turnos(cfg: Any):
+    """Valida y normaliza turnos_config. Devuelve (config, error)."""
+    if not isinstance(cfg, dict):
+        return None, "La configuración de turnos no es válida."
+    turnos, esperado = cfg.get("turnos", []), cfg.get("esperado", [])
+    if not isinstance(turnos, list) or not isinstance(esperado, list):
+        return None, "La configuración de turnos no es válida."
+    if len(turnos) > 8:
+        return None, "Máximo 8 turnos."
+    limpios, vistos = [], set()
+    for t in turnos:
+        if not isinstance(t, dict):
+            return None, "Un turno no es válido."
+        nombre = str(t.get("nombre", "")).strip()[:40]
+        ini, fin, tid = str(t.get("inicio", "")), str(t.get("fin", "")), str(t.get("id", "")).strip()[:20]
+        if not nombre or not tid or tid in vistos:
+            return None, "Cada turno necesita un nombre."
+        if not _HORA.match(ini) or not _HORA.match(fin) or ini == fin:
+            return None, f"El turno «{nombre}» necesita hora de inicio y de fin distintas (HH:MM)."
+        vistos.add(tid)
+        limpios.append({"id": tid, "nombre": nombre, "inicio": ini, "fin": fin})
+    if len(esperado) > 40 or not all(isinstance(x, str) and 0 < len(x) <= 64 for x in esperado):
+        return None, "La lista de formularios esperados no es válida."
+    return {"turnos": limpios, "esperado": list(dict.fromkeys(esperado))}, None
+
+
 def _uuid_valido(valor: Any) -> Optional[str]:
     try:
         return str(uuid.UUID(str(valor)))
@@ -115,14 +144,25 @@ def _upsert(cur, tipo: str, payload: dict) -> dict:
     if tipo == "org":
         # La organización no se crea desde el cliente, solo se editan sus datos
         # de marca. El id sale de la sesión, nunca del cuerpo de la petición.
-        campos = {k: v for k, v in payload.items() if k in ("nombre", "logo_url", "pais")}
+        campos = {k: v for k, v in payload.items() if k in ("nombre", "logo_url", "pais", "turnos_config")}
         if not campos:
             return {"ok": True, "tipo": tipo}
+        if "turnos_config" in campos:
+            cfg, error = _validar_turnos(campos["turnos_config"])
+            if error:
+                return {"ok": False, "error": error, "reintentable": False}
+            campos["turnos_config"] = psycopg2.extras.Json(cfg)
         asigna = ", ".join(f'"{c}" = %s' for c in campos)
         cur.execute(
             f'UPDATE organizations SET {asigna} WHERE id = %s',
             list(campos.values()) + [current_user.org_id],
         )
+        # RLS (org_upd) solo deja actualizar a dueño/admin: para ellos rowcount
+        # es 1. Con otro rol la base devuelve 0 filas SIN error, y "ok" sería
+        # mentira: el usuario creería haber guardado los turnos.
+        if "turnos_config" in campos and cur.rowcount == 0:
+            return {"ok": False, "reintentable": False,
+                    "error": "Solo un administrador de la organización puede cambiar los turnos."}
         return {"ok": True, "id": current_user.org_id, "tipo": tipo}
 
     spec = SINCRONIZABLES.get(tipo)
@@ -257,8 +297,19 @@ def bootstrap():
         )
         programadas = cur.fetchall()
 
-        cur.execute("SELECT id, nombre, logo_url, pais, plan FROM organizations WHERE id = %s",
-                    (current_user.org_id,))
+        # turnos_config llega con la migración 006, que se corre aparte del
+        # despliegue. Si el código se publica antes, la columna no existe: sin esta
+        # tolerancia /api/bootstrap fallaría y la app entera dejaría de abrir.
+        # El SAVEPOINT evita que el error aborte la transacción (y con ella las
+        # variables de RLS que fija sesion_usuario).
+        cur.execute("SAVEPOINT sp_org")
+        try:
+            cur.execute("SELECT id, nombre, logo_url, pais, plan, turnos_config FROM organizations WHERE id = %s",
+                        (current_user.org_id,))
+        except psycopg2.errors.UndefinedColumn:
+            cur.execute("ROLLBACK TO SAVEPOINT sp_org")
+            cur.execute("SELECT id, nombre, logo_url, pais, plan FROM organizations WHERE id = %s",
+                        (current_user.org_id,))
         organizacion = cur.fetchone()
 
     return jsonify({

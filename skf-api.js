@@ -127,7 +127,7 @@ function _mapCloud(fila, pares) {
 const _P_PLANTILLA = [['logo', 'logo_url']];
 const _P_HALLAZGO  = [['foto', 'foto_url']];
 const _P_ACCION    = [['evidencia_cierre', 'evidencia_url']];
-const _P_ORG       = [['logo', 'logo_url']];
+const _P_ORG       = [['logo', 'logo_url'], ['turnosConfig', 'turnos_config']];
 
 // ── Sesión y organización ────────────────────────────────────────────────
 
@@ -379,7 +379,16 @@ const _SALIDA = {
     responsable: i.responsable || null, correo: i.correo || null,
     activa: i.activa !== false, ultimo_completado: i.ultimoCompletado || null,
   }),
-  org: o => ({ nombre: o.nombre, logo_url: o.logo || null, pais: o.pais || null }),
+  // Cada campo viaja solo si se envió: guardar únicamente los turnos no debe
+  // borrar el logo ni el país (que llegarían como null).
+  org: o => {
+    const r = {};
+    if (o.nombre !== undefined) r.nombre = o.nombre;
+    if ('logo' in o) r.logo_url = o.logo || null;
+    if ('pais' in o) r.pais = o.pais || null;
+    if (o.turnos_config !== undefined) r.turnos_config = o.turnos_config;
+    return r;
+  },
 
   deletePlantilla:  x => ({ id: x.id }),
   deleteUnidad:     x => ({ id: x.id }),

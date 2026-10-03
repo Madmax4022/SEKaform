@@ -45,5 +45,6 @@ correr migrations/002_auth_functions.sql
 correr migrations/003_super_admin_invitacion.sql
 correr migrations/004_publico.sql
 correr migrations/005_paneles.sql
+correr migrations/006_turnos.sql
 
 echo "✓ Migraciones aplicadas."

@@ -160,9 +160,9 @@ const AREA_KITS = [
     forms:['inspeccion_extintores','inspeccion_salidas_emergencia','inspeccion_alarma_incendio'] },
   { id:'construccion', ico:'🏗️', nombre:'Obra o construcción',      desc:'Ingreso a obra, trabajo en alturas e inspección',   vertical:'construccion',
     forms:['control_acceso_obra','permiso_altura_obra','inspeccion_seguridad_obra'] },
-  { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia y rondas',      desc:'Ronda de vigilancia, salidas y extintores',          vertical:'inmuebles',
-    forms:['ronda_vigilancia','inspeccion_salidas_emergencia','inspeccion_extintores'],
-    extra:{ label:'Programar mi ronda', href:'programadas.html' } },
+  { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia, rondas y turnos', desc:'Entrega de turno, ronda de vigilancia y salidas',   vertical:'inmuebles',
+    forms:['entrega_turno','ronda_vigilancia','inspeccion_salidas_emergencia'],
+    extra:{ label:'Control por turnos', href:'turnos.html' } },
   { id:'calidad',      ico:'🏆', nombre:'Calidad ISO 9001',         desc:'Auditoría interna, no conformidad y acción correctiva', vertical:'calidad',
     forms:['auditoria_interna_iso','no_conformidad_iso','capa_iso'] },
   { id:'salud',        ico:'🏥', nombre:'Clínica o laboratorio',    desc:'Triage, consentimiento y evento adverso',           vertical:'salud',
@@ -208,6 +208,64 @@ async function skfAgregarKit(kit, paisCode, correo){
   try { localStorage.setItem('skf_plantillas', JSON.stringify(lista.concat(nuevos))); } catch (e) { return 0; }
   for (var k = 0; k < nuevos.length; k++) { try { await skfSyncOrQueue('plantilla', nuevos[k]); } catch (e) {} }
   return nuevos.length;
+}
+
+// ── Control por turnos ───────────────────────────────────────────────────────
+// config = { turnos:[{id,nombre,inicio:'HH:MM',fin:'HH:MM'}], esperado:[idPlantilla,…] }
+// Un turno puede cruzar la medianoche (Noche 22:00–06:00). Un registro hecho a
+// las 02:00 pertenece a la noche que EMPEZÓ el día anterior. Todo se calcula con
+// la hora local del dispositivo.
+function _skfMinutos(hhmm){ var p = String(hhmm).split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+
+// Rango real [inicio, fin) de un turno que empieza en la fecha `dia` (solo su día).
+function _skfRangoTurno(t, dia){
+  var ini = _skfMinutos(t.inicio), fin = _skfMinutos(t.fin), cruza = fin <= ini;
+  var y = dia.getFullYear(), m = dia.getMonth(), d = dia.getDate();
+  return {
+    inicio: new Date(y, m, d, Math.floor(ini / 60), ini % 60),
+    fin:    new Date(y, m, d + (cruza ? 1 : 0), Math.floor(fin / 60), fin % 60),
+  };
+}
+
+// ¿A qué turno pertenece este instante? → { turno, inicio, fin } o null.
+function skfTurnoDe(fecha, turnos){
+  var t = fecha.getHours() * 60 + fecha.getMinutes();
+  for (var i = 0; i < (turnos || []).length; i++) {
+    var tu = turnos[i], ini = _skfMinutos(tu.inicio), fin = _skfMinutos(tu.fin), cruza = fin <= ini;
+    var dentro = cruza ? (t >= ini || t < fin) : (t >= ini && t < fin);
+    if (!dentro) continue;
+    var diaInicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate() - (cruza && t < fin ? 1 : 0));
+    var r = _skfRangoTurno(tu, diaInicio);
+    return { turno: tu, inicio: r.inicio, fin: r.fin };
+  }
+  return null;
+}
+
+// Cumplimiento de cada turno ocurrido desde hace `dias` días hasta ahora.
+// estado: 'completo' | 'en_curso' (el turno aún no termina) | 'omitido' (terminó y faltó algo)
+//         | 'sin_esperado' (no se definió qué se espera)
+function skfEstadoTurnos(config, envios, ahora, dias){
+  var turnos = (config && config.turnos) || [], esperado = (config && config.esperado) || [];
+  var out = [];
+  for (var off = dias; off >= 0; off--) {
+    var dia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - off);
+    turnos.forEach(function(tu){
+      var r = _skfRangoTurno(tu, dia);
+      if (r.inicio > ahora) return; // aún no empieza
+      var hechos = {};
+      (envios || []).forEach(function(e){
+        var f = new Date(e.enviado_en || e.enviadoEn || e.creado_en || e.creadoEn);
+        if (isNaN(f.getTime()) || f < r.inicio || f >= r.fin) return;
+        var pid = e.plantilla_id || e.plantillaId;
+        if (pid && esperado.indexOf(pid) !== -1) hechos[pid] = true;
+      });
+      var hechosL = esperado.filter(function(id){ return hechos[id]; });
+      var faltan = esperado.filter(function(id){ return !hechos[id]; });
+      var estado = !esperado.length ? 'sin_esperado' : (!faltan.length ? 'completo' : (ahora < r.fin ? 'en_curso' : 'omitido'));
+      out.push({ turno: tu, inicio: r.inicio, fin: r.fin, esperado: esperado, hechos: hechosL, faltan: faltan, estado: estado });
+    });
+  }
+  return out.sort(function(a, b){ return b.inicio - a.inicio; });
 }
 
 const FORM_LIBRARY = [
@@ -938,6 +996,19 @@ const FORM_LIBRARY = [
   ]},
 
   // ── General (formatos administrativos genéricos, sin vertical específica) ──
+  {id:'entrega_turno',vertical:'general',nombre:'Entrega de Turno',
+   keywords:['entrega de turno','cambio de turno','novedades','pendientes','relevo','bitacora de turno','turno'],
+   campos_clave:[
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Hora de la entrega',tipo:'hora_auto'},
+    {etiqueta:'Turno que entrega',tipo:'select',opciones:['Mañana','Tarde','Noche','Otro']},
+    {etiqueta:'Nombre de quien entrega',tipo:'texto'},{etiqueta:'Nombre de quien recibe',tipo:'texto'},
+    {etiqueta:'Estado de instalaciones y equipos',tipo:'select',opciones:['Todo normal','Con novedades']},
+    {etiqueta:'Novedades del turno',tipo:'textarea'},
+    {etiqueta:'Pendientes para el siguiente turno',tipo:'textarea'},
+    {etiqueta:'¿Hubo algún incidente?',tipo:'si_no'},
+    {etiqueta:'Foto (opcional)',tipo:'foto'},
+    {etiqueta:'Firma de quien entrega',tipo:'firma'},{etiqueta:'Firma de quien recibe',tipo:'firma'},
+  ]},
   {id:'acta_reunion',vertical:'general',nombre:'Acta de Reunión',
    keywords:['reunion','acta','acuerdo','compromiso','asistente','orden del dia','seguimiento','responsable'],
    campos_clave:[

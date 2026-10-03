@@ -41,6 +41,7 @@ PAGINAS = {
     "hallazgos.html": "hallazgos.html",
     "cumplimiento.html": "cumplimiento.html",
     "bienvenida.html": "bienvenida.html",
+    "turnos.html": "turnos.html",
     "dashboard.html": "dashboard.html",
     "organizacion.html": "organizacion.html",
 }

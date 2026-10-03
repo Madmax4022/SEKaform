@@ -220,6 +220,7 @@ function skfRenderSidebar() {
       { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
       { href: 'plantillas.html',    ico: '📋', label: 'Formularios listos' },
       { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
+      { href: 'turnos.html',        ico: '🔄', label: 'Control por turnos' },
       { href: 'programadas.html',   ico: '📅', label: 'Programadas' },
       { href: 'unidades.html',      ico: '🏢', label: 'Sedes y áreas' },
       { href: 'organizacion.html',  ico: '⚙️', label: 'Organización' },
