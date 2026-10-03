@@ -238,6 +238,9 @@ footer { text-align: center; font-size: .82rem; color: var(--mut); border-top: 1
   flex-shrink: 0; line-height: 1; padding: 0;
   transition: border-color .15s, color .15s, background .15s;
 }
+/* Término del glosario: se toca y explica (mismo popover que el «?») */
+.skf-term { border-bottom: 1px dotted var(--pri); cursor: help; }
+.skf-term:hover, .skf-term.on { color: var(--pri); }
 .skf-help:hover, .skf-help.on { border-color: var(--pri); color: var(--pri); background: rgba(37,99,235,.1); }
 .skf-help-pop {
   position: absolute; z-index: 700;

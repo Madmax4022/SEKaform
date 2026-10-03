@@ -228,7 +228,12 @@
       <span class="ns-arr">→</span>
     </a>
 
-    <div class="sst-hd">Tu ruta de Salud Ocupacional</div>
+    <div class="sst-hd">Tu ruta de Salud Ocupacional<button class="skf-help" data-help-t="¿Cómo uso esta pantalla?" data-help="Esta es tu base de operaciones de SST (Seguridad y Salud en el Trabajo).
+
+• La tarjeta de color de arriba siempre te dice QUÉ hacer ahora — empieza por ella.
+• Los 4 pasos de abajo son el camino completo: configurar, inspeccionar, corregir y demostrar.
+• «Tu mapa de cumplimiento» te muestra si tienes evidencia de los 9 principios que la ley exige.
+• Toca cualquier palabra subrayada con puntitos para ver qué significa.">?</button></div>
     <div class="sst-status" id="sstStatus"></div>
     <div class="sst-journey">
       <a href="plantillas.html?v=sst" class="sst-step">
@@ -402,6 +407,7 @@
     // Estado vivo del SG-SST: al cargar, trae hallazgos, envíos y acciones del
     // backend (skf-api) y pinta el estado real en cada paso de la ruta. Si no
     // hay sesión o conexión, la ruta se queda con su texto guía — sin romperse.
+    document.addEventListener('DOMContentLoaded', function(){ if (typeof skfGlosar === 'function') skfGlosar(document.querySelector('.wrapper')); });
     (async function sstEstado() {
       if (typeof sbLoadHallazgos !== 'function') return;
       let hz = null, env = null, acc = null, plt = null;
@@ -495,6 +501,7 @@
       document.getElementById('nsT').textContent = paso.t;
       document.getElementById('nsS').textContent = paso.s;
       card.hidden = false;
+      if (typeof skfGlosar === 'function') skfGlosar(document.querySelector('.wrapper'));
     })();
   </script>
 </body>

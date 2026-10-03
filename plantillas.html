@@ -386,6 +386,8 @@ function render() {
     others.map(v => secHtml(v, 'cat-alt', 'cat-head-alt', VERTICAL_LABELS[v] || v, 'cat-badge-alt')).join('');
 }
 
+// Glosario: tras cada pintado, los términos de SST (COPASST, EPP…) quedan tocables.
+(function(){ var _r = render; render = function(){ _r.apply(this, arguments); if (typeof skfGlosar === 'function') skfGlosar(document.getElementById('grid')); }; })();
 document.getElementById('searchInp').addEventListener('input', onSearchInput);
 
 // País de la organización → localización de las plantillas del núcleo SST.
