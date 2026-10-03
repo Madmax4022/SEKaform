@@ -103,28 +103,8 @@
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function _norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
 
-// "Al día" = evidencia en los últimos 180 días (SST es mayormente periódica);
-// más vieja = atrasado; ninguna = pendiente.
-var VENTANA_DIAS = 180;
 var _pais = 'co';
 var PAIS_MAP = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa', 'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
-
-// Nombre localizado de cada formulario del núcleo -> id, para reconocer un
-// envío por su nombre y saber qué principios acredita.
-function _nombreIndex(paisCode){
-  var idx = {};
-  FORM_LIBRARY.forEach(function(t){
-    if (!SST_PRINCIPIO_MAP[t.id]) return;
-    idx[_norm(skfLocalizeText(t.nombre, paisCode))] = t.id;
-  });
-  return idx;
-}
-function _fecha(e){ return e.enviado_en || e.enviadoEn || e.creado_en || e.creadoEn || null; }
-function _diasDesde(iso){
-  var d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
-  return Math.floor((Date.now() - d.getTime()) / 86400000);
-}
 
 async function init(){
   var org = null, envios = [], plts = [];
@@ -140,18 +120,7 @@ async function init(){
   if (!Array.isArray(envios)) envios = [];
   if (!Array.isArray(plts)) plts = [];
 
-  var idx = _nombreIndex(_pais);
-  var evidencia = {}; // principioId -> { dias, formNombre }
-  envios.forEach(function(e){
-    var nom = e.plantilla_nombre || e.plantillaNombre || '';
-    var tid = idx[_norm(nom)];
-    if (!tid) return;
-    var dias = _diasDesde(_fecha(e));
-    if (dias === null) return;
-    (SST_PRINCIPIO_MAP[tid] || []).forEach(function(pid){
-      if (!evidencia[pid] || dias < evidencia[pid].dias) evidencia[pid] = { dias: dias, formNombre: nom };
-    });
-  });
+  var evidencia = skfEvidenciaPrincipios(envios, _pais);
 
   var tiene = {};
   plts.forEach(function(pl){ tiene[_norm(pl.nombre)] = true; });
@@ -165,7 +134,7 @@ function render(evidencia, tiene){
 
   var html = SST_PRINCIPIOS.map(function(pr){
     var ev = evidencia[pr.id];
-    var st = !ev ? 'pend' : (ev.dias <= VENTANA_DIAS ? 'ok' : 'warn');
+    var st = skfEstadoPrincipio(ev);
     n[st]++;
 
     var forms = FORM_LIBRARY.filter(function(t){ return (SST_PRINCIPIO_MAP[t.id] || []).indexOf(pr.id) !== -1; })

@@ -103,6 +103,52 @@ const SST_PRINCIPIO_MAP = {
   autoevaluacion_res0312:          ['gestion','responsabilidad'],
 };
 
+// ── Lógica compartida (Centro de SST · Mapa de cumplimiento · Asistente) ─────
+var SST_VENTANA_DIAS = 180; // evidencia de hace <=180 días = "al día"
+
+function _skfNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+
+// Última evidencia por principio, a partir de los envíos reales. Un envío se
+// reconoce por el nombre (localizado) del formulario del núcleo que llenó.
+function skfEvidenciaPrincipios(envios, paisCode){
+  var idx = {};
+  FORM_LIBRARY.forEach(function(t){
+    if (SST_PRINCIPIO_MAP[t.id]) idx[_skfNorm(skfLocalizeText(t.nombre, paisCode))] = t.id;
+  });
+  var ev = {};
+  (envios || []).forEach(function(e){
+    var nom = e.plantilla_nombre || e.plantillaNombre || '';
+    var tid = idx[_skfNorm(nom)];
+    var f = e.enviado_en || e.enviadoEn || e.creado_en || e.creadoEn;
+    var d = new Date(f);
+    if (!tid || isNaN(d.getTime())) return;
+    var dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+    (SST_PRINCIPIO_MAP[tid] || []).forEach(function(pid){
+      if (!ev[pid] || dias < ev[pid].dias) ev[pid] = { dias: dias, formNombre: nom };
+    });
+  });
+  return ev;
+}
+function skfEstadoPrincipio(ev){ return !ev ? 'pend' : (ev.dias <= SST_VENTANA_DIAS ? 'ok' : 'warn'); }
+
+// Res. 0312/2019 (Colombia): estándares mínimos según tamaño y nivel de riesgo.
+//  ≤10 trabajadores y riesgo I-III → 7 · 11-50 y riesgo I-III → 21 · >50 o riesgo IV-V → 60
+function skfEstandarRes0312(trabajadores, riesgo){
+  var alto = riesgo === 'IV' || riesgo === 'V';
+  if (alto || trabajadores > 50) return { n: 60, cap: 3 };
+  if (trabajadores > 10) return { n: 21, cap: 2 };
+  return { n: 7, cap: 1 };
+}
+
+// Perfil de la empresa (tamaño, riesgo, avance del asistente). La base solo guarda
+// nombre/logo/país, así que esto vive en el dispositivo, por usuario.
+function skfPerfilGet(email){
+  try { return JSON.parse(localStorage.getItem('skf_perfil:' + (email || '')) || 'null'); } catch (e) { return null; }
+}
+function skfPerfilSet(email, p){
+  try { localStorage.setItem('skf_perfil:' + (email || ''), JSON.stringify(p)); } catch (e) {}
+}
+
 const FORM_LIBRARY = [
   // ── Calidad / SGC Verticales (ISO 9001:2015) ──────────────────
   {id:'auditoria_interna_iso',vertical:'calidad',nombre:'Checklist de Auditoría Interna (ISO 9001 — Cl. 9.2)',norma:'ISO 9001:2015 — Cl. 9.2',

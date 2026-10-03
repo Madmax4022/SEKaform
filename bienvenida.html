@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Bienvenida — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
+  <style>
+    body { padding-left: 0 !important; }
+    .bv { max-width: 560px; margin: 0 auto; padding: 28px 20px 60px; }
+    .bv-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+    .bv-brand { font-weight: 800; font-size: 1.1rem; }
+    .bv-brand span { color: var(--pri); }
+    .bv-skip { background: none; border: none; color: var(--mut); font-size: .82rem; cursor: pointer; font-family: inherit; text-decoration: underline; }
+    .bv-prog { display: flex; gap: 6px; margin-bottom: 8px; }
+    .bv-prog i { flex: 1; height: 5px; border-radius: 3px; background: var(--bor); transition: background .2s; }
+    .bv-prog i.on { background: var(--pri); }
+    .bv-prog i.done { background: var(--ok); }
+    .bv-step-n { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); margin-bottom: 18px; }
+    .bv h1 { font-size: 1.55rem; font-weight: 800; line-height: 1.2; margin: 0 0 8px; }
+    .bv .lead { color: var(--mut); font-size: .92rem; line-height: 1.6; margin: 0 0 22px; }
+    .bv label.fl { display: block; font-size: .82rem; font-weight: 700; margin: 18px 0 7px; }
+    .bv .hint { font-size: .76rem; color: var(--mut); margin-top: 6px; line-height: 1.5; }
+    .bv input[type=text], .bv select { width: 100%; background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 10px; padding: 13px 14px; font-size: 1rem; font-family: inherit; outline: none; }
+    .bv input:focus, .bv select:focus { border-color: var(--pri); }
+    .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .opt { background: var(--card); border: 2px solid var(--bor); color: var(--txt); border-radius: 10px; padding: 12px 10px; font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit; text-align: center; line-height: 1.3; }
+    .opt small { display: block; font-weight: 500; color: var(--mut); font-size: .72rem; margin-top: 3px; }
+    .opt.sel { border-color: var(--pri); background: var(--pri-dim); }
+    .opts.one { grid-template-columns: 1fr; }
+    .opts.one .opt { text-align: left; padding: 14px 16px; }
+    .resp { margin-top: 20px; background: var(--ok-dim); border: 1px solid rgba(26,188,156,.3); border-radius: 12px; padding: 14px 16px; font-size: .88rem; line-height: 1.55; }
+    .resp b { color: var(--ok); }
+    .bv-nav { display: flex; gap: 10px; margin-top: 28px; }
+    .bv-nav .btn { flex: 1; justify-content: center; padding: 14px; font-size: 1rem; }
+    .bv-nav .btn-sec { flex: 0 0 auto; }
+    .done-list { margin: 18px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .done-list li { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; line-height: 1.5; }
+    .done-list .ck { color: var(--ok); font-weight: 800; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="bv">
+  <div class="bv-top">
+    <div class="bv-brand">SEK<span>a</span>form</div>
+    <button class="bv-skip" id="skip" type="button">Ahora no</button>
+  </div>
+  <div class="bv-prog" id="prog"><i></i><i></i><i></i></div>
+  <div class="bv-step-n" id="stepN"></div>
+
+  <!-- 1 · Tu empresa -->
+  <section id="s1">
+    <h1>Cuéntanos de tu empresa</h1>
+    <p class="lead">Con estos datos te dejamos listo lo que la ley exige a una empresa como la tuya. Toma 1 minuto.</p>
+
+    <label class="fl" for="nombre">¿Cómo se llama tu empresa?</label>
+    <input type="text" id="nombre" placeholder="Ej. Ferretería El Tornillo S.A.S." autocomplete="organization">
+
+    <label class="fl" for="pais">¿En qué país opera?</label>
+    <select id="pais">
+      <option value="">Elige un país…</option>
+      <option value="CO">🇨🇴 Colombia</option>
+      <option value="PA">🇵🇦 Panamá</option>
+      <option value="CR">🇨🇷 Costa Rica</option>
+      <option value="SV">🇸🇻 El Salvador</option>
+      <option value="OTRO">🌎 Otro</option>
+    </select>
+
+    <label class="fl">¿Cuántas personas trabajan en ella?</label>
+    <div class="opts" id="optTrab">
+      <button type="button" class="opt" data-v="10">1 a 10</button>
+      <button type="button" class="opt" data-v="50">11 a 50</button>
+      <button type="button" class="opt" data-v="200">51 a 200</button>
+      <button type="button" class="opt" data-v="201">Más de 200</button>
+    </div>
+
+    <label class="fl">¿Qué tan riesgoso es el trabajo?</label>
+    <div class="opts one" id="optRiesgo">
+      <button type="button" class="opt" data-v="I">Oficina, comercio o servicios<small>Poco riesgo físico</small></button>
+      <button type="button" class="opt" data-v="III">Taller, producción, bodega o cocina<small>Riesgo medio</small></button>
+      <button type="button" class="opt" data-v="V">Construcción, alturas, químicos o maquinaria pesada<small>Riesgo alto</small></button>
+    </div>
+    <div class="hint">No te preocupes si dudas: lo puedes cambiar después en «Organización».</div>
+
+    <div class="resp" id="resp" hidden></div>
+    <div class="bv-nav"><button class="btn btn-pri" id="to2" type="button">Continuar →</button></div>
+  </section>
+
+  <!-- 2 · Tus lugares -->
+  <section id="s2" hidden>
+    <h1>¿Dónde trabajas?</h1>
+    <p class="lead">Una <b>sede</b> es un lugar de trabajo: una oficina, una bodega, una obra. Sirve para saber en cuál ocurrió cada inspección y comparar entre ellas.</p>
+
+    <label class="fl" for="sede">Nombre de tu sede principal</label>
+    <input type="text" id="sede" placeholder="Ej. Sede Principal" autocomplete="off">
+    <div class="hint">Si tienes más de una, las agregas después en «Sedes y áreas». Para empezar basta una.</div>
+
+    <div class="bv-nav">
+      <button class="btn btn-sec" id="back2" type="button">← Atrás</button>
+      <button class="btn btn-pri" id="to3" type="button">Continuar →</button>
+    </div>
+  </section>
+
+  <!-- 3 · Listo -->
+  <section id="s3" hidden>
+    <h1>¡Todo listo! Ahora tu primera inspección</h1>
+    <p class="lead" id="listoLead"></p>
+    <ul class="done-list" id="doneList"></ul>
+    <div class="bv-nav">
+      <button class="btn btn-pri" id="go" type="button">⛑️ Hacer mi primera inspección</button>
+    </div>
+    <p class="hint" style="text-align:center;margin-top:14px"><a href="index.html" id="goHome" style="color:var(--mut)">Prefiero ir al inicio</a></p>
+  </section>
+</div>
+
+<script>
+var state = { trab: null, riesgo: null, email: '' };
+var step = 1;
+
+function $(id){ return document.getElementById(id); }
+function pick(groupId, key){
+  $(groupId).addEventListener('click', function(e){
+    var b = e.target.closest('.opt'); if (!b) return;
+    [].forEach.call($(groupId).children, function(c){ c.classList.remove('sel'); });
+    b.classList.add('sel');
+    state[key] = key === 'trab' ? Number(b.dataset.v) : b.dataset.v;
+    actualizarResp();
+  });
+}
+pick('optTrab', 'trab'); pick('optRiesgo', 'riesgo');
+
+function paisCode(){ var v = $('pais').value; return ({CO:'co',PA:'pa',CR:'cr',SV:'sv'})[v] || null; }
+
+// Respuesta inmediata: el usuario ve que lo que contesta tiene consecuencias.
+function actualizarResp(){
+  var r = $('resp');
+  if (state.trab == null || !state.riesgo) { r.hidden = true; return; }
+  var L = SST_LOCAL[paisCode()] || null;
+  var txt;
+  if ($('pais').value === 'CO') {
+    var e = skfEstandarRes0312(state.trab, state.riesgo);
+    txt = '✓ En Colombia, a tu empresa le aplican <b>' + e.n + ' estándares mínimos</b> (Res. 0312/2019). Te preparamos los formularios para cumplirlos.';
+  } else if (L) {
+    txt = '✓ Te dejamos listos los formularios con la norma de <b>' + L.pais + '</b>: ' + L.norma + '.';
+  } else {
+    txt = '✓ Te dejamos listos los formularios base de SST. Puedes ajustar la norma después.';
+  }
+  r.innerHTML = txt; r.hidden = false;
+}
+$('pais').addEventListener('change', actualizarResp);
+
+function irA(n){
+  step = n;
+  [1,2,3].forEach(function(i){ $('s'+i).hidden = (i !== n); });
+  [].forEach.call($('prog').children, function(el, i){
+    el.className = i + 1 < n ? 'done' : (i + 1 === n ? 'on' : '');
+  });
+  $('stepN').textContent = 'Paso ' + n + ' de 3';
+  window.scrollTo(0, 0);
+}
+
+$('to2').addEventListener('click', function(){
+  if (!$('nombre').value.trim()) { alert('Escribe el nombre de tu empresa.'); $('nombre').focus(); return; }
+  if (!$('pais').value) { alert('Elige el país donde opera tu empresa.'); return; }
+  if (state.trab == null) { alert('Elige cuántas personas trabajan en tu empresa.'); return; }
+  if (!state.riesgo) { alert('Elige qué tan riesgoso es el trabajo.'); return; }
+  irA(2);
+});
+$('back2').addEventListener('click', function(){ irA(1); });
+
+function guardarTodo(){
+  var nombre = $('nombre').value.trim();
+  var pais = $('pais').value;
+  var cache = {}; try { cache = JSON.parse(localStorage.getItem('skf_org') || '{}') || {}; } catch (e) {}
+  var o = { nombre: nombre, logo: cache.logo || null, pais: pais };
+  try { localStorage.setItem('skf_org', JSON.stringify(o)); } catch (e) {}
+  skfSyncOrQueue('org', o);
+
+  var sede = $('sede').value.trim();
+  if (sede) {
+    var list = []; try { list = JSON.parse(localStorage.getItem('skf_unidades') || '[]'); } catch (e) {}
+    if (!list.some(function(u){ return u.nombre === sede; })) {
+      var u = { id: skfUUID(), nombre: sede, tipo: 'sede', padreId: null, creadoEn: new Date().toISOString() };
+      list.push(u);
+      try { localStorage.setItem('skf_unidades', JSON.stringify(list)); } catch (e) {}
+      skfSyncOrQueue('unidad', u);
+    }
+  }
+  skfPerfilSet(state.email, { completo: true, trabajadores: state.trab, riesgo: state.riesgo, pais: pais, en: new Date().toISOString() });
+}
+
+$('to3').addEventListener('click', function(){
+  guardarTodo();
+  var items = ['<li><span class="ck">✓</span><span>Empresa <b>' + $('nombre').value.trim().replace(/</g,'&lt;') + '</b> configurada</span></li>'];
+  if ($('pais').value === 'CO') {
+    var e = skfEstandarRes0312(state.trab, state.riesgo);
+    items.push('<li><span class="ck">✓</span><span><b>' + e.n + ' estándares mínimos</b> de la Res. 0312 identificados para tu empresa</span></li>');
+  }
+  if ($('sede').value.trim()) items.push('<li><span class="ck">✓</span><span>Sede <b>' + $('sede').value.trim().replace(/</g,'&lt;') + '</b> creada</span></li>');
+  items.push('<li><span class="ck">→</span><span>Solo falta tu primera inspección: toma 2 minutos y ya tendrás evidencia.</span></li>');
+  $('doneList').innerHTML = items.join('');
+  $('listoLead').textContent = 'Hicimos lo difícil. Abre la Lista de Verificación SST y llénala con lo que ves hoy en tu lugar de trabajo.';
+  irA(3);
+});
+
+$('go').addEventListener('click', function(){ location.href = 'digitalizador.html?preset=inspeccion_sst'; });
+
+$('skip').addEventListener('click', function(){
+  var p = skfPerfilGet(state.email) || {};
+  p.omitido = true; skfPerfilSet(state.email, p);
+  location.href = 'index.html';
+});
+
+(async function init(){
+  try { var u = await sbGetUser(); state.email = (u && u.email) || ''; } catch (e) {}
+  try {
+    var org = await sbLoadOrg();
+    if (org && org.nombre) $('nombre').value = org.nombre;
+    var p = org && org.pais ? String(org.pais).toUpperCase() : '';
+    if (p && ['CO','PA','CR','SV'].indexOf(p) !== -1) $('pais').value = p;
+  } catch (e) {}
+  irA(1);
+})();
+</script>
+</body>
+</html>
