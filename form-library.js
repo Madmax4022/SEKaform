@@ -210,6 +210,64 @@ async function skfAgregarKit(kit, paisCode, correo){
   return nuevos.length;
 }
 
+// ── Control por turnos ───────────────────────────────────────────────────────
+// config = { turnos:[{id,nombre,inicio:'HH:MM',fin:'HH:MM'}], esperado:[idPlantilla,…] }
+// Un turno puede cruzar la medianoche (Noche 22:00–06:00). Un registro hecho a
+// las 02:00 pertenece a la noche que EMPEZÓ el día anterior. Todo se calcula con
+// la hora local del dispositivo.
+function _skfMinutos(hhmm){ var p = String(hhmm).split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+
+// Rango real [inicio, fin) de un turno que empieza en la fecha `dia` (solo su día).
+function _skfRangoTurno(t, dia){
+  var ini = _skfMinutos(t.inicio), fin = _skfMinutos(t.fin), cruza = fin <= ini;
+  var y = dia.getFullYear(), m = dia.getMonth(), d = dia.getDate();
+  return {
+    inicio: new Date(y, m, d, Math.floor(ini / 60), ini % 60),
+    fin:    new Date(y, m, d + (cruza ? 1 : 0), Math.floor(fin / 60), fin % 60),
+  };
+}
+
+// ¿A qué turno pertenece este instante? → { turno, inicio, fin } o null.
+function skfTurnoDe(fecha, turnos){
+  var t = fecha.getHours() * 60 + fecha.getMinutes();
+  for (var i = 0; i < (turnos || []).length; i++) {
+    var tu = turnos[i], ini = _skfMinutos(tu.inicio), fin = _skfMinutos(tu.fin), cruza = fin <= ini;
+    var dentro = cruza ? (t >= ini || t < fin) : (t >= ini && t < fin);
+    if (!dentro) continue;
+    var diaInicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate() - (cruza && t < fin ? 1 : 0));
+    var r = _skfRangoTurno(tu, diaInicio);
+    return { turno: tu, inicio: r.inicio, fin: r.fin };
+  }
+  return null;
+}
+
+// Cumplimiento de cada turno ocurrido desde hace `dias` días hasta ahora.
+// estado: 'completo' | 'en_curso' (el turno aún no termina) | 'omitido' (terminó y faltó algo)
+//         | 'sin_esperado' (no se definió qué se espera)
+function skfEstadoTurnos(config, envios, ahora, dias){
+  var turnos = (config && config.turnos) || [], esperado = (config && config.esperado) || [];
+  var out = [];
+  for (var off = dias; off >= 0; off--) {
+    var dia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - off);
+    turnos.forEach(function(tu){
+      var r = _skfRangoTurno(tu, dia);
+      if (r.inicio > ahora) return; // aún no empieza
+      var hechos = {};
+      (envios || []).forEach(function(e){
+        var f = new Date(e.enviado_en || e.enviadoEn || e.creado_en || e.creadoEn);
+        if (isNaN(f.getTime()) || f < r.inicio || f >= r.fin) return;
+        var pid = e.plantilla_id || e.plantillaId;
+        if (pid && esperado.indexOf(pid) !== -1) hechos[pid] = true;
+      });
+      var hechosL = esperado.filter(function(id){ return hechos[id]; });
+      var faltan = esperado.filter(function(id){ return !hechos[id]; });
+      var estado = !esperado.length ? 'sin_esperado' : (!faltan.length ? 'completo' : (ahora < r.fin ? 'en_curso' : 'omitido'));
+      out.push({ turno: tu, inicio: r.inicio, fin: r.fin, esperado: esperado, hechos: hechosL, faltan: faltan, estado: estado });
+    });
+  }
+  return out.sort(function(a, b){ return b.inicio - a.inicio; });
+}
+
 const FORM_LIBRARY = [
   // ── Calidad / SGC Verticales (ISO 9001:2015) ──────────────────
   {id:'auditoria_interna_iso',vertical:'calidad',nombre:'Checklist de Auditoría Interna (ISO 9001 — Cl. 9.2)',norma:'ISO 9001:2015 — Cl. 9.2',

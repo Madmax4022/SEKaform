@@ -38,6 +38,7 @@ jobs:
           node tests/analyzeText.test.cjs
           node tests/fieldTypes.test.cjs
           node tests/codigoPlantilla.test.cjs
+          node tests/turnos.test.cjs
 
       # El aislamiento entre clientes es la garantía central del producto:
       # si estas pruebas fallan, no se despliega nada.
