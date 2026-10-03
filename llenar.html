@@ -45,6 +45,11 @@
       transition: border-color .15s, transform .15s;
     }
     .tmpl-card:hover { border-color: var(--pri); transform: translateY(-1px); }
+    /* Alternancia tipo piano: un velo del acento, apenas perceptible, en las
+       tarjetas pares — rompe la monotonía de la lista sin contrastar. */
+    #tmplList .tmpl-card:nth-child(even) {
+      background-image: linear-gradient(rgba(37,99,235,.07), rgba(37,99,235,.07));
+    }
     .tmpl-ico { font-size: 2rem; flex-shrink: 0; }
     .tmpl-logo { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; border-radius: 6px; background: #fff; padding: 3px; }
     .tmpl-info { flex: 1; min-width: 0; }
