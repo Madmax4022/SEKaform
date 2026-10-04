@@ -38,14 +38,14 @@
     .ins-meta { font-size: .78rem; color: var(--mut); margin-top: 3px; }
     .ins-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .ins-pill { font-size: .74rem; font-weight: 800; border-radius: 20px; padding: 4px 11px; white-space: nowrap; }
-    .ins-pill.venc { background: rgba(239,68,68,.15); color: var(--err); }
+    .ins-pill.venc { background: rgba(239,68,68,.15); color: var(--err-txt); }
     .ins-pill.pronto { background: var(--warn-dim); color: var(--warn); }
     .ins-pill.aldia { background: var(--ok-dim); color: var(--ok); }
     .mini { background: transparent; border: 1px solid var(--bor); color: var(--mut); border-radius: 7px; padding: 6px 11px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
     .mini:hover { color: var(--txt); border-color: var(--mut); }
     .mini.done { border-color: rgba(26,188,156,.4); color: var(--ok); }
     .mini.done:hover { background: var(--ok-dim); }
-    .mini.del:hover { color: var(--err); border-color: rgba(239,68,68,.5); }
+    .mini.del:hover { color: var(--err-txt); border-color: rgba(239,68,68,.5); }
 
     .grp-h { font-size: .78rem; font-weight: 800; color: var(--mut); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 10px; }
     .empty-state { text-align: center; padding: 56px 20px; color: var(--mut); }
@@ -58,7 +58,7 @@
     .setup-banner-ico { font-size: 1.5rem; flex-shrink: 0; }
     .setup-banner h3 { font-size: .9rem; font-weight: 700; margin-bottom: 4px; }
     .setup-banner p { font-size: .82rem; color: var(--mut); line-height: 1.55; }
-    .setup-banner a { color: var(--pri); }
+    .setup-banner a { color: var(--pri-txt); }
     .toast { position: fixed; bottom: 24px; right: 16px; background: var(--card); border: 1px solid var(--bor); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 9px; font-size: .85rem; font-weight: 600; z-index: 2000; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
     .toast.ok { border-color: var(--ok); } .toast.er { border-color: var(--err); }
   </style>
@@ -292,7 +292,7 @@ function render(){
   const pronto   = list.filter(i => { const d=diasRestantes(i.proximoEn); return d>=0 && d<=7; });
   const aldia    = list.filter(i => diasRestantes(i.proximoEn) > 7);
   let html = '';
-  if (vencidas.length) html += `<div class="grp-h" style="color:var(--err)">⚠️ Vencidas (${vencidas.length})</div>` + vencidas.map(insRowHtml).join('');
+  if (vencidas.length) html += `<div class="grp-h" style="color:var(--err-txt)">⚠️ Vencidas (${vencidas.length})</div>` + vencidas.map(insRowHtml).join('');
   if (pronto.length)   html += `<div class="grp-h" style="color:var(--warn)">Vencen pronto (${pronto.length})</div>` + pronto.map(insRowHtml).join('');
   if (aldia.length)    html += `<div class="grp-h">Al día (${aldia.length})</div>` + aldia.map(insRowHtml).join('');
   el.innerHTML = html;

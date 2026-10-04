@@ -19,9 +19,9 @@
     /* ─ wizard ─ */
     .wizard{background:var(--card);border-bottom:1px solid var(--bor);padding:0 20px;display:flex;overflow-x:auto;gap:0;}
     .wz{padding:12px 16px;font-size:.8rem;font-weight:600;color:var(--mut);border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:color .2s,border-color .2s;}
-    .wz.active{color:var(--pri);border-bottom-color:var(--pri);}
+    .wz.active{color:var(--pri-txt);border-bottom-color:var(--pri);}
     .wz.done{color:var(--ok);}
-    .wz-n{width:20px;height:20px;border-radius:50%;background:var(--bor);color:var(--mut);font-size:.68rem;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
+    .wz-n{width:20px;height:20px;border-radius:50%;background:var(--bor);color:var(--txt);font-size:.68rem;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
     .wz.active .wz-n{background:var(--pri);color:#fff;}
     .wz.done .wz-n{background:var(--ok);color:#fff;}
 
@@ -56,7 +56,7 @@
     .src-tab.active{border-color:var(--pri);background:var(--pri-dim);}
     .src-tab-ico{font-size:1.8rem;display:block;margin-bottom:6px;}
     .src-tab-lbl{font-size:.72rem;font-weight:700;color:var(--mut);}
-    .src-tab.active .src-tab-lbl{color:var(--pri);}
+    .src-tab.active .src-tab-lbl{color:var(--pri-txt);}
 
     .src-panel{display:none;}
     .src-panel.on{display:block;animation:fadeIn .2s ease;}
@@ -68,13 +68,13 @@
     .dz-ico{font-size:2.5rem;display:block;margin-bottom:10px;}
     .dropzone h3{font-size:.95rem;margin-bottom:6px;}
     .dropzone p{color:var(--mut);font-size:.82rem;}
-    .link{color:var(--pri);text-decoration:underline;cursor:pointer;}
+    .link{color:var(--pri-txt);text-decoration:underline;cursor:pointer;}
     .doc-prev{background:var(--card);border:1px solid var(--bor);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:14px;}
     .doc-thumb{width:76px;height:96px;object-fit:contain;border-radius:6px;background:var(--bg);border:1px solid var(--bor);flex-shrink:0;}
     .doc-info{flex:1;min-width:0;}
     .doc-name{font-weight:600;font-size:.88rem;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .doc-meta{color:var(--mut);font-size:.75rem;}
-    .doc-rm{color:var(--err);cursor:pointer;font-size:.75rem;margin-top:6px;display:inline-block;}
+    .doc-rm{color:var(--err-txt);cursor:pointer;font-size:.75rem;margin-top:6px;display:inline-block;}
 
     /* URL panel */
     .url-wrap{display:flex;gap:8px;margin-bottom:16px;}
@@ -82,7 +82,7 @@
     .url-inp:focus{border-color:var(--pri);}
     .url-examples{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
     .url-ex{background:var(--card);border:1px solid var(--bor);border-radius:20px;padding:4px 12px;font-size:.72rem;color:var(--mut);cursor:pointer;transition:all .15s;}
-    .url-ex:hover{border-color:var(--pri);color:var(--pri);}
+    .url-ex:hover{border-color:var(--pri);color:var(--pri-txt);}
 
     /* manual / bulk */
     .bulk-wrap{background:var(--card);border:1px solid var(--bor);border-radius:10px;padding:16px;margin-bottom:14px;}
@@ -99,7 +99,7 @@
     .proc-status{color:var(--mut);font-size:.88rem;}
     .proc-bar{height:4px;background:var(--bor);border-radius:2px;margin:16px auto;max-width:280px;}
     .proc-fill{height:100%;background:linear-gradient(90deg,var(--pri),var(--ok));border-radius:2px;transition:width .4s ease;width:0%;}
-    .proc-pct{font-size:.78rem;color:var(--pri);font-weight:700;}
+    .proc-pct{font-size:.78rem;color:var(--pri-txt);font-weight:700;}
 
     /* ─ PAGE 2: field review ─ */
     .builder-layout{display:grid;grid-template-columns:240px 1fr;gap:20px;}
@@ -124,7 +124,7 @@
 
     /* type chip */
     .type-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s;margin-top:5px;font-family:inherit;background:transparent;}
-    .chip-auto{color:var(--pri);border-color:var(--pri);background:var(--pri-dim);}
+    .chip-auto{color:var(--pri-txt);border-color:var(--pri);background:var(--pri-dim);}
     .chip-smart{color:var(--ok);border-color:var(--ok);background:var(--ok-dim);}
     .chip-man{color:var(--mut);border-color:var(--bor);}
     .chip-sig{color:var(--purple);border-color:var(--purple);background:var(--purple-dim);}
@@ -147,12 +147,12 @@
     .starter-grid{display:flex;flex-wrap:wrap;gap:8px;}
     .starter-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid var(--bor);border-radius:20px;font-size:.8rem;cursor:pointer;user-select:none;transition:border-color .15s,background .15s,color .15s;}
     .starter-chip input{accent-color:var(--pri);cursor:pointer;margin:0;}
-    .starter-chip:has(input:checked){border-color:var(--pri);background:var(--pri-dim);color:var(--pri);}
+    .starter-chip:has(input:checked){border-color:var(--pri);background:var(--pri-dim);color:var(--pri-txt);}
 
-    .sugg-req{font-size:.68rem;color:var(--err);font-weight:800;flex-shrink:0;}
+    .sugg-req{font-size:.68rem;color:var(--err-txt);font-weight:800;flex-shrink:0;}
     .fi-btn{width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--mut);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;}
     .fi-btn:hover{background:var(--bor);color:var(--txt);}
-    .fi-btn.del:hover{background:rgba(239,68,68,.15);color:var(--err);}
+    .fi-btn.del:hover{background:rgba(239,68,68,.15);color:var(--err-txt);}
 
     /* options */
     .sugg-opts{margin-top:10px;padding-top:10px;border-top:1px solid var(--bor);}
@@ -160,7 +160,7 @@
     .opts-row{display:flex;gap:7px;align-items:center;margin-bottom:6px;}
     .opts-row input{flex:1;background:var(--inp);border:1px solid var(--bor);border-radius:6px;color:var(--txt);padding:6px 10px;font-family:inherit;font-size:.85rem;outline:none;}
     .opts-row input:focus{border-color:var(--pri);}
-    .opt-rm{color:var(--err);background:none;border:none;cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.9rem;flex-shrink:0;}
+    .opt-rm{color:var(--err-txt);background:none;border:none;cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:.9rem;flex-shrink:0;}
     .opt-rm:hover{background:rgba(239,68,68,.12);}
     .chk-row{display:flex;align-items:center;gap:9px;margin-top:8px;}
     .chk-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--pri);cursor:pointer;flex-shrink:0;}
@@ -183,9 +183,9 @@
     .prev-desc{color:var(--mut);font-size:.88rem;margin-bottom:20px;}
     .pf{margin-bottom:18px;}
     .pf label{display:block;font-size:.75rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
-    .pf label .req{color:var(--err);margin-left:3px;}
+    .pf label .req{color:var(--err-txt);margin-left:3px;}
     .pf input,.pf textarea,.pf select{width:100%;background:var(--inp);border:1px solid var(--bor);border-radius:8px;color:var(--txt);font-family:inherit;font-size:.9rem;padding:10px 13px;pointer-events:none;}
-    .pf-sep{font-size:.9rem;font-weight:700;color:var(--pri);padding:10px 0;border-bottom:1px solid var(--bor);margin-bottom:18px;}
+    .pf-sep{font-size:.9rem;font-weight:700;color:var(--pri-txt);padding:10px 0;border-bottom:1px solid var(--bor);margin-bottom:18px;}
 
     /* ─ type menu ─ */
     .type-menu{position:fixed;z-index:500;background:var(--card);border:1px solid var(--bor);border-radius:12px;padding:6px;min-width:210px;display:none;box-shadow:0 12px 32px rgba(0,0,0,.6);animation:menuIn .15s ease;}
@@ -222,7 +222,7 @@
       .wz{padding:11px 8px;font-size:.72rem;gap:5px;}
     }
     .qual-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--warn);margin-top:9px;}
-    .qual-warn.qual-bad{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--err);}
+    .qual-warn.qual-bad{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--err-txt);}
     .qual-btns{display:flex;gap:7px;margin-top:7px;flex-wrap:wrap;}
     .card-warn{border-color:rgba(245,158,11,.4) !important;}
     .card-warn.card-bad{border-color:rgba(239,68,68,.4) !important;}
@@ -306,7 +306,7 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
         <h3>Arrastra la imagen aquí</h3>
         <p>Captura de pantalla, foto del formulario, escáner</p>
         <p style="margin-top:6px">JPG · PNG · GIF · WEBP — máx. 10 MB</p>
-        <p style="margin-top:8px;color:var(--pri)" class="link">Seleccionar archivo</p>
+        <p style="margin-top:8px;color:var(--pri-txt)" class="link">Seleccionar archivo</p>
         <button type="button" class="btn btn-sec btn-sm" style="margin-top:14px" onclick="event.stopPropagation();document.getElementById('fiImgCam').click()">📷 Tomar foto</button>
       </div>
       <div id="prevImg" style="display:none">
@@ -346,7 +346,7 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
         <h3>Arrastra el PDF aquí</h3>
         <p>Formularios PDF, documentos escaneados</p>
         <p style="margin-top:6px">PDF — máx. 20 MB</p>
-        <p style="margin-top:8px;color:var(--pri)" class="link">Seleccionar PDF</p>
+        <p style="margin-top:8px;color:var(--pri-txt)" class="link">Seleccionar PDF</p>
       </div>
       <div id="prevPdf" style="display:none">
         <div class="doc-prev">
@@ -974,7 +974,7 @@ async function analyze() {
       const badCount = tmpl.campos.filter(c=>c._quality==='ilegible' || c._quality==='review').length;
       const omitidos = window._skfOmitidos || 0;
       const hayOriginal = !!(imgData || pdfFile || tmpl.sourceUrl);
-      const btnStyle = 'margin-left:8px;background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.4);color:var(--pri);border-radius:6px;padding:3px 10px;font-size:.75rem;cursor:pointer;font-family:inherit';
+      const btnStyle = 'margin-left:8px;background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.4);color:var(--pri-txt);border-radius:6px;padding:3px 10px;font-size:.75rem;cursor:pointer;font-family:inherit';
       msgEl.innerHTML = `✅ <strong>${detectedCount} campos detectados</strong> · ${autoCount} automáticos · ${sigCount} firma${sigCount!==1?'s':''} · ${selCount} de selección`
         + (badCount ? ` · <span style="color:var(--warn)">✏️ ${badCount} no legible${badCount!==1?'s':''} (escríbelo${badCount!==1?'s':''})</span>` : '')
         + (omitidos ? ` · <span style="color:var(--mut)">🗑️ ${omitidos} fragmento${omitidos!==1?'s':''} ilegible${omitidos!==1?'s':''} omitido${omitidos!==1?'s':''}</span>` : '')
@@ -1816,7 +1816,7 @@ function renderPreview(){
   h+=`<h2 class="prev-title">${esc(tmpl.nombre)}</h2>`;
   if(tmpl.descripcion)h+=`<p class="prev-desc">${esc(tmpl.descripcion)}</p>`;
   if(tmpl.codigo)h+=`<p style="color:var(--mut);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:${tmpl.norma?'6px':'16px'}">${esc(tmpl.codigo)}</p>`;
-  if(tmpl.norma)h+=`<p style="color:var(--pri);font-size:.72rem;font-weight:600;margin-bottom:16px">📋 ${esc(tmpl.norma)}</p>`;
+  if(tmpl.norma)h+=`<p style="color:var(--pri-txt);font-size:.72rem;font-weight:600;margin-bottom:16px">📋 ${esc(tmpl.norma)}</p>`;
   tmpl.campos.forEach(c=>{h+=prevField(c,ds,ts);});
   document.getElementById('prevForm').innerHTML=h;
 }
@@ -1835,9 +1835,9 @@ function prevField(c,ds,ts){
     case 'textarea':
       return`${W}<textarea placeholder="${esc(c.placeholder||'Escribe aquí...')}" disabled style="min-height:72px"></textarea>${E}`;
     case 'fecha_auto':
-      return`${W}<input type="text" value="📅 ${ds}" disabled style="background:var(--pri-dim);border-color:var(--pri);color:var(--pri)">${E}`;
+      return`${W}<input type="text" value="📅 ${ds}" disabled style="background:var(--pri-dim);border-color:var(--pri);color:var(--pri-txt)">${E}`;
     case 'hora_auto':
-      return`${W}<input type="text" value="⏰ ${ts}" disabled style="background:var(--pri-dim);border-color:var(--pri);color:var(--pri)">${E}`;
+      return`${W}<input type="text" value="⏰ ${ts}" disabled style="background:var(--pri-dim);border-color:var(--pri);color:var(--pri-txt)">${E}`;
     case 'fecha':
       return`${W}<input type="date" disabled>${E}`;
     case 'select':
@@ -1857,7 +1857,7 @@ function prevField(c,ds,ts){
     case 'foto':
       return`${W}<div style="background:var(--inp);border:1.5px dashed var(--bor);border-radius:8px;padding:22px;text-align:center;color:var(--mut);font-size:.82rem"><span style="font-size:2rem;display:block;margin-bottom:6px">📷</span>Capturar foto o seleccionar de galería</div>${E}`;
     case 'ubicacion':
-      return`${W}<div style="background:var(--pri-dim);border:1.5px solid var(--pri);border-radius:8px;padding:12px 15px;display:flex;align-items:center;gap:9px;font-size:.82rem;color:var(--pri)"><span style="font-size:1.2rem">📍</span>Ubicación GPS — se captura automáticamente</div>${E}`;
+      return`${W}<div style="background:var(--pri-dim);border:1.5px solid var(--pri);border-radius:8px;padding:12px 15px;display:flex;align-items:center;gap:9px;font-size:.82rem;color:var(--pri-txt)"><span style="font-size:1.2rem">📍</span>Ubicación GPS — se captura automáticamente</div>${E}`;
     default:
       return`${W}<input type="text" placeholder="..." disabled>${E}`;
   }

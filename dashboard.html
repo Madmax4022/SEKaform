@@ -28,7 +28,7 @@
     .stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-bottom:10px;}
     .stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-bottom:4px;}
     .stat-desc{font-size:.75rem;color:var(--mut);}
-    .stat-card.c-pri .stat-num{color:var(--pri);}
+    .stat-card.c-pri .stat-num{color:var(--pri-txt);}
     .stat-card.c-ok .stat-num{color:var(--ok);}
     .stat-card.c-warn .stat-num{color:var(--warn);}
     .stat-card.c-purple .stat-num{color:var(--purple);}
@@ -115,7 +115,7 @@
     .hz-au-form{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .hz-au-form small{display:block;color:var(--mut);font-weight:400;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .sev-pill{font-size:.7rem;font-weight:800;border-radius:20px;padding:2px 9px;white-space:nowrap;display:inline-block;}
-    .sev-pill.critico{background:rgba(239,68,68,.15);color:var(--err);}
+    .sev-pill.critico{background:rgba(239,68,68,.15);color:var(--err-txt);}
     .sev-pill.mayor{background:var(--warn-dim);color:var(--warn);}
     .sev-pill.menor{background:var(--card2);color:var(--mut);}
     .cer-si{color:var(--ok);font-weight:700;} .cer-no{color:var(--warn);font-weight:700;}
@@ -170,7 +170,7 @@
     .empty p{font-size:.85rem;line-height:1.6;max-width:300px;margin:0 auto;}
 
     /* source badge */
-    .src-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;background:var(--pri-dim);color:var(--pri);margin-bottom:24px;}
+    .src-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;background:var(--pri-dim);color:var(--pri-txt);margin-bottom:24px;}
     .src-badge.cloud{background:var(--ok-dim);color:var(--ok);}
 
     /* loading */
@@ -184,11 +184,11 @@
     .setup-banner-ico{font-size:1.5rem;flex-shrink:0;}
     .setup-banner h3{font-size:.9rem;font-weight:700;margin-bottom:4px;}
     .setup-banner p{font-size:.82rem;color:var(--mut);line-height:1.55;}
-    .setup-banner a{color:var(--pri);}
+    .setup-banner a{color:var(--pri-txt);}
 
     /* compliance & gaps */
     .section-title{font-size:1rem;font-weight:800;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
-    .stat-card.c-err .stat-num{color:var(--err);}
+    .stat-card.c-err .stat-num{color:var(--err-txt);}
     .rank-list{display:flex;flex-direction:column;gap:12px;}
     .rank-row{display:flex;align-items:center;gap:10px;}
     .rank-name{flex:0 0 38%;min-width:0;font-size:.82rem;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -221,7 +221,7 @@
     .cmp-bar-num{font-size:.8rem;font-weight:800;color:var(--txt);min-width:26px;text-align:right;}
     .cmp-num{font-size:.85rem;font-weight:800;color:var(--mut);}
     .cmp-num.hasc{color:var(--warn);}
-    .cmp-num.crit{color:var(--err);}
+    .cmp-num.crit{color:var(--err-txt);}
     .cmp-row.sinasignar .cmp-name{color:var(--mut);font-style:italic;font-weight:600;}
 
     @media(max-width:900px){
@@ -1417,7 +1417,7 @@ async function initPanelReadonly(token) {
   if (typeof sbLoadPanel === 'function') { try { snap = await sbLoadPanel(token); } catch {} }
   if (!snap) { try { snap = JSON.parse(localStorage.getItem('skf_panel_' + token) || 'null'); } catch {} }
   if (!snap) {
-    document.getElementById('loadingState').innerHTML = '<span style="color:var(--err)">Este panel compartido no está disponible o expiró. Pide a quien te lo envió que lo comparta de nuevo.</span>';
+    document.getElementById('loadingState').innerHTML = '<span style="color:var(--err-txt)">Este panel compartido no está disponible o expiró. Pide a quien te lo envió que lo comparta de nuevo.</span>';
     return;
   }
   document.body.classList.add('panel-readonly');
@@ -1486,7 +1486,7 @@ function renderComparativo() {
 
   if (!unidadesTipo.length) {
     el.innerHTML = `<div class="gap-empty">No has creado ${U_TIPO_LBL[tipo]||'unidades'} todavía.<br>
-      <a href="unidades.html" style="color:var(--pri)">Crea unidades</a> y etiqueta tus formularios al llenar y asignar para comparar aquí.</div>`;
+      <a href="unidades.html" style="color:var(--pri-txt)">Crea unidades</a> y etiqueta tus formularios al llenar y asignar para comparar aquí.</div>`;
     return;
   }
 
@@ -1820,7 +1820,7 @@ async function init() {
 init().catch(err => {
   console.error(err);
   document.getElementById('loadingState').innerHTML =
-    '<span style="color:var(--err)">Error cargando datos. Recarga la página.</span>';
+    '<span style="color:var(--err-txt)">Error cargando datos. Recarga la página.</span>';
 });
 </script>
 </body>
