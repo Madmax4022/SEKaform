@@ -344,3 +344,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 
 .btn { min-height: 44px; }
 .btn-file, .u-mini, button.filter-sel, [class^="cod-edit"], .cfg-row .rm { min-height: 44px; min-width: 44px; }
+
+/* ── Avisos (toast) por encima de la barra de navegación inferior ─────────────────
+   Cada pantalla define su .toast con bottom:20–24px; en celular eso queda DEBAJO de la barra
+   inferior (54 px, z-index 400) y el aviso no se ve. !important porque cada pantalla define el
+   suyo en su propio <style>, que va después de este archivo. */
+@media (max-width: 860px) { .toast { bottom: 76px !important; } }
