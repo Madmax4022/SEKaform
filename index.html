@@ -558,8 +558,22 @@
       else if (abiertos.length > 0) paso = { ico:'⚠️', t:'Cierra ' + abiertos.length + ' hallazgo' + (abiertos.length !== 1 ? 's' : '') + ' abierto' + (abiertos.length !== 1 ? 's' : ''), s:'Asigna un responsable y una fecha límite a cada uno.', href:'hallazgos.html', cls:'warn' };
       else if (!perfil.completo && !perfil.omitido) paso = { ico:'🧭', t:'Revisa los datos de tu empresa', s:'1 minuto: te dejamos listo lo que la ley exige a tu empresa y tus formularios por actividad.', href:'bienvenida.html' };
       else if (kitPendiente) paso = { ico: kitPendiente.ico, t:'Agrega tu kit de «' + kitPendiente.nombre + '»', s: skfKitFaltantes(kitPendiente, pc).length + ' formularios para empezar, en un toque.', href:'#tusAreas' };
-      else if (atras.length > 0) paso = { ico:'🔄', t:'Renueva la evidencia de «' + atras[0].p.nombre + '»', s:'La última tiene ' + atras[0].ev.dias + ' días. ' + (atras.length > 1 ? 'Y ' + (atras.length - 1) + ' principio' + (atras.length > 2 ? 's' : '') + ' más atrasado' + (atras.length > 2 ? 's' : '') + '.' : 'Ábrelo en tu mapa de cumplimiento.'), href:'cumplimiento.html', cls:'warn' };
-      else if (pend.length > 0) paso = { ico:'🎯', t:'Te falta evidencia de «' + pend[0].p.nombre + '»', s:'Llevas ' + (9 - pend.length) + ' de 9 principios con evidencia. Mira qué formulario lo cubre.', href:'cumplimiento.html' };
+      else if (atras.length > 0 || pend.length > 0) {
+        // Directo al formulario que cubre el principio (uno que ya tenga, si lo hay), no al Mapa.
+        const mias = (Array.isArray(plt) ? plt : []).map(p => ({ id: p.id, nombre: p.nombre }));
+        try { JSON.parse(localStorage.getItem('skf_plantillas') || '[]').forEach(p => mias.push({ id: p.id, nombre: p.nombre })); } catch (e) {}
+        if (atras.length > 0) {
+          const x = atras[0], d = skfFormularioParaPrincipio(x.p.id, pc, mias);
+          paso = { ico:'🔄', t:'Renueva la evidencia de «' + x.p.nombre + '»',
+            s:'La última tiene ' + x.ev.dias + ' días. ' + (d ? 'Renuévala con «' + d.nombre + '».' : 'Ábrelo en tu mapa de cumplimiento.') + (atras.length > 1 ? ' (Y ' + (atras.length - 1) + ' más atrasado' + (atras.length > 2 ? 's' : '') + '.)' : ''),
+            href: d ? d.href : 'cumplimiento.html', cls:'warn' };
+        } else {
+          const x = pend[0], d = skfFormularioParaPrincipio(x.p.id, pc, mias);
+          paso = { ico:'🎯', t:'Te falta evidencia de «' + x.p.nombre + '»',
+            s:'Llevas ' + (9 - pend.length) + ' de 9 principios con evidencia. ' + (d ? 'Empieza con «' + d.nombre + '».' : 'Mira qué formulario lo cubre.'),
+            href: d ? d.href : 'cumplimiento.html' };
+        }
+      }
       else paso = { ico:'✅', t:'Todo al día', s:'Tienes evidencia reciente de los 9 principios. Revisa tu mapa de cumplimiento.', href:'cumplimiento.html', cls:'ok' };
 
       const card = document.getElementById('nextStep');
