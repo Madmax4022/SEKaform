@@ -140,14 +140,22 @@ function skfEstandarRes0312(trabajadores, riesgo){
   return { n: 7, cap: 1 };
 }
 
-// ¿A qué formulario llevar a quien le falta evidencia de un principio? Primero uno que YA tenga
+// ¿A qué formulario llevar a quien le falta evidencia de un principio? Solo de los que se llenan a voluntad;
+// entre ellos, primero uno que YA tenga
 // (así no se crean copias), el más usado primero; si no tiene ninguno que lo cubra, el más usado del
 // catálogo (se agrega y se abre). `mias` = [{id, nombre}] de la nube y del dispositivo.
 // Devuelve { href, nombre, propio, id } o null si ningún formulario cubre ese principio.
+// Formularios que se llenan SOLO cuando ocurre algo (un accidente, un incidente). Nunca se sugieren
+// para «conseguir evidencia»: empujaría a registrar un evento que no existe.
+var SST_FORMS_DE_EVENTO = ['incidente_accidente', 'investigacion_at'];
+
 function skfFormularioParaPrincipio(principioId, paisCode, mias){
-  var candidatos = FORM_LIBRARY
+  var todos = FORM_LIBRARY
     .filter(function(t){ return (SST_PRINCIPIO_MAP[t.id] || []).indexOf(principioId) !== -1; })
     .sort(function(a, b){ return (a.freq || 99) - (b.freq || 99); });
+  // Primero los que se pueden llenar cuando uno quiera; los de evento, solo si no hay otro.
+  var proactivos = todos.filter(function(t){ return SST_FORMS_DE_EVENTO.indexOf(t.id) === -1; });
+  var candidatos = proactivos.length ? proactivos : todos;
   if (!candidatos.length) return null;
   var porNombre = {};
   (mias || []).forEach(function(p){ if (p && p.id && p.nombre && !porNombre[_skfNorm(p.nombre)]) porNombre[_skfNorm(p.nombre)] = p.id; });

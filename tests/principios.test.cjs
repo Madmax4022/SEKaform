@@ -39,6 +39,19 @@ t('los nombres se comparan localizados al país (Acta del comité cambia por pa�
   eq(r.propio, true, 'reconoce «Acta de Reunión — Comisión de Salud Ocupacional»'); eq(r.nombre, 'Acta de Reunión — Comisión de Salud Ocupacional');
   eq(dest('cooperacion', 'cr', [{ id: 'acta-co', nombre: nom('acta_copasst', 'co') }]).propio, false, 'el nombre de Colombia no es el de Costa Rica');
 });
+t('NUNCA propone un formulario de evento (accidente) para «conseguir evidencia»', () => {
+  const r = dest('responsabilidad', 'co', []);
+  eq(r.id, 'autoevaluacion_res0312', 'Responsabilidad -> la Autoevaluación, no la Investigación de Accidente');
+  // aunque el usuario ya tenga el de accidente, no se le manda ahí
+  const r2 = dest('responsabilidad', 'co', [{ id: 'mi-inv', nombre: nom('investigacion_at') }]);
+  eq(r2.id, 'autoevaluacion_res0312'); eq(r2.propio, false);
+  ['prevencion','responsabilidad','cooperacion','capacitacion','gestion','salud','participacion','realidad','proteccion'].forEach(p => {
+    const x = dest(p, 'co', []); if (['incidente_accidente','investigacion_at'].includes(x.id)) throw new Error(p + ' -> ' + x.id);
+  });
+});
+t('para «Atención de la salud» propone el formulario preventivo más usado (botiquín), no los de evento', () => {
+  eq(dest('salud', 'co', []).id, 'inspeccion_botiquin');
+});
 t('el id se codifica en la URL y entradas raras no rompen', () => {
   eq(dest('prevencion', 'co', [{ id: 'a b/c', nombre: nom('inspeccion_sst') }]).href, 'llenar.html?tmpl=a%20b%2Fc');
   eq(dest('prevencion', 'co', [null, {}, { id: 'z' }, { nombre: 'q' }]).propio, false);
