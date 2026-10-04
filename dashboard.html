@@ -694,10 +694,40 @@ function buildFormChart(envios, plantillas) {
   if (!sorted.length) return;   // sin datos en el filtro: canvas en blanco (se recalcula al cambiar filtro)
 
   const COLORS = [CHART_BLUE,'#1abc9c','#a78bfa','#f59e0b','#ec4899','#f97316','#06b6d4'];
+  // El nombre del formulario se PARTE en líneas (por palabras) en vez de recortarlo con «…»:
+  // quien lee el gráfico debe poder distinguir «Lista de Verificación SST» de «Lista de Verificación
+  // de Botiquín». El ancho disponible para los rótulos depende de la pantalla (Chart.js les reserva
+  // menos de la mitad del gráfico), así que se mide en PÍXELES con la misma fuente del gráfico, no
+  // en caracteres. Solo en el caso extremo (más de 6 líneas) la última se acorta; el nombre completo
+  // siempre sale en el aviso al tocar la barra y en la descripción para lectores de pantalla.
+  const cv = document.getElementById('chartForms');
+  const mide = cv.getContext('2d');
+  mide.font = '12px ' + ((window.Chart && Chart.defaults.font && Chart.defaults.font.family) || 'sans-serif');
+  const anchoGrafico = (cv.parentElement && cv.parentElement.clientWidth) || Math.min(window.innerWidth - 80, 560);
+  const anchoMax = Math.max(100, anchoGrafico * 0.34);
+  const cabe = s => mide.measureText(s).width <= anchoMax;
+  const acortar = s => { while (s.length > 1 && !cabe(s + '…')) s = s.slice(0, -1); return s + '…'; };
+  const partir = (txt, lineasMax = 6) => {
+    const lineas = []; let cur = '';
+    String(txt).split(/\s+|(?<=\/)/).forEach(w => {
+      if (cur && !cabe(cur + ' ' + w)) { lineas.push(cur); cur = w; } else { cur = cur ? cur + ' ' + w : w; }
+    });
+    if (cur) lineas.push(cur);
+    for (let i = 0; i < lineas.length; i++) if (!cabe(lineas[i])) lineas[i] = acortar(lineas[i]);   // palabra sola demasiado larga
+    if (lineas.length > lineasMax) { const resto = lineas.slice(lineasMax - 1).join(' '); lineas.length = lineasMax - 1; lineas.push(cabe(resto) ? resto : acortar(resto)); }
+    return lineas;
+  };
+  const nombresCompletos = sorted.map(([k]) => labelMap[k]);
+  const etiquetas = nombresCompletos.map(n => partir(n));
+  // Chart.js reparte el alto en espacios iguales: manda la barra con más líneas (mínimo 200 px, como antes).
+  const maxLineas = Math.max(1, ...etiquetas.map(l => l.length));
+  const altoPx = etiquetas.length * Math.max(44, maxLineas * 15 + 22) + 50;
+  const wrapForms = document.getElementById('chartForms').parentElement;
+  if (wrapForms) wrapForms.style.height = Math.max(200, altoPx) + 'px';
   _chForms = new Chart(document.getElementById('chartForms'), {
     type: 'bar',
     data: {
-      labels: sorted.map(([k]) => { const l=labelMap[k]; return l.length>22 ? l.slice(0,20)+'…' : l; }),
+      labels: etiquetas,
       datasets: [{
         data: sorted.map(([,v]) => v),
         backgroundColor: sorted.map((_,i) => COLORS[i % COLORS.length] + 'e6'),
@@ -709,10 +739,13 @@ function buildFormChart(envios, plantillas) {
     options: {
       indexAxis: 'y',
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => nombresCompletos[items[0].dataIndex] } } },
       scales: {
         x: { ticks: { color: CHART_TEXT, precision: 0, font:{size:12} }, grid: { color: CHART_GRID }, beginAtZero: true },
-        y: { ticks: { color: CHART_TEXT, font:{size:12} }, grid: { display: false } }
+        // Ancho del eje FIJADO al mismo valor con que se partieron los nombres (si no, Chart.js decide
+        // otro y recorta), y sin ocultar rótulos: con varias líneas, autoSkip se deshacía de barras enteras.
+        y: { afterFit: sc => { sc.width = Math.ceil(anchoMax) + 14; },
+             ticks: { color: CHART_TEXT, font:{size:12}, autoSkip: false }, grid: { display: false } }
       }
     }
   });
