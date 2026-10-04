@@ -484,7 +484,6 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
   </div>
 </div>
 
-<script src="chart.min.js"></script>
 <script>
 const CHART_GRID  = 'rgba(51,65,85,.6)';
 const CHART_TEXT  = '#94a3b8';
@@ -505,6 +504,50 @@ const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct'
 // ── Filtros globales del panel ──────────────────────────────────────
 // Recalculan TODO el BI y también los reportes (la "Carpeta de evidencia"
 // no es más que este panel filtrado por periodo + unidad + formulario).
+// ── Chart.js se carga SOLO cuando hay gráficos que mostrar ───────────────────
+// Pesa 200 KB (69 comprimido) y bloquea ~280 ms en un teléfono de gama media. La vista
+// predeterminada es la SIMPLE, que no muestra ningún gráfico, así que quien solo mira los
+// números no debe pagar por él. Se pide al abrir «Ver panel completo» (el service worker
+// ya lo tiene en caché, también sin conexión).
+let _chartPromesa = null;
+function cargarChart() {
+  if (window.Chart) return Promise.resolve();
+  if (_chartPromesa) return _chartPromesa;
+  _chartPromesa = new Promise((ok, err) => {
+    const s = document.createElement('script');
+    s.src = 'chart.min.js';
+    s.onload = () => ok();
+    s.onerror = () => { _chartPromesa = null; s.remove(); err(new Error('No se pudo cargar chart.min.js')); };
+    document.head.appendChild(s);
+  });
+  return _chartPromesa;
+}
+const IDS_GRAFICAS = ['chartDaily', 'chartForms', 'chartTrend'];
+// Si Chart.js no llega (sin conexión y sin caché), se avisa EN el lugar del gráfico, sin
+// destruir el canvas: al volver la señal y reintentar, el gráfico se puede dibujar.
+function avisoSinGraficas(hay) {
+  IDS_GRAFICAS.forEach(id => {
+    const c = document.getElementById(id); if (!c || !c.parentNode) return;
+    let p = c.parentNode.querySelector('.sin-graficas');
+    if (hay) {
+      c.style.display = 'none';
+      if (!p) { p = document.createElement('p'); p.className = 'sin-graficas'; p.style.cssText = 'color:var(--mut);text-align:center;padding:50px 0;font-size:.8rem'; p.textContent = 'Las gráficas necesitan conexión la primera vez. Vuelve a intentarlo cuando tengas señal.'; c.parentNode.appendChild(p); }
+    } else { c.style.display = ''; if (p) p.remove(); }
+  });
+}
+function graficasVisibles() { return !document.body.classList.contains('dash-simple'); }
+function asegurarGraficas() {
+  if (!graficasVisibles()) return;               // vista simple: no hay nada que dibujar
+  cargarChart().then(() => {
+    avisoSinGraficas(false);
+    const ds = datosFiltrados();
+    buildDailyChart(ds.envios);
+    buildFormChart(ds.envios, ds.plantillas);
+    buildTrendChart(ds.envios, ds.hallazgos);
+    renderExplorador();                          // su gráfico depende de Chart: se redibuja ya cargado
+  }).catch(() => avisoSinGraficas(true));
+}
+
 let _chDaily = null, _chForms = null, _chTrend = null, _chExpl = null;   // instancias de gráfica (para destruir al recalcular)
 let _explForms = [];                    // formularios con campos analizables
 const _explRango = { min: null, max: null };  // rango válido opcional para campos número
@@ -1775,11 +1818,7 @@ function pintar() {
   document.getElementById('sMonth').textContent = stats.month;
   document.getElementById('sWeek').textContent  = stats.week;
 
-  if (typeof Chart !== 'undefined') {
-    buildDailyChart(ds.envios);
-    buildFormChart(ds.envios, ds.plantillas);
-    buildTrendChart(ds.envios, ds.hallazgos);
-  }
+  asegurarGraficas();   // carga Chart.js (si hace falta) y dibuja; en vista simple no hace nada
 
   _biEnvios = ds.envios; _biHallazgos = ds.hallazgos; _biUnidades = ds.unidades;
   renderComparativo();
@@ -1815,6 +1854,7 @@ function toggleVista() {
   const simple = !((localStorage.getItem('skf_dash_simple') || '1') === '1');
   localStorage.setItem('skf_dash_simple', simple ? '1' : '0');
   aplicarVista();
+  if (!simple) asegurarGraficas();   // pasó a «panel completo»: ahora sí hacen falta
 }
 
 async function init() {
@@ -1838,13 +1878,6 @@ async function init() {
   // Marca para los reportes: caché local primero, luego se refresca de la nube.
   try { _biOrg = JSON.parse(localStorage.getItem('skf_org')||'null'); } catch { _biOrg = null; }
   sbLoadOrg().then(o => { if (o) { _biOrg = o; localStorage.setItem('skf_org', JSON.stringify({nombre:o.nombre, logo:o.logo||null})); } }).catch(()=>{});
-
-  // Si Chart.js no cargó (offline), avisa una sola vez
-  if (typeof Chart === 'undefined') {
-    ['chartDaily','chartForms','chartTrend'].forEach(id => {
-      const c = document.getElementById(id); if (c) c.parentNode.innerHTML = '<p style="color:var(--mut);text-align:center;padding:50px 0;font-size:.85rem">Gráfica no disponible sin conexión</p>';
-    });
-  }
 
   // Poblar filtro de unidades (agrupadas por tipo)
   const uSel = document.getElementById('fltUnidad');
