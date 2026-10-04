@@ -89,7 +89,7 @@
     .corr-info{flex:1;min-width:180px;font-weight:700;font-size:.9rem;color:var(--txt);}
     .corr-info small{display:block;color:var(--mut);font-weight:500;font-size:.76rem;margin-top:2px;}
     .corr-act{margin-left:auto;}
-    .corr-mark{background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.45);color:var(--pri,#60a5fa);border-radius:8px;padding:7px 13px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    .corr-mark{background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.45);color:var(--pri-txt);border-radius:8px;padding:7px 13px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
     .corr-mark:hover{background:rgba(37,99,235,.28);}
     .corr-done{font-size:.82rem;font-weight:700;color:var(--ok,#22c55e);white-space:nowrap;}
     .corr-undo{background:none;border:none;color:var(--mut);text-decoration:underline;cursor:pointer;font-size:.74rem;font-family:inherit;margin-left:4px;}
@@ -488,6 +488,18 @@ La tabla de abajo te deja ver, para lo filtrado, qué se encontró y si ya se ce
 <script>
 const CHART_GRID  = 'rgba(51,65,85,.6)';
 const CHART_TEXT  = '#94a3b8';
+const CHART_BLUE  = '#60a5fa';   // el azul de marca #2563eb da 2.8:1 sobre la tarjeta; este, 5.7:1
+const CHART_BLUE_FILL = 'rgba(96,165,250,.16)';
+
+// Alternativa de texto de un gráfico: lectores de pantalla no leen un <canvas>.
+// Se vuelve a escribir cada vez que el gráfico se redibuja, con sus datos reales.
+function describirGrafico(canvasId, texto) {
+  const c = document.getElementById(canvasId);
+  if (!c) return;
+  c.setAttribute('role', 'img');
+  c.setAttribute('aria-label', texto);
+  c.textContent = texto;   // contenido alterno para navegadores sin canvas
+}
 const MONTHS_ES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 // ── Filtros globales del panel ──────────────────────────────────────
@@ -621,6 +633,11 @@ function buildDailyChart(envios) {
     }).length);
   }
 
+  const totalDia = counts.reduce((s, v) => s + v, 0);
+  const maxDia = Math.max(...counts);
+  describirGrafico('chartDaily', totalDia
+    ? `Envíos por día, últimos 30 días: ${totalDia} en total; el máximo fue ${maxDia} el ${labels[counts.indexOf(maxDia)]}.`
+    : 'Envíos por día, últimos 30 días: sin envíos en este periodo.');
   if (_chDaily) _chDaily.destroy();
   _chDaily = new Chart(document.getElementById('chartDaily'), {
     type: 'line',
@@ -628,21 +645,21 @@ function buildDailyChart(envios) {
       labels,
       datasets: [{
         data: counts,
-        borderColor: '#2563eb',
-        backgroundColor: 'rgba(37,99,235,.15)',
+        borderColor: CHART_BLUE,
+        backgroundColor: CHART_BLUE_FILL,
         borderWidth: 2,
         fill: true,
         tension: .35,
         pointRadius: 3,
-        pointBackgroundColor: '#2563eb'
+        pointBackgroundColor: CHART_BLUE
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: CHART_TEXT, maxTicksLimit: 7, font:{size:11} }, grid: { color: CHART_GRID } },
-        y: { ticks: { color: CHART_TEXT, precision: 0, font:{size:11} }, grid: { color: CHART_GRID }, beginAtZero: true }
+        x: { ticks: { color: CHART_TEXT, maxTicksLimit: 7, font:{size:12} }, grid: { color: CHART_GRID } },
+        y: { ticks: { color: CHART_TEXT, precision: 0, font:{size:12} }, grid: { color: CHART_GRID }, beginAtZero: true }
       }
     }
   });
@@ -671,16 +688,19 @@ function buildFormChart(envios, plantillas) {
 
   const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
   if (_chForms) { _chForms.destroy(); _chForms = null; }
+  describirGrafico('chartForms', sorted.length
+    ? 'Envíos por formulario: ' + sorted.map(([k, v]) => `${labelMap[k]} (${v})`).join('; ') + '.'
+    : 'Envíos por formulario: sin datos para este filtro.');
   if (!sorted.length) return;   // sin datos en el filtro: canvas en blanco (se recalcula al cambiar filtro)
 
-  const COLORS = ['#2563eb','#1abc9c','#8b5cf6','#f59e0b','#ec4899','#f97316','#06b6d4'];
+  const COLORS = [CHART_BLUE,'#1abc9c','#a78bfa','#f59e0b','#ec4899','#f97316','#06b6d4'];
   _chForms = new Chart(document.getElementById('chartForms'), {
     type: 'bar',
     data: {
       labels: sorted.map(([k]) => { const l=labelMap[k]; return l.length>22 ? l.slice(0,20)+'…' : l; }),
       datasets: [{
         data: sorted.map(([,v]) => v),
-        backgroundColor: sorted.map((_,i) => COLORS[i % COLORS.length] + 'cc'),
+        backgroundColor: sorted.map((_,i) => COLORS[i % COLORS.length] + 'e6'),
         borderColor:     sorted.map((_,i) => COLORS[i % COLORS.length]),
         borderWidth: 1,
         borderRadius: 5
@@ -691,8 +711,8 @@ function buildFormChart(envios, plantillas) {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: CHART_TEXT, precision: 0, font:{size:11} }, grid: { color: CHART_GRID }, beginAtZero: true },
-        y: { ticks: { color: CHART_TEXT, font:{size:11} }, grid: { display: false } }
+        x: { ticks: { color: CHART_TEXT, precision: 0, font:{size:12} }, grid: { color: CHART_GRID }, beginAtZero: true },
+        y: { ticks: { color: CHART_TEXT, font:{size:12} }, grid: { display: false } }
       }
     }
   });
@@ -984,10 +1004,11 @@ function renderExplNumero(el, campo, rows) {
   const keys = Object.keys(byMonth).sort();
   const labels = keys.map(k => { const [y,m]=k.split('-'); return `${MONTHS_ES[+m-1]} ${y.slice(2)}`; });
   const data = keys.map(k => { const a=byMonth[k]; return a.reduce((s,v)=>s+v,0)/a.length; });
+  describirGrafico('chartExpl', 'Promedio mensual del campo: ' + labels.map((l, i) => `${l}: ${fmt(data[i])}`).join('; ') + '.');
   if (typeof Chart !== 'undefined') {
     _chExpl = new Chart(document.getElementById('chartExpl'), {
-      type:'line', data:{ labels, datasets:[{ label:'Promedio', data, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.14)', fill:true, tension:.3, pointRadius:3, pointBackgroundColor:'#2563eb' }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:CHART_TEXT,font:{size:11}},grid:{color:CHART_GRID}}, y:{ticks:{color:CHART_TEXT,font:{size:11}},grid:{color:CHART_GRID}} } }
+      type:'line', data:{ labels, datasets:[{ label:'Promedio', data, borderColor:CHART_BLUE, backgroundColor:CHART_BLUE_FILL, fill:true, tension:.3, pointRadius:3, pointBackgroundColor:CHART_BLUE }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:CHART_TEXT,font:{size:12}},grid:{color:CHART_GRID}}, y:{ticks:{color:CHART_TEXT,font:{size:12}},grid:{color:CHART_GRID}} } }
     });
   }
   const byUni = {};
@@ -1531,19 +1552,21 @@ function buildTrendChart(envios, hallazgos) {
     envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
     hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
   }
+  describirGrafico('chartTrend', 'Últimos 6 meses, envíos y hallazgos: ' +
+    labels.map((l, i) => `${l}: ${envCounts[i]} envíos, ${hzCounts[i]} hallazgos`).join('; ') + '.');
   if (_chTrend) _chTrend.destroy();
   _chTrend = new Chart(document.getElementById('chartTrend'), {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Envíos',    data: envCounts, backgroundColor: 'rgba(37,99,235,.75)',  borderRadius: 5 },
-      { label: 'Hallazgos', data: hzCounts,  backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 5 }
+      { label: 'Envíos',    data: envCounts, backgroundColor: 'rgba(96,165,250,.9)',  borderRadius: 5 },
+      { label: 'Hallazgos', data: hzCounts,  backgroundColor: 'rgba(245,158,11,.9)', borderRadius: 5 }
     ]},
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, labels: { color: CHART_TEXT, font:{size:11}, boxWidth: 12 } } },
+      plugins: { legend: { display: true, labels: { color: CHART_TEXT, font:{size:12}, boxWidth: 12 } } },
       scales: {
-        x: { ticks: { color: CHART_TEXT, font:{size:11} }, grid: { color: CHART_GRID } },
-        y: { beginAtZero: true, ticks: { color: CHART_TEXT, precision: 0, font:{size:11} }, grid: { color: CHART_GRID } }
+        x: { ticks: { color: CHART_TEXT, font:{size:12} }, grid: { color: CHART_GRID } },
+        y: { beginAtZero: true, ticks: { color: CHART_TEXT, precision: 0, font:{size:12} }, grid: { color: CHART_GRID } }
       }
     }
   });
