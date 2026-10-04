@@ -14,6 +14,7 @@ from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 
 from . import db, security
+from .compresion import registrar_compresion
 from .config import Config
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -107,6 +108,7 @@ def crear_app(config: type[Config] = Config) -> Flask:
     registrar_api(app, csrf)
 
     _registrar_frontend(app)
+    registrar_compresion(app)
     _registrar_cabeceras(app)
     _registrar_errores(app)
 
