@@ -48,6 +48,7 @@
       cursor: pointer; transition: all .15s;
     }
     .filt-btn:hover { border-color: var(--pri); color: var(--txt); }
+    .filt-btn { min-height: 44px; }
     .filt-btn.active { background: var(--ok); border-color: var(--ok); color: #06281f; }
 
     /* Secciones colapsables (vista "Todas") */
@@ -79,7 +80,7 @@
     /* Chip de SST destacado; los de otras áreas, apagados y detrás de una etiqueta */
     .filt-sst { background: var(--pri-dim) !important; border-color: var(--pri) !important; color: var(--pri-txt) !important; }
     .filt-sst.active { background: var(--pri) !important; border-color: var(--pri) !important; color: #fff !important; }
-    .filt-otras-btn { align-self: center; background: none; border: none; cursor: pointer;
+    .filt-otras-btn { min-height: 44px; align-self: center; background: none; border: none; cursor: pointer;
       font-family: inherit; font-size: .72rem; font-weight: 800; color: var(--mut);
       text-transform: uppercase; letter-spacing: .04em; padding: 6px 4px; }
     .filt-otras-btn:hover { color: var(--txt); }
@@ -138,12 +139,14 @@
       transition: background .2s;
     }
     .tcard-cta:hover { background: var(--pri-h); }
+    .tcard-cta { min-height: 44px; }
     .tcard-cta-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
     .tcard-cta-min {
       color: var(--mut); font-size: .78rem; font-weight: 600; text-decoration: none;
       padding: 5px 8px; border-radius: 6px; transition: color .15s, background .15s;
     }
     .tcard-cta-min:hover { color: var(--txt); background: var(--bor); }
+    .tcard-cta-min { min-height: 44px; display: inline-flex; align-items: center; }
     .tcard-cta-dot { color: var(--bor); }
 
     .empty-state { text-align:center; padding: 60px 20px; color: var(--mut); }

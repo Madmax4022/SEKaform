@@ -56,17 +56,18 @@
     .pc-forms { display: flex; flex-wrap: wrap; gap: 6px; }
     .pc-chip { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 5px 10px; font-size: .8rem; color: var(--txt); text-decoration: none; transition: border-color .15s, color .15s; }
     .pc-chip:hover { border-color: var(--pri); color: var(--pri-txt); }
+    .pc-chip { display: inline-flex; align-items: center; min-height: 44px; }
     .pc-chip.done { border-color: rgba(26,188,156,.4); }
     .pc-chip .ck { color: var(--ok); font-weight: 800; }
     .pc-ev { font-size: .78rem; color: var(--mut); margin-top: 11px; }
     .pc-ev b { color: var(--txt); font-weight: 600; }
     @media (max-width: 560px) { .pc-desc, .pc-body { margin-left: 0; } .pc-top { flex-wrap: wrap; } }
 
-    .cmp-cta { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px dashed var(--bor); border-radius: 12px; padding: 16px 18px; margin-top: 22px; text-decoration: none; color: inherit; }
+    .cmp-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: var(--card); border: 1px dashed var(--bor); border-radius: 12px; padding: 16px 18px; margin-top: 22px; text-decoration: none; color: inherit; }
     .cmp-cta:hover { border-color: var(--pri); }
     .cmp-cta .cc-b { flex: 1; font-size: .86rem; color: var(--mut); }
     .cmp-cta .cc-b b { color: var(--txt); }
-    .cmp-cta .cc-a { color: var(--pri-txt); font-weight: 700; font-size: .85rem; white-space: nowrap; }
+    .cmp-cta .cc-a { color: var(--pri-txt); font-weight: 700; font-size: .85rem; }
   </style>
 </head>
 <body>

@@ -318,3 +318,29 @@ html:not(.sb-collapsed) body > .skf-demo-bar { margin-left: 0; }
     transition-duration: .01ms !important; scroll-behavior: auto !important;
   }
 }
+
+/* ── Zonas táctiles ≥ 44 px (WCAG 2.5.5) ──────────────────────────────────
+   El «?» se ve igual de pequeño, pero su área de toque crece 12 px por lado. */
+.skf-help { position: relative; }
+.skf-help::after { content: ""; position: absolute; inset: -12px; }
+.sidebar-logo { display: inline-block; padding: 12px 0; }
+.sidebar-link { min-height: 44px; }
+.auth-bell { min-width: 44px; min-height: 44px; }
+.auth-link { display: inline-block; padding: 16px 0; }
+@media (max-width: 860px) {
+  .btn-sm, .topbar-back, .page-toolbar .btn, .filt-btn { min-height: 44px; }
+  input[type=text], input[type=email], input[type=search], input[type=url], input[type=tel],
+  input[type=number], input[type=date], input[type=time], select { min-height: 44px; }
+}
+
+/* ── Foco visible ────────────────────────────────────────────────────────
+   Varios campos de formulario quitan el contorno y solo cambian el color del
+   borde (azul de marca, 2.5:1 sobre el fondo). Con teclado no se distinguía
+   dónde estaba el cursor. Este anillo usa el azul de texto (≥5:1) y solo se
+   muestra al navegar con teclado (:focus-visible), no al tocar con el dedo. */
+:focus-visible { outline: 3px solid var(--pri-txt); outline-offset: 2px; border-radius: 4px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--pri-txt) !important; outline-offset: 1px; }
+.skf-term:focus-visible, .skf-help:focus-visible { outline-offset: 3px; }
+
+.btn { min-height: 44px; }
+.btn-file, .u-mini, button.filter-sel, [class^="cod-edit"], .cfg-row .rm { min-height: 44px; min-width: 44px; }
