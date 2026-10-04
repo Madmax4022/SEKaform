@@ -203,12 +203,13 @@
     .sig-canvas { display: block; width: 100%; touch-action: none; cursor: crosshair; }
     .sig-toolbar {
       padding: 8px 12px; display: flex; align-items: center; justify-content: space-between;
-      border-top: 1px solid var(--bor); background: var(--card);
+      border-bottom: 1px solid var(--bor); background: var(--card);
     }
     .sig-hint { color: var(--mut); font-size: 0.75rem; }
     .sig-clear {
       background: none; border: 1px solid var(--bor); border-radius: 5px; color: var(--mut);
-      padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: all .15s;
+      padding: 4px 14px; font-size: 0.8rem; cursor: pointer; font-family: inherit; transition: all .15s;
+      min-height: 44px; min-width: 44px;   /* con el dedo: antes era 67×24 px */
     }
     .sig-clear:hover { border-color: var(--err); color: var(--err-txt); }
 
@@ -1031,11 +1032,14 @@ function buildFieldEl(c) {
       inner = document.createElement('div');
       inner.className='sig-box';
       inner.id=`sigbox_${c.id}`;
-      inner.innerHTML=`<canvas class="sig-canvas" id="sig_${c.id}" height="160"></canvas>
-        <div class="sig-toolbar">
+      // «Limpiar» va ARRIBA del recuadro, no debajo: el recuadro absorbe todo toque (touch-action:none,
+      // para poder dibujar) y no deja desplazar la página; con el botón abajo, al firmar cerca del borde
+      // inferior quedaba detrás de la barra de acciones y no se alcanzaba. Arriba siempre está a la vista.
+      inner.innerHTML=`<div class="sig-toolbar">
           <span class="sig-hint">✍ Dibuja tu firma</span>
-          <button class="sig-clear" onclick="clearSig('${c.id}')">Limpiar</button>
-        </div>`;
+          <button type="button" class="sig-clear" onclick="clearSig('${c.id}')" aria-label="Borrar la firma y empezar de nuevo">Limpiar</button>
+        </div>
+        <canvas class="sig-canvas" id="sig_${c.id}" height="160"></canvas>`;
       break;
     }
 
