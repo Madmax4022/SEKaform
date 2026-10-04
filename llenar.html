@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="icons/icon-192.png">
@@ -55,12 +55,12 @@
     .tmpl-info { flex: 1; min-width: 0; }
     .tmpl-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; line-height: 1.25; overflow-wrap: anywhere; }
     .tmpl-meta { color: var(--mut); font-size: 0.78rem; line-height: 1.5; }
-    .tmpl-cod { color: var(--pri); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+    .tmpl-cod { color: var(--pri-txt); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
     .tmpl-acts { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; flex-shrink: 0; align-items: flex-start; justify-content: flex-end; }
     .btn-fav { background: transparent; border: 1px solid var(--bor); color: var(--mut); border-radius: 7px; padding: 5px 10px; font-size: 1rem; cursor: pointer; font-family: inherit; transition: all .15s; line-height: 1; }
     .btn-fav:hover { border-color: #f59e0b; color: #f59e0b; }
     .btn-fav.on { background: rgba(245,158,11,.12); border-color: #f59e0b; color: #f59e0b; }
-    .btn-danger { background: transparent; border: 1px solid rgba(239,68,68,.35); color: var(--err); border-radius: 7px; padding: 6px 10px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
+    .btn-danger { background: transparent; border: 1px solid rgba(239,68,68,.35); color: var(--err-txt); border-radius: 7px; padding: 6px 10px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
     .btn-danger:hover { background: rgba(239,68,68,.12); border-color: var(--err); }
     /* QR modal */
     .qr-over { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 600; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -96,7 +96,7 @@
     .form-logo { max-height: 56px; max-width: 160px; object-fit: contain; display: block; margin-bottom: 12px; border-radius: 6px; background: #fff; padding: 4px; }
     .form-logo.hidden { display: none; }
     .form-header-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .form-cod { font-size: 0.68rem; font-weight: 800; color: var(--pri); text-transform: uppercase; letter-spacing: .8px; background: rgba(37,99,235,.13); padding: 3px 8px; border-radius: 4px; }
+    .form-cod { font-size: 0.68rem; font-weight: 800; color: var(--pri-txt); text-transform: uppercase; letter-spacing: .8px; background: rgba(37,99,235,.13); padding: 3px 8px; border-radius: 4px; }
     .form-title-h { font-size: 1.35rem; font-weight: 800; margin-bottom: 5px; }
     .form-desc-p { color: var(--mut); font-size: 0.87rem; line-height: 1.5; margin-bottom: 0; }
 
@@ -129,7 +129,7 @@
       font-size: 0.78rem; font-weight: 700; color: var(--mut);
       letter-spacing: .1px; margin-bottom: 10px; cursor: default;
     }
-    .fg > label .req { color: var(--err); margin-left: 2px; }
+    .fg > label .req { color: var(--err-txt); margin-left: 2px; }
     .fg-ico {
       width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -150,7 +150,7 @@
     .fg textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
     .fg select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; cursor: pointer; }
 
-    .fg .err-msg { color: var(--err); font-size: 0.75rem; margin-top: 6px; display: none; }
+    .fg .err-msg { color: var(--err-txt); font-size: 0.75rem; margin-top: 6px; display: none; }
     .fg.has-error .err-msg { display: block; }
     .fg.has-error input, .fg.has-error textarea, .fg.has-error select { border-color: var(--err); }
 
@@ -160,7 +160,7 @@
       background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25);
     }
     .hz-banner.hidden { display: none; }
-    .hz-banner-top { font-size: .78rem; font-weight: 700; color: var(--err); margin-bottom: 8px; }
+    .hz-banner-top { font-size: .78rem; font-weight: 700; color: var(--err-txt); margin-bottom: 8px; }
     .hz-banner-desc {
       width: 100%; background: var(--inp); border: 1px solid var(--bor); border-radius: 8px;
       color: var(--txt); font-size: .85rem; font-family: inherit; padding: 8px 10px;
@@ -192,7 +192,7 @@
     .gps-field {
       background: rgba(37,99,235,.08); border: 1px solid var(--pri); border-radius: 9px;
       padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer;
-      transition: background .15s; font-size: 0.88rem; color: var(--pri);
+      transition: background .15s; font-size: 0.88rem; color: var(--pri-txt);
     }
     .gps-field:hover { background: rgba(37,99,235,.14); }
     .gps-field.got { color: var(--ok); border-color: var(--ok); background: rgba(26,188,156,.08); }
@@ -210,7 +210,7 @@
       background: none; border: 1px solid var(--bor); border-radius: 5px; color: var(--mut);
       padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: all .15s;
     }
-    .sig-clear:hover { border-color: var(--err); color: var(--err); }
+    .sig-clear:hover { border-color: var(--err); color: var(--err-txt); }
 
     /* photo */
     .photo-box {
@@ -232,7 +232,7 @@
     .form-footer .btn { flex: 1; justify-content: center; }
 
     /* buttons */
-    .btn-lnk { background: transparent; color: var(--pri); }
+    .btn-lnk { background: transparent; color: var(--pri-txt); }
     .btn-lnk:hover { background: rgba(37,99,235,.08); }
 
     /* ── success modal ── */
@@ -285,6 +285,8 @@
       .tmpl-acts { flex-basis: 100%; width: 100%; justify-content: flex-start; flex-wrap: nowrap; align-items: stretch; gap: 5px; }
       .tmpl-acts .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; font-size: .76rem; white-space: nowrap; }
       .tmpl-acts .btn-fav, .tmpl-acts .btn-danger { flex: 0 0 auto; }
+      .tmpl-acts .btn, .tmpl-acts .btn-fav, .tmpl-acts .btn-danger { min-height: 44px; }
+      .tmpl-acts .btn-fav, .tmpl-acts .btn-danger { min-width: 44px; }
       .form-footer .btn-sec { flex: 0 0 auto; padding: 12px 16px; }
     }
   </style>
@@ -330,7 +332,7 @@
       </div>
       <h1 class="form-title-h" id="fTitle"></h1>
       <p class="form-desc-p" id="fDesc"></p>
-      <p id="fNorma" style="display:none;color:var(--pri);font-size:.76rem;font-weight:600;margin-top:6px"></p>
+      <p id="fNorma" style="display:none;color:var(--pri-txt);font-size:.76rem;font-weight:600;margin-top:6px"></p>
     </div>
     <div class="fg hidden" id="fg_fillerName">
       <label><span class="fg-ico">👤</span>¿Quién llena este formulario?<span class="req">*</span></label>
@@ -418,7 +420,7 @@
     <h2 class="modal-h">¡Formulario enviado!</h2>
     <p class="modal-p">El registro fue guardado correctamente y quedará disponible para exportar a base de datos.</p>
     <div class="modal-id" id="successId"></div>
-    <p class="modal-p hidden" id="successHz" style="margin-top:-10px;color:var(--err)"></p>
+    <p class="modal-p hidden" id="successHz" style="margin-top:-10px;color:var(--err-txt)"></p>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-pri" style="justify-content:center" onclick="fillAgain()">Llenar otro registro</button>
       <button class="btn btn-sec" style="justify-content:center" onclick="backToList()">Volver al inicio</button>

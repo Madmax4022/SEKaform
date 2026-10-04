@@ -45,28 +45,29 @@
     .pc-top { display: flex; align-items: flex-start; gap: 12px; }
     .pc-num { font-size: 1.3rem; font-weight: 800; color: var(--mut); opacity: .45; min-width: 1.3em; font-variant-numeric: tabular-nums; line-height: 1.1; }
     .pc-name { font-size: 1.05rem; font-weight: 800; flex: 1; min-width: 0; line-height: 1.2; }
-    .pc-cob { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px; border-radius: 20px; background: var(--pri-dim); color: var(--pri); white-space: nowrap; align-self: center; }
+    .pc-cob { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px; border-radius: 20px; background: var(--pri-dim); color: var(--pri-txt); white-space: nowrap; align-self: center; }
     .pc-status { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; align-self: center; }
     .pc-status.st-ok { background: var(--ok-dim); color: var(--ok); }
     .pc-status.st-warn { background: rgba(245,158,11,.15); color: var(--warn); }
-    .pc-status.st-pend { background: var(--bor); color: var(--mut); }
+    .pc-status.st-pend { background: var(--bor); color: var(--txt); }
     .pc-desc { font-size: .87rem; color: var(--mut); margin: 8px 0 0 calc(1.3em + 12px); line-height: 1.5; }
     .pc-body { margin: 12px 0 0 calc(1.3em + 12px); }
     .pc-lbl { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); margin-bottom: 7px; }
     .pc-forms { display: flex; flex-wrap: wrap; gap: 6px; }
     .pc-chip { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 5px 10px; font-size: .8rem; color: var(--txt); text-decoration: none; transition: border-color .15s, color .15s; }
-    .pc-chip:hover { border-color: var(--pri); color: var(--pri); }
+    .pc-chip:hover { border-color: var(--pri); color: var(--pri-txt); }
+    .pc-chip { display: inline-flex; align-items: center; min-height: 44px; }
     .pc-chip.done { border-color: rgba(26,188,156,.4); }
     .pc-chip .ck { color: var(--ok); font-weight: 800; }
     .pc-ev { font-size: .78rem; color: var(--mut); margin-top: 11px; }
     .pc-ev b { color: var(--txt); font-weight: 600; }
     @media (max-width: 560px) { .pc-desc, .pc-body { margin-left: 0; } .pc-top { flex-wrap: wrap; } }
 
-    .cmp-cta { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px dashed var(--bor); border-radius: 12px; padding: 16px 18px; margin-top: 22px; text-decoration: none; color: inherit; }
+    .cmp-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: var(--card); border: 1px dashed var(--bor); border-radius: 12px; padding: 16px 18px; margin-top: 22px; text-decoration: none; color: inherit; }
     .cmp-cta:hover { border-color: var(--pri); }
     .cmp-cta .cc-b { flex: 1; font-size: .86rem; color: var(--mut); }
     .cmp-cta .cc-b b { color: var(--txt); }
-    .cmp-cta .cc-a { color: var(--pri); font-weight: 700; font-size: .85rem; white-space: nowrap; }
+    .cmp-cta .cc-a { color: var(--pri-txt); font-weight: 700; font-size: .85rem; }
   </style>
 </head>
 <body>

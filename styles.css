@@ -9,6 +9,9 @@
   --orange:#f97316; --orange-dim:rgba(249,115,22,.13);
   --pink:#ec4899; --pink-dim:rgba(236,72,153,.13);
   --txt:#f8fafc; --mut:#94a3b8; --bor:#334155;
+  /* Para TEXTO sobre fondos oscuros: el azul y el rojo de marca (--pri, --err) solo
+     dan 2.5–3.4:1 como texto; estos cumplen WCAG AA (≥4.5:1) sobre todos los fondos. */
+  --pri-txt:#6ea8fe; --err-txt:#f87171;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
@@ -40,12 +43,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 html.sb-collapsed .sidebar { transform: translateX(-100%); }
 
 .sidebar-logo { font-size: 1.05rem; font-weight: 900; letter-spacing: -.5px; color: var(--txt); text-decoration: none; margin: 0 8px 18px; }
-.sidebar-logo span { color: var(--pri); }
+.sidebar-logo span { color: var(--pri-txt); }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .sidebar-link { display: flex; align-items: center; gap: 10px; color: var(--mut); text-decoration: none; font-size: .86rem; font-weight: 600; padding: 10px 12px; border-radius: 8px; transition: background .15s, color .15s; }
 .sidebar-link:hover { background: var(--bor); color: var(--txt); }
-.sidebar-link.active { color: var(--pri); background: var(--pri-dim); }
+.sidebar-link.active { color: var(--pri-txt); background: var(--pri-dim); }
 /* Menú agrupado: encabezados de grupo + grupo colapsable */
 .sidebar-group { display: flex; flex-direction: column; gap: 2px; }
 .sidebar-group-h { font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--mut); padding: 13px 12px 5px; }
@@ -116,7 +119,7 @@ details.sidebar-group[open] > summary.sidebar-group-h::after { transform: rotate
   padding: 4px 2px; white-space: nowrap; transition: color .15s;
 }
 .bb-tab .bi { font-size: 1.3rem; line-height: 1; }
-.bb-tab.active { color: var(--pri); }
+.bb-tab.active { color: var(--pri-txt); }
 .bb-tab:active { color: var(--txt); }
 .bb-auth {
   flex: 1; display: flex; justify-content: center; overflow: hidden; min-width: 0;
@@ -196,9 +199,9 @@ html.sb-collapsed body { padding-left: 0; }
 .skf-critical-toast.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
 .skf-critical-toast-ico { font-size: 1.3rem; flex-shrink: 0; }
 .skf-critical-toast-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; font-size: .82rem; }
-.skf-critical-toast-body strong { color: var(--err); font-size: .85rem; }
+.skf-critical-toast-body strong { color: var(--err-txt); font-size: .85rem; }
 .skf-critical-toast-body span { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.skf-critical-toast-link { color: var(--err); font-weight: 700; font-size: .8rem; text-decoration: none; white-space: nowrap; }
+.skf-critical-toast-link { color: var(--err-txt); font-weight: 700; font-size: .8rem; text-decoration: none; white-space: nowrap; }
 .skf-critical-toast-link:hover { text-decoration: underline; }
 .skf-critical-toast-close { background: none; border: none; color: var(--mut); cursor: pointer; font-size: .9rem; padding: 4px; flex-shrink: 0; }
 .skf-critical-toast-close:hover { color: var(--txt); }
@@ -240,10 +243,10 @@ footer { text-align: center; font-size: .82rem; color: var(--mut); border-top: 1
 }
 /* Término del glosario: se toca y explica (mismo popover que el «?») */
 .skf-term { border-bottom: 1px dotted var(--pri); cursor: help; }
-.skf-term:hover, .skf-term.on { color: var(--pri); }
+.skf-term:hover, .skf-term.on { color: var(--pri-txt); }
 /* Sobre fondos de color (tarjeta «Tu siguiente paso») hereda el color del texto */
 .next-step .skf-term, .next-step .skf-term:hover { color: inherit; border-bottom-color: currentColor; }
-.skf-help:hover, .skf-help.on { border-color: var(--pri); color: var(--pri); background: rgba(37,99,235,.1); }
+.skf-help:hover, .skf-help.on { border-color: var(--pri); color: var(--pri-txt); background: rgba(37,99,235,.1); }
 .skf-help-pop {
   position: absolute; z-index: 700;
   background: var(--card); border: 1px solid var(--bor); border-radius: 12px;
@@ -293,14 +296,51 @@ footer { text-align: center; font-size: .82rem; color: var(--mut); border-top: 1
    para reforzar la jerarquía (dónde estás) de forma consistente. */
 .pg-eyebrow {
   font-size: .66rem; font-weight: 800; text-transform: uppercase;
-  letter-spacing: .09em; color: var(--pri); margin-bottom: 8px;
+  letter-spacing: .09em; color: var(--pri-txt); margin-bottom: 8px;
 }
 
 /* ── Modo ejemplo: barra fija arriba, siempre visible ─────────────────── */
 .skf-demo-bar { position: sticky; top: 0; z-index: 500; display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: #d97706; color: #fff; padding: 9px 14px; font-size: .8rem; line-height: 1.3; }
+  background: #b45309; color: #fff; padding: 9px 14px; font-size: .8rem; line-height: 1.3; }
 .skf-demo-bar b { font-weight: 800; }
 .skf-demo-bar button { background: rgba(0,0,0,.25); color: #fff; border: 1px solid rgba(255,255,255,.55); border-radius: 8px;
   padding: 6px 12px; font-size: .78rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .skf-demo-bar button:hover { background: rgba(0,0,0,.4); }
 html:not(.sb-collapsed) body > .skf-demo-bar { margin-left: 0; }
+
+/* ── Movimiento reducido ─────────────────────────────────────────────────
+   Quien activa «reducir movimiento» en su teléfono (por mareo o por
+   preferencia) no debe ver deslizamientos, giros ni transiciones. Se dejan
+   los cambios de estado, pero instantáneos. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
+}
+
+/* ── Zonas táctiles ≥ 44 px (WCAG 2.5.5) ──────────────────────────────────
+   El «?» se ve igual de pequeño, pero su área de toque crece 12 px por lado. */
+.skf-help { position: relative; }
+.skf-help::after { content: ""; position: absolute; inset: -12px; }
+.sidebar-logo { display: inline-block; padding: 12px 0; }
+.sidebar-link { min-height: 44px; }
+.auth-bell { min-width: 44px; min-height: 44px; }
+.auth-link { display: inline-block; padding: 16px 0; }
+@media (max-width: 860px) {
+  .btn-sm, .topbar-back, .page-toolbar .btn, .filt-btn { min-height: 44px; }
+  input[type=text], input[type=email], input[type=search], input[type=url], input[type=tel],
+  input[type=number], input[type=date], input[type=time], select { min-height: 44px; }
+}
+
+/* ── Foco visible ────────────────────────────────────────────────────────
+   Varios campos de formulario quitan el contorno y solo cambian el color del
+   borde (azul de marca, 2.5:1 sobre el fondo). Con teclado no se distinguía
+   dónde estaba el cursor. Este anillo usa el azul de texto (≥5:1) y solo se
+   muestra al navegar con teclado (:focus-visible), no al tocar con el dedo. */
+:focus-visible { outline: 3px solid var(--pri-txt); outline-offset: 2px; border-radius: 4px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--pri-txt) !important; outline-offset: 1px; }
+.skf-term:focus-visible, .skf-help:focus-visible { outline-offset: 3px; }
+
+.btn { min-height: 44px; }
+.btn-file, .u-mini, button.filter-sel, [class^="cod-edit"], .cfg-row .rm { min-height: 44px; min-width: 44px; }

@@ -36,7 +36,7 @@
     .hz-card.sev-menor { border-left-color: #eab308; }
     .hz-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .hz-badge { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 3px 9px; border-radius: 20px; }
-    .hz-badge.sev-critico { background: rgba(239,68,68,.15); color: var(--err); }
+    .hz-badge.sev-critico { background: rgba(239,68,68,.15); color: var(--err-txt); }
     .hz-badge.sev-mayor { background: rgba(245,158,11,.15); color: var(--warn); }
     .hz-badge.sev-menor { background: rgba(234,179,8,.15); color: #eab308; }
     .hz-plantilla { font-weight: 800; font-size: .95rem; margin-top: 8px; }
@@ -179,22 +179,22 @@ function render() {
     const capaHtml = ac ? `<div class="hz-capa-existing">
         <span>👤 ${esc(ac.responsable||'Sin asignar')}</span>
         ${ac.fechaLimite ? `<span>📅 Límite: ${esc(ac.fechaLimite)}</span>` : ''}
-        <select class="hz-estado-sel" onchange="setAccionEstado('${esc(ac.id)}',this.value)">
+        <select class="hz-estado-sel" aria-label="Estado de la acción correctiva" onchange="setAccionEstado('${esc(ac.id)}',this.value)">
           <option value="pendiente" ${ac.estado==='pendiente'?'selected':''}>Pendiente</option>
           <option value="completada" ${ac.estado==='completada'?'selected':''}>Completada</option>
           <option value="vencida" ${ac.estado==='vencida'?'selected':''}>Vencida</option>
         </select>
       </div>` : `<div class="hz-capa-form">
-        <input type="text" id="resp_${esc(h.id)}" placeholder="Responsable">
-        <input type="email" id="correo_${esc(h.id)}" placeholder="Correo (opcional)">
-        <input type="date" id="fecha_${esc(h.id)}" min="${new Date().toISOString().split('T')[0]}">
+        <input type="text" id="resp_${esc(h.id)}" aria-label="Responsable de la acción" placeholder="Responsable">
+        <input type="email" id="correo_${esc(h.id)}" aria-label="Correo del responsable" placeholder="Correo (opcional)">
+        <input type="date" id="fecha_${esc(h.id)}" aria-label="Fecha límite" min="${new Date().toISOString().split('T')[0]}">
         <button class="btn btn-sec btn-sm" onclick="asignarAccion('${esc(h.id)}')">Asignar acción correctiva (CAPA)</button>
       </div>`;
 
     return `<div class="hz-card sev-${esc(h.severidad)}">
       <div class="hz-top">
         <span class="hz-badge sev-${esc(h.severidad)}">${sevLbl[h.severidad]||h.severidad}</span>
-        <select class="hz-estado-sel" onchange="setHallazgoEstado('${esc(h.id)}',this.value)">
+        <select class="hz-estado-sel" aria-label="Estado del hallazgo" onchange="setHallazgoEstado('${esc(h.id)}',this.value)">
           <option value="abierto" ${(h.estado||'abierto')==='abierto'?'selected':''}>Abierto</option>
           <option value="en_proceso" ${h.estado==='en_proceso'?'selected':''}>En atención</option>
           <option value="cerrado" ${h.estado==='cerrado'?'selected':''}>Cerrado</option>
