@@ -662,7 +662,8 @@ function computeStats(envios) {
 }
 
 // ── Daily chart ──────────────────────────────────────────────────
-function buildDailyChart(envios) {
+// ── Datos de las gráficas: UN solo cálculo, usado por la pantalla y por el reporte PDF ──
+function _datosDiario(envios) {
   const labels = [], counts = [];
   const today = new Date();
   for (let i = 29; i >= 0; i--) {
@@ -675,6 +676,33 @@ function buildDailyChart(envios) {
       return ed.toISOString().slice(0,10) === key;
     }).length);
   }
+  return { labels, counts };
+}
+function _datosFormularios(envios) {
+  const countMap = {}, labelMap = {};
+  envios.forEach(e => {
+    const key = envioGroupKey(e);
+    countMap[key] = (countMap[key]||0) + 1;
+    if (!labelMap[key]) labelMap[key] = e.plantilla_nombre || e.plantillaNombre || 'Sin nombre';
+  });
+  const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  return { sorted, labelMap };
+}
+function _datosTendencia(envios, hallazgos) {
+  const labels = [], envCounts = [], hzCounts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear(), m = d.getMonth();
+    labels.push(`${MONTHS_ES[m]} ${String(y).slice(2)}`);
+    envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+    hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+  }
+  return { labels, envCounts, hzCounts };
+}
+
+function buildDailyChart(envios) {
+  const { labels, counts } = _datosDiario(envios);
 
   const totalDia = counts.reduce((s, v) => s + v, 0);
   const maxDia = Math.max(...counts);
@@ -722,14 +750,7 @@ function envioGroupKey(e) {
 
 // ── By-form chart ────────────────────────────────────────────────
 function buildFormChart(envios, plantillas) {
-  const countMap = {}, labelMap = {};
-  envios.forEach(e => {
-    const key = envioGroupKey(e);
-    countMap[key] = (countMap[key]||0) + 1;
-    if (!labelMap[key]) labelMap[key] = e.plantilla_nombre || e.plantillaNombre || 'Sin nombre';
-  });
-
-  const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const { sorted, labelMap } = _datosFormularios(envios);
   if (_chForms) { _chForms.destroy(); _chForms = null; }
   describirGrafico('chartForms', sorted.length
     ? 'Envíos por formulario: ' + sorted.map(([k, v]) => `${labelMap[k]} (${v})`).join('; ') + '.'
@@ -1619,15 +1640,7 @@ function renderComparativo() {
 }
 
 function buildTrendChart(envios, hallazgos) {
-  const labels = [], envCounts = [], hzCounts = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const y = d.getFullYear(), m = d.getMonth();
-    labels.push(`${MONTHS_ES[m]} ${String(y).slice(2)}`);
-    envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
-    hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
-  }
+  const { labels, envCounts, hzCounts } = _datosTendencia(envios, hallazgos);
   describirGrafico('chartTrend', 'Últimos 6 meses, envíos y hallazgos: ' +
     labels.map((l, i) => `${l}: ${envCounts[i]} envíos, ${hzCounts[i]} hallazgos`).join('; ') + '.');
   if (_chTrend) _chTrend.destroy();
