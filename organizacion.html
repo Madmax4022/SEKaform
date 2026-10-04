@@ -17,6 +17,12 @@
     }
   </script>
   <style>
+    .guided-link { display: flex; align-items: center; gap: 14px; background: var(--pri-dim); border: 1px solid var(--pri); border-radius: 14px; padding: 15px 18px; margin: 0 0 18px; text-decoration: none; color: inherit; min-height: 44px; }
+    .guided-link:hover { filter: brightness(1.12); }
+    .guided-link .gl-ico { font-size: 1.6rem; flex-shrink: 0; }
+    .guided-link .gl-body { flex: 1; display: flex; flex-direction: column; gap: 3px; font-size: .95rem; }
+    .guided-link .gl-body span { font-size: .8rem; color: var(--mut); line-height: 1.45; }
+    .guided-link .gl-arr { color: var(--pri-txt); font-size: 1.3rem; font-weight: 700; }
     .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
     .pg-h { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
     .pg-sub { color: var(--mut); font-size: .88rem; margin-bottom: 28px; line-height: 1.6; max-width: 600px; }
@@ -64,6 +70,13 @@ Ese nombre y logo aparecen como marca en los reportes en PDF que descargas del p
       <p>Los datos de la organización viven en la nube y se comparten con tu equipo. <a href="login.html">Iniciar sesión →</a></p>
     </div>
   </div>
+
+  <a class="guided-link" href="bienvenida.html">
+    <span class="gl-ico">🧭</span>
+    <span class="gl-body"><b>Configurar mi empresa paso a paso</b>
+      <span>País, tamaño, nivel de riesgo y áreas de trabajo — te dejamos listo lo que la ley exige y tus formularios por actividad. Puedes repetirlo cuando quieras.</span></span>
+    <span class="gl-arr">→</span>
+  </a>
 
   <div class="card">
     <div class="fg">

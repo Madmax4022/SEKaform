@@ -136,7 +136,7 @@
 </div>
 
 <script>
-var state = { trab: null, riesgo: null, email: '', areas: [] };
+var state = { trab: null, riesgo: null, email: '', areas: [], repaso: false };
 var step = 1;
 
 function $(id){ return document.getElementById(id); }
@@ -239,16 +239,25 @@ $('to4').addEventListener('click', async function(){
     items.push('<li><span class="ck">✓</span><span>Kit <b>' + kit.nombre + '</b>: ' + (n ? n + ' formulario' + (n !== 1 ? 's' : '') + ' agregado' + (n !== 1 ? 's' : '') : 'ya lo tenías') + '</span></li>');
   }
   items.push('<li><span class="ck">→</span><span>Solo falta tu primera inspección: toma 2 minutos y ya tendrás evidencia.</span></li>');
+  if (state.repaso) {
+    $('s4').querySelector('h1').textContent = '¡Listo! Tu empresa quedó al día';
+    $('listoLead').textContent = 'Guardamos los cambios. Tus formularios y registros siguen donde estaban; el inicio ya usa tu información actualizada.';
+    $('go').textContent = 'Ir al inicio'; $('goHome').parentNode.hidden = true;
+    items.pop();   // «solo falta tu primera inspección» no aplica a quien ya está usando la app
+  } else {
+    $('listoLead').textContent = 'Hicimos lo difícil. Abre la Lista de Verificación SST y llénala con lo que ves hoy en tu lugar de trabajo.';
+  }
   $('doneList').innerHTML = items.join('');
-  $('listoLead').textContent = 'Hicimos lo difícil. Abre la Lista de Verificación SST y llénala con lo que ves hoy en tu lugar de trabajo.';
   irA(4);
 });
 
-$('go').addEventListener('click', function(){ location.href = 'digitalizador.html?preset=inspeccion_sst'; });
+$('go').addEventListener('click', function(){ location.href = state.repaso ? 'index.html' : 'digitalizador.html?preset=inspeccion_sst'; });
 
 $('skip').addEventListener('click', function(){
-  var p = skfPerfilGet(state.email) || {};
-  p.omitido = true; skfPerfilSet(state.email, p);
+  if (!state.repaso) {          // solo la PRIMERA vez cuenta como «lo dejé para después»
+    var p = skfPerfilGet(state.email) || {};
+    p.omitido = true; skfPerfilSet(state.email, p);
+  }
   location.href = 'index.html';
 });
 
@@ -260,6 +269,37 @@ $('skip').addEventListener('click', function(){
     var p = org && org.pais ? String(org.pais).toUpperCase() : '';
     if (p && ['CO','PA','CR','SV'].indexOf(p) !== -1) $('pais').value = p;
   } catch (e) {}
+
+  // ¿Ya usa la app? Entonces esto es un REPASO: recordamos lo contestado y no lo
+  // tratamos como a alguien que empieza de cero.
+  var perfil = skfPerfilGet(state.email) || {};
+  var tieneDatos = false;
+  try { var envs = await sbLoadEnvios(); tieneDatos = Array.isArray(envs) && envs.length > 0; } catch (e) {}
+  try { tieneDatos = tieneDatos || JSON.parse(localStorage.getItem('skf_plantillas') || '[]').length > 0; } catch (e) {}
+  state.repaso = !!perfil.completo || tieneDatos;
+
+  if (perfil.trabajadores != null) {
+    var bt = document.querySelector('#optTrab .opt[data-v="' + perfil.trabajadores + '"]');
+    if (bt) { bt.classList.add('sel'); state.trab = Number(perfil.trabajadores); }
+  }
+  if (perfil.riesgo) {
+    var br = document.querySelector('#optRiesgo .opt[data-v="' + perfil.riesgo + '"]');
+    if (br) { br.classList.add('sel'); state.riesgo = perfil.riesgo; }
+  }
+  (perfil.areas || []).forEach(function(id){
+    var ba = document.querySelector('#optAreas .opt[data-id="' + id + '"]');
+    if (ba) ba.classList.add('sel');
+  });
+  state.areas = (perfil.areas || []).filter(function(id){ return !!document.querySelector('#optAreas .opt[data-id="' + id + '"]'); });
+  actualizarResp();
+
+  if (state.repaso) {
+    $('skip').textContent = 'Cancelar';
+    $('s1').querySelector('h1').textContent = 'Revisa los datos de tu empresa';
+    $('s1').querySelector('.lead').textContent = 'Cambia lo que haga falta. Tus formularios y registros no se tocan.';
+    $('s2').querySelector('.hint').textContent = 'Quitar un área de aquí no borra los formularios que ya tienes.';
+    $('s3').querySelector('.hint').textContent = 'Si ya tienes sedes, puedes dejar esto vacío: las que existen se conservan.';
+  }
   irA(1);
 })();
 </script>
