@@ -65,9 +65,9 @@
 
     .cmp-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: var(--card); border: 1px dashed var(--bor); border-radius: 12px; padding: 16px 18px; margin-top: 22px; text-decoration: none; color: inherit; }
     .cmp-cta:hover { border-color: var(--pri); }
-    .cmp-cta .cc-b { flex: 1; font-size: .86rem; color: var(--mut); }
+    .cmp-cta .cc-b { flex: 1 1 220px; min-width: 0; font-size: .86rem; color: var(--mut); line-height: 1.5; }
     .cmp-cta .cc-b b { color: var(--txt); }
-    .cmp-cta .cc-a { color: var(--pri-txt); font-weight: 700; font-size: .85rem; }
+    .cmp-cta .cc-a { color: var(--pri-txt); font-weight: 700; font-size: .85rem; margin-left: auto; }
   </style>
 </head>
 <body>
@@ -132,7 +132,11 @@ async function init(){
   var evidencia = skfEvidenciaPrincipios(envios, _pais);
 
   var tiene = {};
-  plts.forEach(function(pl){ tiene[_norm(pl.nombre)] = true; });
+  // Formularios de la nube Y los guardados en este dispositivo: uno recién creado puede no haberse
+  // sincronizado todavía (o no haber conexión) y, sin mirar el dispositivo, un segundo clic crearía una copia.
+  var locales = [];
+  try { locales = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch (e) {}
+  plts.concat(Array.isArray(locales) ? locales : []).forEach(function(pl){ if (pl && pl.id && pl.nombre) tiene[_norm(pl.nombre)] = tiene[_norm(pl.nombre)] || pl.id; });
   render(evidencia, tiene);
 }
 
@@ -149,10 +153,15 @@ function render(evidencia, tiene){
     var forms = FORM_LIBRARY.filter(function(t){ return (SST_PRINCIPIO_MAP[t.id] || []).indexOf(pr.id) !== -1; })
       .map(function(t){
         var nom = skfLocalizeText(t.nombre, _pais);
-        var done = !!tiene[_norm(nom)];
-        return '<a class="pc-chip' + (done ? ' done' : '') + '" href="plantillas.html?v=sst" title="' +
-          (done ? 'Ya está en tu repositorio' : 'Agrégalo desde el catálogo') + '">' +
-          (done ? '<span class="ck">✓</span> ' : '') + esc(nom) + '</a>';
+        var miId = tiene[_norm(nom)];          // id del formulario del usuario, si ya lo tiene
+        var done = !!miId;
+        // Lo tiene -> se abre ESE formulario para llenarlo. No lo tiene -> mismo camino que «Usar este
+        // formulario» del catálogo: se agrega y se abre. (Ir al listado obligaba a buscarlo otra vez.)
+        var href = done ? 'llenar.html?tmpl=' + encodeURIComponent(miId)
+                        : 'digitalizador.html?preset=' + encodeURIComponent(t.id);
+        return '<a class="pc-chip' + (done ? ' done' : '') + '" href="' + href + '" title="' +
+          (done ? 'Abrir y llenar' : 'Agregar a tus formularios y llenar') + '">' +
+          '<span class="pc-t">' + (done ? '<span class="ck">✓</span> ' : '') + esc(nom) + '</span></a>';
       }).join('');
 
     var evLine = ev
