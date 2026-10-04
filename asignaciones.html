@@ -112,16 +112,16 @@
 Las personas asignadas NO necesitan cuenta: abren el link, escriben su nombre y llenan. Abajo verás quién ya respondió y quién falta.">?</button></h2>
     <div class="fg">
       <label>Formulario a asignar</label>
-      <select id="asgPlantilla"></select>
+      <select id="asgPlantilla" aria-label="Formulario a asignar"></select>
     </div>
     <div class="fg">
       <label>Unidad — sede / área / contratista (opcional)</label>
-      <select id="asgUnidad"></select>
+      <select id="asgUnidad" aria-label="Unidad (sede o área)"></select>
       <div class="fg-hint">¿No aparece la que buscas? <a href="unidades.html" style="color:var(--pri-txt)">Crea sedes y áreas aquí</a>.</div>
     </div>
     <div class="fg">
       <label>Personas asignadas</label>
-      <textarea id="asgNames" placeholder="Juan Pérez&#10;María Gómez, maria@empresa.com&#10;Carlos Ruiz"></textarea>
+      <textarea id="asgNames" aria-label="Personas a asignar, una por línea" placeholder="Juan Pérez&#10;María Gómez, maria@empresa.com&#10;Carlos Ruiz"></textarea>
       <div class="fg-hint">Un nombre por línea. Para agregar correo: Juan Pérez, juan@empresa.com</div>
     </div>
     <button class="btn btn-pri" id="btnCreateAsg" onclick="createAsignacion()">Crear asignación →</button>

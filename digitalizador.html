@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="icons/icon-192.png">
@@ -382,7 +382,7 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
     <div style="margin-top:8px">
       <div class="fg">
         <label>Nombre del formulario *</label>
-        <input type="text" id="fNom" placeholder="Ej: Acta de Inspección Sanitaria" maxlength="100">
+        <input type="text" id="fNom" aria-label="Nombre del formulario" placeholder="Ej: Acta de Inspección Sanitaria" maxlength="100">
       </div>
 
       <!-- Todo lo opcional va aquí, colapsado, para no abrumar a quien crea su
@@ -394,12 +394,12 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="fg">
               <label>Descripción</label>
-              <input type="text" id="fDesc" placeholder="Para qué se usa">
+              <input type="text" id="fDesc" aria-label="Descripción del formulario" placeholder="Para qué se usa">
             </div>
             <div class="fg">
               <label>Código</label>
               <div class="cod-row">
-                <input type="text" id="fCod" readonly>
+                <input type="text" id="fCod" aria-label="Código del formulario" readonly>
                 <button type="button" class="cod-edit-btn" id="fCodBtn" onmousedown="event.preventDefault()" onclick="toggleCodEdit()" title="Editar código">✏️</button>
               </div>
               <div class="cod-hint">Se genera automáticamente. Puedes dejarlo así.</div>
@@ -407,7 +407,7 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
           </div>
           <div class="fg">
             <label>Norma / referencia <span style="color:var(--mut);font-weight:400">(opcional)</span></label>
-            <input type="text" id="fNorma" placeholder="Ej: Res. 2674/2013 · o déjalo vacío" maxlength="120">
+            <input type="text" id="fNorma" aria-label="Norma o referencia" placeholder="Ej: Res. 2674/2013 · o déjalo vacío" maxlength="120">
             <div class="cod-hint">Si aplica una norma, se mostrará al llenar y en la Carpeta de evidencia. Déjalo vacío si el formulario no cita ninguna (por ejemplo, en otro país).</div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -420,7 +420,7 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
             </div>
             <div class="fg">
               <label>📧 Correo para avisos</label>
-              <input type="email" id="fCorreoNotif" placeholder="ej: supervisor@empresa.com">
+              <input type="email" id="fCorreoNotif" aria-label="Correo de notificación" placeholder="ej: supervisor@empresa.com">
               <div class="cod-hint">Si lo configuras, se enviará un correo automático con un resumen cada vez que alguien complete este formulario.</div>
             </div>
           </div>

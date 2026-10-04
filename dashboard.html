@@ -267,7 +267,7 @@
     <!-- barra de filtros global: recalcula todo el panel y los reportes -->
     <div class="flt-bar" id="fltBar">
       <span class="flt-lbl">Ver:</span>
-      <select class="filter-sel" id="fltPeriodo" onchange="onFiltroChange()">
+      <select class="filter-sel" id="fltPeriodo" aria-label="Periodo" onchange="onFiltroChange()">
         <option value="todo">Todo el histórico</option>
         <option value="mes">Este mes</option>
         <option value="trim">Este trimestre</option>
@@ -279,8 +279,8 @@
         <span class="flt-lbl">a</span>
         <input type="date" id="fltHasta" class="filter-sel" onchange="onFiltroChange()">
       </span>
-      <select class="filter-sel" id="fltUnidad" onchange="onFiltroChange()"><option value="">Todas las unidades</option></select>
-      <select class="filter-sel" id="fltFormulario" onchange="onFiltroChange()"><option value="">Todos los formularios</option></select>
+      <select class="filter-sel" id="fltUnidad" aria-label="Unidad" onchange="onFiltroChange()"><option value="">Todas las unidades</option></select>
+      <select class="filter-sel" id="fltFormulario" aria-label="Formulario" onchange="onFiltroChange()"><option value="">Todos los formularios</option></select>
       <button class="filter-sel" id="btnVista" onclick="toggleVista()" title="Cambia entre lo esencial y el panel completo">🔎 Vista simple</button>
       <span class="flt-count" id="fltCount"></span>
     </div>
@@ -294,7 +294,7 @@
       </div>
       <div class="pa-group">
         <span class="pa-lbl">🔧 Para campo · correcciones</span>
-        <select class="filter-sel" id="corrGroup" title="Cómo agrupar la lista de correcciones">
+        <select class="filter-sel" id="corrGroup" aria-label="Agrupar correcciones por" title="Cómo agrupar la lista de correcciones">
           <option value="unidad">Por unidad</option>
           <option value="responsable">Por responsable</option>
         </select>

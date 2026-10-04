@@ -88,20 +88,20 @@ Cuando la completes, toca «Marcar hecha» y la fecha avanza sola al siguiente p
     <h2>+ Nueva inspección programada</h2>
     <div class="fg">
       <label>Formulario a repetir</label>
-      <select id="inPlantilla"></select>
+      <select id="inPlantilla" aria-label="Formulario a repetir"></select>
     </div>
     <div class="grid2">
       <div class="fg">
         <label>Nombre / referencia</label>
-        <input type="text" id="inNombre" placeholder="Ej. Inspección de extintores" autocomplete="off">
+        <input type="text" id="inNombre" aria-label="Nombre o referencia" placeholder="Ej. Inspección de extintores" autocomplete="off">
       </div>
       <div class="fg">
         <label>Unidad — sede / área (opcional)</label>
-        <select id="inUnidad"></select>
+        <select id="inUnidad" aria-label="Unidad (sede o área)"></select>
       </div>
       <div class="fg">
         <label>Frecuencia</label>
-        <select id="inFrecuencia">
+        <select id="inFrecuencia" aria-label="Frecuencia">
           <option value="diaria">Diaria</option>
           <option value="semanal">Semanal</option>
           <option value="quincenal">Quincenal</option>
@@ -113,15 +113,15 @@ Cuando la completes, toca «Marcar hecha» y la fecha avanza sola al siguiente p
       </div>
       <div class="fg">
         <label>Próximo vencimiento</label>
-        <input type="date" id="inProximo">
+        <input type="date" id="inProximo" aria-label="Próximo vencimiento">
       </div>
       <div class="fg">
         <label>Responsable (opcional)</label>
-        <input type="text" id="inResp" placeholder="Nombre del responsable" autocomplete="off">
+        <input type="text" id="inResp" aria-label="Responsable" placeholder="Nombre del responsable" autocomplete="off">
       </div>
       <div class="fg">
         <label>Correo del responsable (opcional)</label>
-        <input type="email" id="inCorreo" placeholder="correo@empresa.com" autocomplete="off">
+        <input type="email" id="inCorreo" aria-label="Correo del responsable" placeholder="correo@empresa.com" autocomplete="off">
       </div>
     </div>
     <button class="btn btn-pri" id="btnCrear" onclick="crearInspeccion()">Programar →</button>

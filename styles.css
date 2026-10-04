@@ -307,3 +307,14 @@ footer { text-align: center; font-size: .82rem; color: var(--mut); border-top: 1
   padding: 6px 12px; font-size: .78rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .skf-demo-bar button:hover { background: rgba(0,0,0,.4); }
 html:not(.sb-collapsed) body > .skf-demo-bar { margin-left: 0; }
+
+/* ── Movimiento reducido ─────────────────────────────────────────────────
+   Quien activa «reducir movimiento» en su teléfono (por mareo o por
+   preferencia) no debe ver deslizamientos, giros ni transiciones. Se dejan
+   los cambios de estado, pero instantáneos. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
+}
