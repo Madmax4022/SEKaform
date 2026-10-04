@@ -58,10 +58,12 @@
     .pc-chip:hover { border-color: var(--pri); color: var(--pri-txt); }
     .pc-chip { display: inline-flex; align-items: center; min-height: 44px; }
     .pc-chip.done { border-color: rgba(26,188,156,.4); }
+    .pc-ev-tag { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 5px; background: var(--bor); color: var(--txt); font-size: .68rem; font-weight: 700; }
+    .pc-evnote { font-size: .76rem; color: var(--mut); margin-top: 8px; line-height: 1.4; }
     .pc-chip .ck { color: var(--ok); font-weight: 800; }
     .pc-ev { font-size: .78rem; color: var(--mut); margin-top: 11px; }
     .pc-ev b { color: var(--txt); font-weight: 600; }
-    @media (max-width: 560px) { .pc-desc, .pc-body { margin-left: 0; } .pc-top { flex-wrap: wrap; } }
+    @media (max-width: 560px) { .pc-desc, .pc-body { margin-left: 0; } .pc-top { flex-wrap: wrap; } .pc-name { flex: 1 1 9em; min-width: 9em; } }
 
     .cmp-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: var(--card); border: 1px dashed var(--bor); border-radius: 12px; padding: 16px 18px; margin-top: 22px; text-decoration: none; color: inherit; }
     .cmp-cta:hover { border-color: var(--pri); }
@@ -150,7 +152,12 @@ function render(evidencia, tiene){
     var st = skfEstadoPrincipio(ev);
     n[st]++;
 
-    var forms = FORM_LIBRARY.filter(function(t){ return (SST_PRINCIPIO_MAP[t.id] || []).indexOf(pr.id) !== -1; })
+    var esEv = function(t){ return SST_FORMS_DE_EVENTO.indexOf(t.id) !== -1; };
+    var delPrincipio = FORM_LIBRARY.filter(function(t){ return (SST_PRINCIPIO_MAP[t.id] || []).indexOf(pr.id) !== -1; });
+    var hayEvento = delPrincipio.some(esEv);
+    // Los de evento van al final: se llenan solo si ocurre algo, no son tarea de rutina.
+    delPrincipio = delPrincipio.filter(function(t){ return !esEv(t); }).concat(delPrincipio.filter(esEv));
+    var forms = delPrincipio
       .map(function(t){
         var nom = skfLocalizeText(t.nombre, _pais);
         var miId = tiene[_norm(nom)];          // id del formulario del usuario, si ya lo tiene
@@ -159,9 +166,12 @@ function render(evidencia, tiene){
         // formulario» del catálogo: se agrega y se abre. (Ir al listado obligaba a buscarlo otra vez.)
         var href = done ? 'llenar.html?tmpl=' + encodeURIComponent(miId)
                         : 'digitalizador.html?preset=' + encodeURIComponent(t.id);
+        var ev1 = esEv(t);
         return '<a class="pc-chip' + (done ? ' done' : '') + '" href="' + href + '" title="' +
+          (ev1 ? 'Se llena solo cuando ocurre un accidente o incidente. ' : '') +
           (done ? 'Abrir y llenar' : 'Agregar a tus formularios y llenar') + '">' +
-          '<span class="pc-t">' + (done ? '<span class="ck">✓</span> ' : '') + esc(nom) + '</span></a>';
+          '<span class="pc-t">' + (done ? '<span class="ck">✓</span> ' : '') + esc(nom) +
+          (ev1 ? ' <span class="pc-ev-tag">si ocurre</span>' : '') + '</span></a>';
       }).join('');
 
     var evLine = ev
@@ -177,7 +187,8 @@ function render(evidencia, tiene){
       '</div>' +
       '<div class="pc-desc">' + esc(pr.desc) + '</div>' +
       '<div class="pc-body"><div class="pc-lbl">Formularios que lo cubren</div>' +
-        '<div class="pc-forms">' + forms + '</div>' + evLine + '</div>' +
+        '<div class="pc-forms">' + forms + '</div>' +
+        (hayEvento ? '<div class="pc-evnote">Los marcados «si ocurre» se llenan solo cuando pasa un accidente o incidente. Si pasa, cuentan como evidencia; no hace falta llenarlos para completar el mapa.</div>' : '') + evLine + '</div>' +
     '</div>';
   }).join('');
 
