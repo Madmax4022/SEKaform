@@ -662,7 +662,8 @@ function computeStats(envios) {
 }
 
 // ── Daily chart ──────────────────────────────────────────────────
-function buildDailyChart(envios) {
+// ── Datos de las gráficas: UN solo cálculo, usado por la pantalla y por el reporte PDF ──
+function _datosDiario(envios) {
   const labels = [], counts = [];
   const today = new Date();
   for (let i = 29; i >= 0; i--) {
@@ -675,6 +676,33 @@ function buildDailyChart(envios) {
       return ed.toISOString().slice(0,10) === key;
     }).length);
   }
+  return { labels, counts };
+}
+function _datosFormularios(envios) {
+  const countMap = {}, labelMap = {};
+  envios.forEach(e => {
+    const key = envioGroupKey(e);
+    countMap[key] = (countMap[key]||0) + 1;
+    if (!labelMap[key]) labelMap[key] = e.plantilla_nombre || e.plantillaNombre || 'Sin nombre';
+  });
+  const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  return { sorted, labelMap };
+}
+function _datosTendencia(envios, hallazgos) {
+  const labels = [], envCounts = [], hzCounts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear(), m = d.getMonth();
+    labels.push(`${MONTHS_ES[m]} ${String(y).slice(2)}`);
+    envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+    hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
+  }
+  return { labels, envCounts, hzCounts };
+}
+
+function buildDailyChart(envios) {
+  const { labels, counts } = _datosDiario(envios);
 
   const totalDia = counts.reduce((s, v) => s + v, 0);
   const maxDia = Math.max(...counts);
@@ -722,14 +750,7 @@ function envioGroupKey(e) {
 
 // ── By-form chart ────────────────────────────────────────────────
 function buildFormChart(envios, plantillas) {
-  const countMap = {}, labelMap = {};
-  envios.forEach(e => {
-    const key = envioGroupKey(e);
-    countMap[key] = (countMap[key]||0) + 1;
-    if (!labelMap[key]) labelMap[key] = e.plantilla_nombre || e.plantillaNombre || 'Sin nombre';
-  });
-
-  const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const { sorted, labelMap } = _datosFormularios(envios);
   if (_chForms) { _chForms.destroy(); _chForms = null; }
   describirGrafico('chartForms', sorted.length
     ? 'Envíos por formulario: ' + sorted.map(([k, v]) => `${labelMap[k]} (${v})`).join('; ') + '.'
@@ -1228,7 +1249,88 @@ function _canvasImg(id) {
   } catch (e) { return ''; }
 }
 
-function exportarPanelPDF() {
+// ── Gráficas del REPORTE PDF ─────────────────────────────────────────────────
+// Antes el reporte tomaba una «foto» de las gráficas de la pantalla. Eso fallaba de dos maneras:
+// desde la vista simple (la predeterminada) esas gráficas están ocultas y miden 0×0, así que el
+// reporte salía SIN gráficos; y en la vista completa la foto salía del tamaño de la pantalla del
+// teléfono (≈330 px: borrosa al imprimir) y con los colores del tema oscuro (texto gris claro
+// sobre papel blanco). Ahora el reporte dibuja las suyas, fuera de pantalla, a tamaño fijo, a
+// doble resolución y con colores de impresión; no depende de la vista ni del tamaño del teléfono.
+const TEMA_IMPRESION = {
+  texto: '#374151', grid: '#e5e7eb', azul: '#1a56db', azulRelleno: 'rgba(26,86,219,.12)', ambar: '#d97706',
+  colores: ['#1a56db', '#0f9d84', '#7c3aed', '#d97706', '#db2777', '#ea580c', '#0891b2'],
+};
+const _FONDO_BLANCO = { id: 'fondoBlanco', beforeDraw(c) { const x = c.ctx; x.save(); x.globalCompositeOperation = 'destination-over'; x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.restore(); } };
+
+function _graficaParaReporte(ancho, alto, cfg) {
+  const host = document.createElement('div');
+  host.style.cssText = `position:fixed;left:-10000px;top:0;width:${ancho}px;height:${alto}px;pointer-events:none`;
+  const cv = document.createElement('canvas');
+  cv.width = ancho; cv.height = alto; cv.style.width = ancho + 'px'; cv.style.height = alto + 'px';
+  host.appendChild(cv); document.body.appendChild(host);
+  let png = '';
+  try {
+    const ch = new Chart(cv, { ...cfg,
+      plugins: [_FONDO_BLANCO],
+      options: { ...cfg.options, layout: { padding: { right: 18, top: 6 } }, responsive: false, animation: false, devicePixelRatio: 2, maintainAspectRatio: false, events: [] } });
+    png = cv.toDataURL('image/png');
+    ch.destroy();
+  } catch (e) { png = ''; }
+  host.remove();
+  return png;
+}
+function _imgReporte(png) {
+  return (png && png.length > 200)
+    ? `<img src="${png}" alt="" style="width:100%;max-width:660px;height:auto;border:1px solid #e5e7eb;border-radius:8px;margin:4px 0 2px">` : '';
+}
+// Parte un nombre largo en líneas por palabras (en papel hay sitio: no se recorta con «…»).
+function _partirNombre(txt, max = 40, lineasMax = 3) {
+  const out = []; let cur = '';
+  String(txt).split(/\s+/).forEach(w => { if (cur && (cur + ' ' + w).length > max) { out.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; });
+  if (cur) out.push(cur);
+  if (out.length > lineasMax) { const r = out.slice(lineasMax - 1).join(' '); out.length = lineasMax - 1; out.push(r.length > max ? r.slice(0, max - 1) + '…' : r); }
+  return out;
+}
+// Devuelve { ok, daily, forms, trend } como <img>; ok=false si Chart.js no se pudo cargar.
+async function graficasReporte(ds) {
+  try { await cargarChart(); } catch (e) { return { ok: false }; }
+  const T = TEMA_IMPRESION;
+  const escala = (extra) => ({ ticks: { color: T.texto, font: { size: 13 }, ...(extra || {}) }, grid: { color: T.grid } });
+
+  const d = _datosDiario(ds.envios);
+  const daily = _graficaParaReporte(880, 340, {
+    type: 'line',
+    data: { labels: d.labels, datasets: [{ data: d.counts, borderColor: T.azul, backgroundColor: T.azulRelleno, borderWidth: 2.5, fill: true, tension: .35, pointRadius: 3, pointBackgroundColor: T.azul }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: escala({ maxTicksLimit: 10 }), y: { ...escala({ precision: 0 }), beginAtZero: true } } },
+  });
+
+  const f = _datosFormularios(ds.envios);
+  let forms = '';
+  if (f.sorted.length) {
+    const nombres = f.sorted.map(([k]) => _partirNombre(f.labelMap[k]));
+    const maxL = Math.max(1, ...nombres.map(n => n.length));
+    forms = _graficaParaReporte(880, Math.max(240, f.sorted.length * Math.max(46, maxL * 17 + 20) + 60), {
+      type: 'bar',
+      data: { labels: nombres, datasets: [{ data: f.sorted.map(([, v]) => v), backgroundColor: f.sorted.map((_, i) => T.colores[i % T.colores.length]), borderRadius: 4 }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false } },
+        scales: { x: { ...escala({ precision: 0 }), beginAtZero: true },
+                  y: { afterFit: sc => { sc.width = 300; }, ticks: { color: T.texto, font: { size: 13 }, autoSkip: false }, grid: { display: false } } } },
+    });
+  }
+
+  const tr = _datosTendencia(ds.envios, ds.hallazgos);
+  const trend = _graficaParaReporte(880, 340, {
+    type: 'bar',
+    data: { labels: tr.labels, datasets: [
+      { label: 'Envíos', data: tr.envCounts, backgroundColor: T.azul, borderRadius: 4 },
+      { label: 'Hallazgos', data: tr.hzCounts, backgroundColor: T.ambar, borderRadius: 4 } ] },
+    options: { plugins: { legend: { display: true, labels: { color: T.texto, font: { size: 13 }, boxWidth: 14 } } },
+               scales: { x: escala(), y: { ...escala({ precision: 0 }), beginAtZero: true } } },
+  });
+  return { ok: true, daily: _imgReporte(daily), forms: _imgReporte(forms), trend: _imgReporte(trend) };
+}
+
+async function exportarPanelPDF() {
   const ds = datosFiltrados();
   const st = computeStats(ds.envios);
   const { done, total, pct } = computeCumplimiento(ds.asignaciones, ds.envios);
@@ -1249,15 +1351,21 @@ function exportarPanelPDF() {
     <div class="k">Críticos sin resolver</div><div class="v">${criticos}</div>
   </div>`;
 
-  const imgDaily = _canvasImg('chartDaily');
-  const imgForms = _canvasImg('chartForms');
-  const imgTrend = _canvasImg('chartTrend');
+  // Las gráficas del reporte se dibujan aparte (ver arriba): sirven desde cualquier vista.
+  const btn = document.querySelector('[onclick="exportarPanelPDF()"]');
+  const textoBtn = btn && btn.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparando…'; }
+  let g;
+  try { g = await graficasReporte(ds); } finally { if (btn) { btn.disabled = false; btn.textContent = textoBtn; } }
+  const imgDaily = g.daily || '', imgForms = g.forms || '', imgTrend = g.trend || '';
+  // El análisis del explorador solo entra si su gráfica está a la vista (depende del campo elegido).
   const imgExpl  = _canvasImg('chartExpl');
 
   const graficas = [
     imgDaily && `<h2>Envíos por día — últimos 30 días</h2>${imgDaily}`,
     imgForms && `<h2>Envíos por formulario</h2>${imgForms}`,
     imgTrend && `<h2>Tendencia mensual — envíos y hallazgos</h2>${imgTrend}`,
+    !g.ok && `<p style="color:#6b7280;font-size:12px;margin:10px 0">Las gráficas no se incluyeron: hace falta conexión la primera vez para generarlas. Los números del reporte están completos.</p>`,
   ].filter(Boolean).join('');
 
   // Análisis de datos: campo elegido en el explorador + sus tiles + gráfica.
@@ -1619,15 +1727,7 @@ function renderComparativo() {
 }
 
 function buildTrendChart(envios, hallazgos) {
-  const labels = [], envCounts = [], hzCounts = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const y = d.getFullYear(), m = d.getMonth();
-    labels.push(`${MONTHS_ES[m]} ${String(y).slice(2)}`);
-    envCounts.push(envios.filter(e => { const x = new Date(fEnvCreado(e)); return x.getFullYear()===y && x.getMonth()===m; }).length);
-    hzCounts.push(hallazgos.filter(h => { const x = new Date(fHzCreado(h)); return x.getFullYear()===y && x.getMonth()===m; }).length);
-  }
+  const { labels, envCounts, hzCounts } = _datosTendencia(envios, hallazgos);
   describirGrafico('chartTrend', 'Últimos 6 meses, envíos y hallazgos: ' +
     labels.map((l, i) => `${l}: ${envCounts[i]} envíos, ${hzCounts[i]} hallazgos`).join('; ') + '.');
   if (_chTrend) _chTrend.destroy();
