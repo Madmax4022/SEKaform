@@ -217,6 +217,7 @@ function skfRenderSidebar() {
       { href: 'dashboard.html', ico: '📊', label: 'Panel de control' },
     ]},
     { h: 'Configuración y más', colapsable: true, links: [
+      { href: 'bienvenida.html',    ico: '🧭', label: 'Configurar mi empresa' },
       { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
       { href: 'plantillas.html',    ico: '📋', label: 'Formularios listos' },
       { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
