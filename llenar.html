@@ -230,6 +230,17 @@
       padding: 12px 16px; display: flex; gap: 10px; z-index: 100;
     }
     .form-footer .btn { flex: 1; justify-content: center; }
+    /* La barra de acciones respeta lo que la rodea (todas fijadas con position:fixed):
+       · escritorio: se queda a la DERECHA del menú lateral (232 px) — antes quedaba debajo
+         de él y el primer botón no se podía tocar;
+       · celular: se sube por encima de la barra de navegación inferior (54 px), que tiene
+         z-index mayor y antes tapaba 54 de sus 81 px, botón «Enviar» incluido. */
+    .form-footer { left: 232px; }
+    html.sb-collapsed .form-footer { left: 0; }
+    @media (max-width: 860px) {
+      .form-footer { left: 0; bottom: 54px; }
+      .toast { bottom: 200px !important; }   /* barra de acciones de dos filas (≈125 px) + navegación (54 px) + aire */
+    }
 
     /* buttons */
     .btn-lnk { background: transparent; color: var(--pri-txt); }
@@ -287,7 +298,14 @@
       .tmpl-acts .btn-fav, .tmpl-acts .btn-danger { flex: 0 0 auto; }
       .tmpl-acts .btn, .tmpl-acts .btn-fav, .tmpl-acts .btn-danger { min-height: 44px; }
       .tmpl-acts .btn-fav, .tmpl-acts .btn-danger { min-width: 44px; }
-      .form-footer .btn-sec { flex: 0 0 auto; padding: 12px 16px; }
+      /* Barra de acciones en DOS filas: «Enviar» (lo principal) arriba, a todo lo ancho, y debajo
+         los dos secundarios mitad y mitad. Antes los 3 botones iban en una fila y, con
+         flex:0 0 auto, no se achicaban: «Enviar» se salía por el borde derecho y no se podía tocar. */
+      .form-footer { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+      .form-footer .btn { min-height: 48px; min-width: 0; }
+      .form-footer .btn-pri { order: -1; flex: 1 1 100%; }
+      .form-footer .btn-sec { flex: 1 1 0; padding: 8px 6px; font-size: .84rem; line-height: 1.2; white-space: normal; text-align: center; }
+      .form-wrap { padding-bottom: 150px; }   /* sitio para las dos filas (≈124 px) + aire */
     }
   </style>
   <script src="skf-api.js"></script>
