@@ -265,6 +265,39 @@ function skfRenderSidebar() {
       '<button type="button" onclick="skfDemoSalir()">Salir del ejemplo</button></div>');
   }
 
+  // Barra de «siguiente paso»: hasta que la cuenta tenga su primer envío (el momento en que la app
+  // ya le sirvió), una franja fija en TODAS las páginas lleva directo a ese paso. Así quien entra
+  // por cualquier puerta no queda a varios clics del camino que importa. Desaparece sola.
+  (function skfBarraSiguiente() {
+    try {
+      var pg = location.pathname.split('/').pop() || 'index.html';
+      var q = location.search;
+      // No en: inicio (ya tiene su tarjeta), asistente, digitalizador, ni mientras llena un formulario.
+      if (['index.html', 'bienvenida.html', 'digitalizador.html'].indexOf(pg) !== -1) return;
+      if (pg === 'llenar.html' && /[?&](tmpl|pub|shared)=/.test(q)) return;
+      if (typeof skfDemoActivo === 'function' && skfDemoActivo()) return;
+      if (sessionStorage.getItem('skf_barra_off') === '1') return;
+      if (typeof sbGetUser !== 'function' || typeof sbLoadEnvios !== 'function') return;
+      sbGetUser().then(function (user) {
+        if (!user) return;
+        return sbLoadEnvios().then(function (nube) {
+          var local = []; try { local = JSON.parse(localStorage.getItem('skf_envios') || '[]'); } catch (e) {}
+          if ((nube && nube.length) || local.length) return;       // ya tiene su primer envío
+          var plts = []; try { plts = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch (e) {}
+          var href = plts.length && plts[0].id ? 'llenar.html?tmpl=' + encodeURIComponent(plts[0].id)
+                                               : 'digitalizador.html?preset=inspeccion_sst';
+          var b = document.createElement('div');
+          b.className = 'skf-next-bar'; b.setAttribute('role', 'status');
+          b.innerHTML = '<span>👉 <b>Te falta un paso:</b> haz tu primer registro y ya tendrás evidencia.</span>' +
+            '<a href="' + href + '">Empezar</a>' +
+            '<button type="button" aria-label="Ocultar por ahora">✕</button>';
+          b.querySelector('button').onclick = function () { try { sessionStorage.setItem('skf_barra_off', '1'); } catch (e) {} b.remove(); };
+          document.body.insertAdjacentElement('afterbegin', b);
+        });
+      }).catch(function () {});
+    } catch (e) {}
+  })();
+
   // Marca la pestaña activa de la barra inferior según la página actual.
   const _cur = (location.pathname.split('/').pop() || 'index.html');
   document.querySelectorAll('#skfBottomBar .bb-tab[data-page]').forEach(t => {

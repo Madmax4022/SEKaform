@@ -262,7 +262,9 @@
     .modal-ico { font-size: 3.5rem; margin-bottom: 16px; }
     .modal-h { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
     .modal-p { color: var(--mut); font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
-    .modal-id { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 10px 14px; font-family: monospace; font-size: 0.78rem; color: var(--ok); margin-bottom: 20px; word-break: break-all; }
+    .succ-next { text-align: left; font-size: .86rem; line-height: 1.45; background: var(--bg); border: 1px solid var(--bor); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .succ-next a:not(.btn) { color: var(--pri-txt); }
+  .modal-id { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 10px 14px; font-family: monospace; font-size: 0.78rem; color: var(--ok); margin-bottom: 20px; word-break: break-all; }
 
     /* ── submissions view ── */
     .sub-card {
@@ -311,6 +313,7 @@
   </style>
   <script src="skf-api.js"></script>
   <script src="field-types.js"></script>
+  <script src="form-library.js"></script>
 </head>
 <body>
 
@@ -440,6 +443,7 @@
     <p class="modal-p">El registro fue guardado correctamente y quedará disponible para exportar a base de datos.</p>
     <div class="modal-id" id="successId"></div>
     <p class="modal-p hidden" id="successHz" style="margin-top:-10px;color:var(--err-txt)"></p>
+    <div class="succ-next hidden" id="successNext" role="status"></div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-pri" style="justify-content:center" onclick="fillAgain()">Llenar otro registro</button>
       <button class="btn btn-sec" style="justify-content:center" onclick="backToList()">Volver al inicio</button>
@@ -1446,10 +1450,44 @@ function submitForm() {
       hzMsg.classList.add('hidden');
     }
     document.getElementById('successModal').classList.remove('hidden');
+    if (!isPublicFill) cierreSiguiente(envio);
   } catch (e) {
     console.error('[SEKaform] submitForm error:', e);
     toast('No se pudo enviar: ' + e.message, 'er');
   }
+}
+
+// Pantalla de cierre: qué cubrió este registro en el Mapa y cuál es el siguiente paso, para que
+// quien termina no se quede sin saber qué sigue. Si algo falla, simplemente no se muestra.
+async function cierreSiguiente(envio) {
+  const box = document.getElementById('successNext');
+  try {
+    if (typeof skfEvidenciaPrincipios !== 'function') return;
+    const PAIS = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa', 'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
+    let org = null; try { org = await sbLoadOrg(); } catch (e) {}
+    const pais = PAIS[(org && org.pais) ? String(org.pais).trim().toLowerCase() : ''] || 'co';
+    const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const este = skfEvidenciaPrincipios([envio], pais);
+    const nombres = SST_PRINCIPIOS.filter(p => este[p.id]).map(p => p.nombre);
+    const todos = JSON.parse(localStorage.getItem('skf_envios') || '[]');
+    const ev = skfEvidenciaPrincipios(todos, pais);
+    const alDia = SST_PRINCIPIOS.filter(p => skfEstadoPrincipio(ev[p.id]) === 'ok').length;
+    let html = '';
+    if (nombres.length) html += '<div>Cuenta como evidencia de: <b>' + nombres.map(esc).join(', ') + '</b>.</div>';
+    html += '<div>Llevas <b>' + alDia + ' de 9</b> principios al día · <a href="cumplimiento.html">ver el Mapa</a></div>';
+    const mias = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
+    let sig = null;
+    for (const p of SST_PRINCIPIOS) {
+      if (skfEstadoPrincipio(ev[p.id]) === 'ok') continue;
+      sig = skfFormularioParaPrincipio(p.id, pais, mias);
+      if (sig) { sig.principio = p.nombre; break; }
+    }
+    if (sig) html += '<a class="btn btn-pri" style="justify-content:center;margin-top:10px;text-decoration:none" href="' + sig.href + '">Siguiente: ' + esc(sig.nombre) + ' →</a>' +
+      '<div style="font-size:.76rem;color:var(--mut);margin-top:4px">Te falta evidencia de «' + esc(sig.principio) + '».</div>';
+    else html += '<div style="margin-top:8px"><b>¡Tus 9 principios están al día!</b></div>';
+    box.innerHTML = html;
+    box.classList.remove('hidden');
+  } catch (e) { box.classList.add('hidden'); }
 }
 
 function fillAgain() {
