@@ -571,6 +571,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   await syncFromCloud();
+  const quitados = limpiarRepetidos(params.get('tmpl'));
   const sharedEncoded = params.get('shared');
   const urlTmpl = params.get('tmpl');
   if (sharedEncoded) {
@@ -584,6 +585,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     openTemplate(urlTmpl);
   } else {
     renderList();
+    if (quitados) toast('Se quitaron ' + quitados + ' formulario' + (quitados !== 1 ? 's' : '') + ' repetido' + (quitados !== 1 ? 's' : '') + ' (sin registros)', 'ok');
     if (params.get('archived') === '1') {
       history.replaceState(null, '', 'llenar.html');
       toast('Formulario agregado a tu repositorio — listo para llenar o compartir en blanco', 'ok');
@@ -655,6 +657,32 @@ function backToList() {
 }
 
 // ── Delete template ────────────────────────────────────────────────
+// Quita copias repetidas (mismo nombre) que quedaron de abrir el catálogo varias veces.
+// Conservador: de cada grupo se queda UNA (la que tiene más registros; si empatan, la favorita
+// y luego la más antigua) y solo borra las otras si no tienen registros ni borrador.
+function limpiarRepetidos(idEnUso) {
+  const norm = x => String(x || '').trim().toLowerCase();
+  const list = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
+  const borradores = JSON.parse(localStorage.getItem('skf_borradores') || '[]');
+  const grupos = {};
+  list.forEach(t => { if (t && t.id && t.nombre && !t._shared) (grupos[norm(t.nombre)] = grupos[norm(t.nombre)] || []).push(t); });
+  const quitar = [];
+  Object.keys(grupos).forEach(k => {
+    const g = grupos[k];
+    if (g.length < 2) return;
+    g.sort((a, b) => getSubsForTemplate(b.id) - getSubsForTemplate(a.id)
+      || (b.favorito ? 1 : 0) - (a.favorito ? 1 : 0)
+      || String(a.creadoEn || '').localeCompare(String(b.creadoEn || '')));
+    g.slice(1).forEach(t => {
+      if (t.id !== idEnUso && !getSubsForTemplate(t.id) && !borradores.some(d => d.plantillaId === t.id)) quitar.push(t.id);
+    });
+  });
+  if (!quitar.length) return 0;
+  localStorage.setItem('skf_plantillas', JSON.stringify(list.filter(t => quitar.indexOf(t.id) === -1)));
+  quitar.forEach(id => skfSyncOrQueue('deletePlantilla', { id }));
+  return quitar.length;
+}
+
 function confirmDeleteTemplate(id) {
   const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
   const t = list.find(x=>x.id===id);
