@@ -2089,6 +2089,19 @@ async function loadPreset(presetId, editMode, archiveOnly) {
   // a Colombia (ancla). skfLocalizeTemplate no muta el catálogo original.
   const _pais = await _paisCode();
   const t = (typeof skfLocalizeTemplate === 'function') ? skfLocalizeTemplate(base, _pais) : base;
+  // Si ya tiene este formulario (mismo nombre, en este equipo o en la nube) se abre ese:
+  // crear otra copia en cada clic llenaba «Mis formularios» de repetidos.
+  if (!editMode) {
+    const norm = x => String(x || '').trim().toLowerCase();
+    let existentes = [];
+    try { existentes = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch {}
+    try { const nube = (typeof sbLoadPlantillas === 'function') ? await sbLoadPlantillas() : null; if (nube) existentes = existentes.concat(nube); } catch {}
+    const ya = existentes.find(p => p && p.id && norm(p.nombre) === norm(t.nombre));
+    if (ya) {
+      window.location.href = archiveOnly ? 'llenar.html?archived=1' : `llenar.html?tmpl=${encodeURIComponent(ya.id)}`;
+      return true;
+    }
+  }
   tmpl.nombre = t.nombre;
   tmpl.campos = t.campos_clave.map((f,i) => ({
     id: `c${Date.now()}_${i}_${Math.random().toString(36).slice(2,5)}`,
