@@ -46,5 +46,6 @@ correr migrations/003_super_admin_invitacion.sql
 correr migrations/004_publico.sql
 correr migrations/005_paneles.sql
 correr migrations/006_turnos.sql
+correr migrations/007_aviso_publico.sql
 
 echo "✓ Migraciones aplicadas."

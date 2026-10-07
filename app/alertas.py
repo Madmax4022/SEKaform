@@ -15,12 +15,14 @@ from typing import Any, Optional
 
 from markupsafe import escape
 
+from . import db
 from .config import Config
 from .puntaje import UMBRAL_BAJO, puntaje
 
 log = logging.getLogger(__name__)
 _CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _MAX_FILAS = 10
+MAX_AVISOS_PUBLICOS_POR_HORA = 3   # por formulario: un enlace abierto no puede inundar de correos
 
 
 def evaluar(cur, envio: dict) -> Optional[dict]:
@@ -59,6 +61,7 @@ def _html(items: list) -> str:
     filas = []
     for a in items[:_MAX_FILAS]:
         quien = f" · {escape(a['llenado_por'])}" if a["llenado_por"] else ""
+        quien += " · formulario público" if a.get("publico") else ""
         fallan = "; ".join(str(escape(x)) for x in a["fallan"][:5]) + ("…" if len(a["fallan"]) > 5 else "")
         filas.append(
             f'<p style="margin:14px 0 4px"><b>{escape(a["formulario"])}</b>{quien} — '
@@ -108,3 +111,37 @@ def enviar(avisos: list) -> int:
         except Exception:
             log.exception("Fallo al enviar el aviso de puntaje bajo")
     return enviados
+
+
+def avisar_publico(envio_id: str, token: str) -> int:
+    """Aviso para un envío de un formulario PÚBLICO (quien lo llena no tiene sesión).
+
+    Usa las funciones de la migración 007, que lo reservan una sola vez y limitan los correos
+    por hora y por formulario. Nunca lanza: si la migración no se corrió o algo falla, el envío
+    ya está guardado y simplemente no se avisa. Devuelve cuántos correos salieron.
+    """
+    try:
+        with db.sesion_privilegiada() as cur:
+            cur.execute("SELECT * FROM skf_publico_aviso_datos(%s, %s)", (envio_id, token))
+            d = cur.fetchone()
+            if not d or d["ya_avisado"]:
+                return 0
+            correo = (d["correo"] or "").strip()
+            if not _CORREO.match(correo):
+                return 0
+            p = puntaje(d["campos"], d["datos"])
+            if not p or p["pct"] >= UMBRAL_BAJO:
+                return 0
+            cur.execute("SELECT skf_publico_aviso_marcar(%s, %s, %s) AS enviar",
+                        (envio_id, token, MAX_AVISOS_PUBLICOS_POR_HORA))
+            if not cur.fetchone()["enviar"]:
+                log.info("Aviso de puntaje bajo omitido (reintento o límite por hora) para el envío %s", envio_id)
+                return 0
+            aviso = {"correo": correo, "formulario": d["formulario"] or "Formulario", "pct": p["pct"],
+                     "ok": p["ok"], "total": p["total"], "fallan": p["fallan"],
+                     "llenado_por": (d["llenado_por"] or "").strip(), "publico": True}
+        return enviar([aviso])
+    except Exception:
+        log.exception("No se pudo avisar del puntaje bajo de un envío público "
+                      "(¿se corrió la migración 007?)")
+        return 0

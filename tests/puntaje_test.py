@@ -174,5 +174,76 @@ class Envio(unittest.TestCase):
             self.assertEqual(alertas.enviar([self._aviso("a@x.com")]), 0)
 
 
+class PublicoCur:
+    """Cursor falso que responde a las dos funciones de la migración 007."""
+    def __init__(self, datos, enviar=True):
+        self.datos, self.enviar, self.llamadas, self._ultima = datos, enviar, [], None
+
+    def execute(self, q, args=None):
+        self.llamadas.append(q.split("(")[0].replace("SELECT * FROM ", "").replace("SELECT ", "").strip())
+        self._ultima = q
+
+    def fetchone(self):
+        if "skf_publico_aviso_marcar" in self._ultima:
+            return {"enviar": self.enviar}
+        return self.datos
+
+
+def sesion(cur):
+    import contextlib
+
+    @contextlib.contextmanager
+    def _s(*a, **k):
+        yield cur
+    return _s
+
+
+def datos_pub(**k):
+    base = {"formulario": "Lista SST", "campos": SI, "correo": "jefe@empresa.com",
+            "datos": {"s0": "No", "s1": "No", "s2": "Sí", "s3": "Sí"}, "llenado_por": "Visitante", "ya_avisado": False}
+    base.update(k)
+    return base
+
+
+class Publico(unittest.TestCase):
+    def _correr(self, cur, key="k"):
+        with mock.patch.object(alertas.Config, "RESEND_API_KEY", key), \
+             mock.patch.object(alertas.db, "sesion_privilegiada", sesion(cur)), \
+             mock.patch("requests.post") as post:
+            post.return_value.status_code = 200
+            return alertas.avisar_publico("e", "tok"), post
+
+    def test_puntaje_bajo_avisa_y_dice_que_es_publico(self):
+        n, post = self._correr(PublicoCur(datos_pub()))
+        self.assertEqual(n, 1)
+        self.assertIn("formulario público", post.call_args.kwargs["json"]["html"])
+
+    def test_no_avisa_si_cumple_ya_se_aviso_o_no_hay_correo(self):
+        for d in (datos_pub(datos={"s0": "Sí", "s1": "Sí", "s2": "Sí", "s3": "Sí"}),
+                  datos_pub(ya_avisado=True), datos_pub(correo=""), datos_pub(correo="x"), None):
+            n, post = self._correr(PublicoCur(d))
+            self.assertEqual(n, 0)
+            post.assert_not_called()
+
+    def test_no_reserva_cupo_si_el_puntaje_no_es_bajo(self):
+        # Un envío bueno no debe gastar el límite por hora del formulario.
+        cur = PublicoCur(datos_pub(datos={"s0": "Sí", "s1": "Sí", "s2": "Sí", "s3": "Sí"}))
+        self._correr(cur)
+        self.assertNotIn("skf_publico_aviso_marcar", cur.llamadas)
+
+    def test_si_la_base_dice_que_no_se_envia_no_sale_correo(self):
+        n, post = self._correr(PublicoCur(datos_pub(), enviar=False))
+        self.assertEqual(n, 0)
+        post.assert_not_called()
+
+    def test_migracion_sin_correr_no_rompe_el_envio(self):
+        class Rota(PublicoCur):
+            def execute(self, q, args=None):
+                raise RuntimeError("function skf_publico_aviso_datos does not exist")
+        n, post = self._correr(Rota(datos_pub()))
+        self.assertEqual(n, 0)
+        post.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
