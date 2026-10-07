@@ -13,6 +13,7 @@ import logging
 import re
 from typing import Any, Optional
 
+import psycopg2.errors
 from markupsafe import escape
 
 from . import db
@@ -22,7 +23,12 @@ from .puntaje import UMBRAL_BAJO, puntaje
 log = logging.getLogger(__name__)
 _CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _MAX_FILAS = 10
-MAX_AVISOS_PUBLICOS_POR_HORA = 3   # por formulario: un enlace abierto no puede inundar de correos
+MAX_AVISOS_PUBLICOS_POR_HORA = 3   # predeterminado por formulario: un enlace abierto no puede inundar de correos
+
+
+def _umbral(v) -> int:
+    """Porcentaje bajo el cual se avisa. None = predeterminado; 0 = este formulario no avisa."""
+    return UMBRAL_BAJO if v is None else int(v)
 
 
 def evaluar(cur, envio: dict) -> Optional[dict]:
@@ -34,7 +40,11 @@ def evaluar(cur, envio: dict) -> Optional[dict]:
         if not pid:
             return None
         cur.execute("SAVEPOINT alerta_puntaje")
-        cur.execute("SELECT nombre, campos, correo_notificacion FROM plantillas WHERE id = %s", (pid,))
+        try:
+            cur.execute("SELECT nombre, campos, correo_notificacion, aviso_umbral FROM plantillas WHERE id = %s", (pid,))
+        except psycopg2.errors.UndefinedColumn:      # migración 008 sin correr: valores predeterminados
+            cur.execute("ROLLBACK TO SAVEPOINT alerta_puntaje")
+            cur.execute("SELECT nombre, campos, correo_notificacion FROM plantillas WHERE id = %s", (pid,))
         fila = cur.fetchone()
         cur.execute("RELEASE SAVEPOINT alerta_puntaje")
         if not fila:
@@ -42,10 +52,11 @@ def evaluar(cur, envio: dict) -> Optional[dict]:
         correo = (fila["correo_notificacion"] or "").strip()
         if not _CORREO.match(correo):
             return None
+        umbral = _umbral(fila.get("aviso_umbral"))
         p = puntaje(fila["campos"], envio.get("datos") or {})
-        if not p or p["pct"] >= UMBRAL_BAJO:
+        if umbral <= 0 or not p or p["pct"] >= umbral:
             return None
-        return {"correo": correo, "formulario": fila["nombre"] or envio.get("plantilla_nombre") or "Formulario",
+        return {"umbral": umbral, "correo": correo, "formulario": fila["nombre"] or envio.get("plantilla_nombre") or "Formulario",
                 "pct": p["pct"], "ok": p["ok"], "total": p["total"], "fallan": p["fallan"],
                 "llenado_por": (envio.get("llenado_por") or "").strip()}
     except Exception:
@@ -66,7 +77,7 @@ def _html(items: list) -> str:
         filas.append(
             f'<p style="margin:14px 0 4px"><b>{escape(a["formulario"])}</b>{quien} — '
             f'<span style="color:#f87171;font-weight:700">{a["pct"]} %</span> '
-            f'({a["ok"]} de {a["total"]} puntos cumplen)</p>'
+            f'({a["ok"]} de {a["total"]} puntos cumplen; mínimo {a.get("umbral", UMBRAL_BAJO)} %)</p>'
             f'<p style="margin:0;font-size:13px;color:#8497a8">No cumple: {fallan or "—"}</p>')
     mas = f'<p style="color:#8497a8">…y {len(items) - _MAX_FILAS} más.</p>' if len(items) > _MAX_FILAS else ""
     enlace = (f'<p style="margin:24px 0"><a href="{escape(Config.URL_PUBLICA)}/dashboard.html" '
@@ -75,7 +86,7 @@ def _html(items: list) -> str:
     return ('<div style="font-family:Barlow,Segoe UI,sans-serif;background:#070d14;color:#cdd9e3;'
             'padding:32px;border-radius:12px;max-width:560px">'
             '<h2 style="color:#3fd9d2;margin:0 0 8px">Inspección con cumplimiento bajo</h2>'
-            f'<p>Se registró lo siguiente con menos de {UMBRAL_BAJO} % de cumplimiento:</p>'
+            '<p>Estas inspecciones quedaron por debajo del cumplimiento mínimo definido para su formulario:</p>'
             f'{"".join(filas)}{mas}{enlace}'
             '<p style="font-size:12px;color:#8497a8">Recibes este aviso porque tu correo está como '
             '«Correo de notificación» del formulario.</p></div>')
@@ -129,15 +140,16 @@ def avisar_publico(envio_id: str, token: str) -> int:
             correo = (d["correo"] or "").strip()
             if not _CORREO.match(correo):
                 return 0
+            umbral = _umbral(d.get("aviso_umbral"))
             p = puntaje(d["campos"], d["datos"])
-            if not p or p["pct"] >= UMBRAL_BAJO:
+            if umbral <= 0 or not p or p["pct"] >= umbral:
                 return 0
-            cur.execute("SELECT skf_publico_aviso_marcar(%s, %s, %s) AS enviar",
-                        (envio_id, token, MAX_AVISOS_PUBLICOS_POR_HORA))
+            tope = d.get("aviso_max_hora") or MAX_AVISOS_PUBLICOS_POR_HORA
+            cur.execute("SELECT skf_publico_aviso_marcar(%s, %s, %s) AS enviar", (envio_id, token, tope))
             if not cur.fetchone()["enviar"]:
                 log.info("Aviso de puntaje bajo omitido (reintento o límite por hora) para el envío %s", envio_id)
                 return 0
-            aviso = {"correo": correo, "formulario": d["formulario"] or "Formulario", "pct": p["pct"],
+            aviso = {"umbral": umbral, "correo": correo, "formulario": d["formulario"] or "Formulario", "pct": p["pct"],
                      "ok": p["ok"], "total": p["total"], "fallan": p["fallan"],
                      "llenado_por": (d["llenado_por"] or "").strip(), "publico": True}
         return enviar([aviso])

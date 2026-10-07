@@ -340,6 +340,10 @@ const _SALIDA = {
     descripcion: t.descripcion || null, norma: t.norma || null,
     logo_url: t.logo || null, favorito: !!t.favorito, publica: !!t.publica,
     share_token: t.shareToken || null, correo_notificacion: t.correoNotificacion || null,
+    // Ajustes de aviso por puntaje bajo (migración 008). Solo viajan si el formulario los tiene;
+    // null = «predeterminado» y SÍ se envía, para poder volver al valor por defecto.
+    ...('avisoUmbral' in t ? { aviso_umbral: t.avisoUmbral } : {}),
+    ...('avisoMaxHora' in t ? { aviso_max_hora: t.avisoMaxHora } : {}),
   }),
   envio: e => ({
     id: e.id, plantilla_id: e.plantillaId || null,

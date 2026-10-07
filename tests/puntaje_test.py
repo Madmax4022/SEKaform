@@ -136,6 +136,59 @@ class Aviso(unittest.TestCase):
         self.assertIsNone(alertas.evaluar(Rota(fila()), MALO))
 
 
+class PorFormulario(unittest.TestCase):
+    """El umbral y el tope por hora se eligen por formulario."""
+    def _eval(self, umbral, envio=None):
+        f = fila(); f["aviso_umbral"] = umbral
+        return alertas.evaluar(FakeCur(f), envio or LIMITE)      # LIMITE = 75 %
+
+    def test_umbral_propio_cambia_cuando_avisa(self):
+        self.assertIsNone(self._eval(None))            # predeterminado 70: 75 % no avisa
+        self.assertIsNotNone(self._eval(80))           # con 80: 75 % sí avisa
+        self.assertEqual(self._eval(80)["umbral"], 80)
+        self.assertIsNone(self._eval(75))              # justo en el umbral no es «bajo»
+        self.assertIsNotNone(self._eval(76))
+
+    def test_cero_desactiva_los_avisos(self):
+        self.assertIsNone(self._eval(0, MALO))         # 50 % pero el formulario no avisa
+
+    def test_umbral_mas_estricto_deja_pasar_lo_que_antes_avisaba(self):
+        self.assertIsNone(self._eval(40, MALO))        # 50 % con mínimo 40: cumple lo exigido
+        self.assertIsNotNone(self._eval(None, MALO))
+
+    def test_el_correo_dice_el_minimo_del_formulario(self):
+        html = alertas._html([self._eval(80)])
+        self.assertIn("mínimo 80 %", html)
+
+    def test_publico_usa_umbral_y_tope_del_formulario(self):
+        d = datos_pub(datos={"s0": "Sí", "s1": "Sí", "s2": "Sí", "s3": "No"}, aviso_umbral=80, aviso_max_hora=7)   # 75 %
+        cur = PublicoCur(d)
+        with mock.patch.object(alertas.Config, "RESEND_API_KEY", "k"), \
+             mock.patch.object(alertas.db, "sesion_privilegiada", sesion(cur)), \
+             mock.patch("requests.post") as post:
+            post.return_value.status_code = 200
+            self.assertEqual(alertas.avisar_publico("e", "tok"), 1)
+        self.assertEqual(cur.args_marcar[2], 7)           # el tope propio llega a la base
+
+    def test_publico_sin_ajustes_usa_los_predeterminados(self):
+        cur = PublicoCur(datos_pub())                     # sin aviso_umbral/aviso_max_hora (migración 008 sin correr)
+        with mock.patch.object(alertas.Config, "RESEND_API_KEY", "k"), \
+             mock.patch.object(alertas.db, "sesion_privilegiada", sesion(cur)), \
+             mock.patch("requests.post") as post:
+            post.return_value.status_code = 200
+            alertas.avisar_publico("e", "tok")
+        self.assertEqual(cur.args_marcar[2], alertas.MAX_AVISOS_PUBLICOS_POR_HORA)
+
+    def test_publico_cero_no_reserva_ni_envia(self):
+        cur = PublicoCur(datos_pub(aviso_umbral=0))
+        with mock.patch.object(alertas.Config, "RESEND_API_KEY", "k"), \
+             mock.patch.object(alertas.db, "sesion_privilegiada", sesion(cur)), \
+             mock.patch("requests.post") as post:
+            self.assertEqual(alertas.avisar_publico("e", "tok"), 0)
+        post.assert_not_called()
+        self.assertNotIn("skf_publico_aviso_marcar", cur.llamadas)
+
+
 class Envio(unittest.TestCase):
     def _aviso(self, correo, pct=50, nombre="Lista SST"):
         return {"correo": correo, "formulario": nombre, "pct": pct, "ok": 1, "total": 2,
@@ -182,6 +235,8 @@ class PublicoCur:
     def execute(self, q, args=None):
         self.llamadas.append(q.split("(")[0].replace("SELECT * FROM ", "").replace("SELECT ", "").strip())
         self._ultima = q
+        if "skf_publico_aviso_marcar" in q:
+            self.args_marcar = args
 
     def fetchone(self):
         if "skf_publico_aviso_marcar" in self._ultima:

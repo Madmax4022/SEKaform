@@ -48,7 +48,7 @@ SINCRONIZABLES: dict[str, dict[str, Any]] = {
         "tabla": "plantillas",
         "columnas": ["id", "nombre", "codigo", "descripcion", "norma", "campos",
                      "logo_url", "favorito", "publica", "share_token",
-                     "correo_notificacion", "archivada"],
+                     "correo_notificacion", "archivada", "aviso_umbral", "aviso_max_hora"],
     },
     "envio": {
         "tabla": "envios",
@@ -130,6 +130,32 @@ def _uuid_valido(valor: Any) -> Optional[str]:
         return None
 
 
+_AVISO_CLAVES = ("aviso_umbral", "aviso_max_hora")
+_AVISO_RANGOS = {"aviso_umbral": (0, 100), "aviso_max_hora": (1, 20)}
+
+
+def _preparar_aviso(cur, payload: dict):
+    """Valida los ajustes de aviso de una plantilla y, si la migración 008 aún no se corrió,
+    los descarta en vez de fallar: sin esto, guardar CUALQUIER formulario quedaría reintentando
+    para siempre contra una columna que no existe. Devuelve (payload, error)."""
+    if not any(k in payload for k in _AVISO_CLAVES):
+        return payload, None
+    limpio = dict(payload)
+    for k, (mn, mx) in _AVISO_RANGOS.items():
+        if k not in limpio or limpio[k] is None:
+            continue
+        v = limpio[k]
+        if isinstance(v, bool) or not isinstance(v, int) or not mn <= v <= mx:
+            return payload, f"«{k}» debe ser un número entero entre {mn} y {mx}."
+    cur.execute("SELECT 1 FROM pg_attribute WHERE attrelid = 'plantillas'::regclass "
+                "AND attname = 'aviso_umbral' AND NOT attisdropped")
+    if not cur.fetchone():
+        log.warning("Migración 008 sin correr: se descartan los ajustes de aviso del formulario.")
+        for k in _AVISO_CLAVES:
+            limpio.pop(k, None)
+    return limpio, None
+
+
 def _upsert(cur, tipo: str, payload: dict) -> dict:
     """Inserta, actualiza o borra un registro del cliente. Idempotente por id."""
     if tipo in BORRABLES:
@@ -168,6 +194,11 @@ def _upsert(cur, tipo: str, payload: dict) -> dict:
     spec = SINCRONIZABLES.get(tipo)
     if not spec:
         return {"ok": False, "error": f"Tipo desconocido: {tipo}", "reintentable": False}
+
+    if tipo == "plantilla":
+        payload, error = _preparar_aviso(cur, payload)
+        if error:
+            return {"ok": False, "error": error, "reintentable": False}
 
     registro_id = _uuid_valido(payload.get("id"))
     if not registro_id:
@@ -289,11 +320,19 @@ def bootstrap():
     ahí el inspector puede trabajar desconectado con datos frescos.
     """
     with sesion_usuario(solo_lectura=True) as cur:
-        cur.execute(
-            "SELECT id, nombre, codigo, descripcion, norma, campos, logo_url, favorito, "
-            "publica, share_token, es_catalogo, vertical "
-            "FROM plantillas WHERE NOT archivada ORDER BY favorito DESC, actualizado_en DESC"
-        )
+        # correo_notificacion y los ajustes de aviso DEBEN viajar al cliente: si no, al reenviar
+        # un formulario (p. ej. al marcarlo favorito) el cliente lo guarda sin correo y borra el
+        # del servidor, apagando los avisos sin que nadie lo note. Los ajustes de aviso llegan con la
+        # migración 008: sin ella se piden sin esas columnas (misma tolerancia que turnos_config).
+        base = ("SELECT id, nombre, codigo, descripcion, norma, campos, logo_url, favorito, "
+                "publica, share_token, es_catalogo, vertical, correo_notificacion{extra} "
+                "FROM plantillas WHERE NOT archivada ORDER BY favorito DESC, actualizado_en DESC")
+        cur.execute("SAVEPOINT sp_plantillas")
+        try:
+            cur.execute(base.format(extra=", aviso_umbral, aviso_max_hora"))
+        except psycopg2.errors.UndefinedColumn:
+            cur.execute("ROLLBACK TO SAVEPOINT sp_plantillas")
+            cur.execute(base.format(extra=""))
         plantillas = cur.fetchall()
 
         cur.execute("SELECT id, nombre, tipo, padre_id FROM unidades WHERE activa ORDER BY nombre")
