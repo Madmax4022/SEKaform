@@ -83,3 +83,30 @@ function answerIsFinding(tipo, valor, field) {
   if (tipo === 'select' || tipo === 'radio') return _SKF_BAD_ANSWER_RE.test(String(valor));
   return false;
 }
+
+// ── Lógica condicional: «mostrar este campo solo si otra respuesta es…» ─────
+// campo.mostrarSi = { campoId, valores:[…] }. Solo puede depender de un campo ANTERIOR
+// de respuesta única. Si la dependencia ya no es válida (el campo se borró, se movió
+// más abajo o se cambió el texto de la opción) el campo se MUESTRA: es preferible un
+// campo de más que uno que nunca aparece y deje al inspector sin poder registrar algo.
+const COND_TYPES = ['si_no', 'radio', 'select', 'escala_1_5'];
+function fieldCondOptions(c) {
+  if (!c) return [];
+  if (c.tipo === 'si_no') return ['Sí', 'No', 'N/A'];
+  if (COND_TYPES.indexOf(c.tipo) === -1) return [];
+  return (c.opciones || []).filter(function (o) { return o !== ''; });
+}
+function fieldIsVisible(c, campos, datos, depth) {
+  var m = c && c.mostrarSi;
+  if (!m || !m.campoId || !Array.isArray(m.valores) || !m.valores.length) return true;
+  if ((depth || 0) > 8) return true;
+  var ci = -1, ii = -1;
+  for (var k = 0; k < campos.length; k++) { if (campos[k].id === m.campoId) ci = k; if (campos[k].id === c.id) ii = k; }
+  if (ci < 0 || ii < 0 || ci >= ii) return true;
+  var ctl = campos[ci];
+  var opts = fieldCondOptions(ctl);
+  if (!m.valores.some(function (v) { return opts.indexOf(v) !== -1; })) return true;
+  if (!fieldIsVisible(ctl, campos, datos, (depth || 0) + 1)) return false;
+  var v = datos[ctl.id];
+  return m.valores.indexOf(v == null ? '' : String(v)) !== -1;
+}

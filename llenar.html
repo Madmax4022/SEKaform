@@ -264,6 +264,7 @@
     .modal-p { color: var(--mut); font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
     .succ-next { text-align: left; font-size: .86rem; line-height: 1.45; background: var(--bg); border: 1px solid var(--bor); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
   .succ-next a:not(.btn) { color: var(--pri-txt); }
+  .cond-oculto { display: none !important; }
   .modal-id { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 10px 14px; font-family: monospace; font-size: 0.78rem; color: var(--ok); margin-bottom: 20px; word-break: break-all; }
 
     /* ── submissions view ── */
@@ -473,7 +474,7 @@ function encodeTemplateForShare(tmpl) {
   const d = {
     v:1, n:tmpl.nombre, d:tmpl.descripcion||'', c:tmpl.codigo||'',
     f:tmpl.campos.map(c=>[c.id,c.tipo,c.etiqueta,c.requerido?1:0,
-       needsOpts(c.tipo)&&c.opciones&&c.opciones[0]!==''?c.opciones:null])
+       needsOpts(c.tipo)&&c.opciones&&c.opciones[0]!==''?c.opciones:null, c.mostrarSi||null])
   };
   try { return btoa(unescape(encodeURIComponent(JSON.stringify(d)))); } catch(e) { return null; }
 }
@@ -485,9 +486,10 @@ function decodeSharedTemplate(encoded) {
   return {
     id: 'sh_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     nombre:d.n, descripcion:d.d, codigo:d.c,
-    campos: d.f.map(([id,tipo,etiqueta,req,opts])=>({
+    campos: d.f.map(([id,tipo,etiqueta,req,opts,cond])=>({
       id, tipo, etiqueta, placeholder:'', requerido:!!req,
-      opciones: needsOpts(tipo)?(opts||['']):undefined
+      opciones: needsOpts(tipo)?(opts||['']):undefined,
+      mostrarSi: cond||undefined
     })),
     creadoEn:new Date().toISOString(), actualizadoEn:new Date().toISOString(), _shared:true
   };
@@ -907,6 +909,7 @@ function renderFields(campos) {
   // Init signatures after DOM insertion
   campos.filter(c=>c.tipo==='firma').forEach(c => initCanvas(c.id));
 
+  aplicarCondiciones();
   // Auto-fill
   setTimeout(() => autoFill(campos), 100);
 }
@@ -1291,9 +1294,21 @@ function autoFill(campos) {
 }
 
 // ── Progress ───────────────────────────────────────────────────────
+// Muestra u oculta los campos con «mostrar solo si…» según lo respondido hasta ahora.
+function aplicarCondiciones() {
+  if (!activeTmpl) return;
+  activeTmpl.campos.forEach(c => {
+    if (!c.mostrarSi) return;
+    const fg = document.getElementById(`fg_${c.id}`);
+    if (fg) fg.classList.toggle('cond-oculto', !fieldIsVisible(c, activeTmpl.campos, submission));
+  });
+}
+const _visible = c => fieldIsVisible(c, activeTmpl.campos, submission);
+
 function updateProgress() {
   if (!activeTmpl) return;
-  const req = activeTmpl.campos.filter(c=>c.requerido && c.tipo!=='separador');
+  aplicarCondiciones();
+  const req = activeTmpl.campos.filter(c=>c.requerido && c.tipo!=='separador' && _visible(c));
   const filled = req.filter(c => {
     const v=submission[c.id];
     if (Array.isArray(v)) return v.length>0;
@@ -1313,7 +1328,7 @@ function validate() {
     else clearErr('fillerName');
   }
   activeTmpl.campos.forEach(c => {
-    if (!c.requerido || c.tipo==='separador') return;
+    if (!c.requerido || c.tipo==='separador' || !_visible(c)) return;
     const v=submission[c.id];
     const empty = !v || (Array.isArray(v)?v.length===0:String(v).trim().length===0);
     if (empty) { markErr(c.id); ok=false; }
@@ -1353,7 +1368,7 @@ function submitForm() {
   try {
     if (!validate()) {
       const missing = activeTmpl.campos
-        .filter(c => c.requerido && c.tipo!=='separador')
+        .filter(c => c.requerido && c.tipo!=='separador' && _visible(c))
         .filter(c => { const v=submission[c.id]; return !v || (Array.isArray(v)?v.length===0:String(v).trim().length===0); })
         .map(c => c.etiqueta);
       const msg = missing.length <= 3
@@ -1365,6 +1380,11 @@ function submitForm() {
       return;
     }
 
+    // Lo que quedó oculto por una condición no se envía (ni sus hallazgos): podría ser una respuesta vieja.
+    const datosEnvio = {...submission};
+    activeTmpl.campos.forEach(c => { if (!_visible(c)) delete datosEnvio[c.id]; });
+    hallazgos = hallazgos.filter(h => { const c = activeTmpl.campos.find(x => x.id === h.campoId); return !c || _visible(c); });
+
     const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
     const numero = envios.filter(e=>e.plantillaId===activeTmpl.id).reduce((max,e)=>Math.max(max,e.numero||0),0) + 1;
 
@@ -1375,7 +1395,7 @@ function submitForm() {
       plantillaNombre: activeTmpl.nombre,
       plantillaCodigo: activeTmpl.codigo || '',
       estado: 'enviado',
-      datos: {...submission},
+      datos: datosEnvio,
       unidadId: isPublicFill ? null : (document.getElementById('fillUnidad') ? document.getElementById('fillUnidad').value || null : null),
       llenadoPor: isPublicFill ? document.getElementById('fillerName').value.trim() : '',
       creadoEn: new Date().toISOString(),
