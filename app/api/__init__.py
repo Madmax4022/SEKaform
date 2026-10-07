@@ -29,7 +29,7 @@ import psycopg2.extras
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from .. import db
+from .. import alertas, db
 from ..security import (auditar, requiere_organizacion, requiere_escritura,
                         sesion_usuario)
 
@@ -202,11 +202,15 @@ def _upsert(cur, tipo: str, payload: dict) -> dict:
 
     cur.execute(
         f'INSERT INTO {spec["tabla"]} ({lista}) VALUES ({marcadores}) '
-        f'ON CONFLICT (id) {conflicto} RETURNING id',
+        f'ON CONFLICT (id) {conflicto} RETURNING id, (xmax = 0) AS nuevo',
         valores,
     )
     fila = cur.fetchone()
-    return {"ok": True, "id": fila["id"] if fila else registro_id, "tipo": tipo}
+    r = {"ok": True, "id": fila["id"] if fila else registro_id, "tipo": tipo}
+    # xmax = 0 solo en una fila INSERTADA ahora: un reintento de la cola (UPDATE) no cuenta como nuevo.
+    if tipo == "envio" and fila and fila.get("nuevo"):
+        r["_nuevo"] = True
+    return r
 
 
 # ── Sincronización por lotes ───────────────────────────────────────────────
@@ -234,6 +238,7 @@ def sync():
 
     resultados = []
     aplicadas = 0
+    avisos = []   # envíos nuevos con puntaje bajo: se avisa UNA vez por destinatario al final
 
     for op in operaciones:
         op_id = op.get("opId")
@@ -242,8 +247,14 @@ def sync():
         try:
             # Cada operación en su propia transacción: una que falle por datos
             # inválidos no debe arrastrar a las que sí eran correctas.
+            aviso = None
             with sesion_usuario() as cur:
                 r = _upsert(cur, tipo, datos)
+                if r.pop("_nuevo", False):
+                    aviso = alertas.evaluar(cur, datos)
+            # Solo si la transacción se confirmó: un envío revertido no debe avisar.
+            if aviso:
+                avisos.append(aviso)
             r["opId"] = op_id
             resultados.append(r)
             if r.get("ok"):
@@ -260,6 +271,9 @@ def sync():
 
     if aplicadas:
         auditar("sync", detalle={"operaciones": len(operaciones), "aplicadas": aplicadas})
+    if avisos:
+        salieron = alertas.enviar(avisos)
+        auditar("aviso_puntaje_bajo", detalle={"inspecciones": len(avisos), "correos": salieron})
 
     return jsonify({"resultados": resultados, "aplicadas": aplicadas})
 

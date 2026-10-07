@@ -44,10 +44,11 @@ jobs:
 
       # Compresión gzip: comprime texto grande y NO comprime el token CSRF, las
       # pantallas de acceso ni lo que pone cookies (ataque BREACH).
-      - name: Compresión de respuestas
+      - name: Compresión de respuestas y aviso por puntaje bajo
         run: |
           python3 -m pip install -q -r requirements.txt
           python3 tests/compresion_test.py
+          python3 tests/puntaje_test.py
 
       # El aislamiento entre clientes es la garantía central del producto:
       # si estas pruebas fallan, no se despliega nada.
