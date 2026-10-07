@@ -482,6 +482,8 @@ def publico_envio():
 
     if r["resultado"] != "ok":
         return jsonify({"error": "Ese formulario ya no acepta respuestas."}), 403
+    # Con el envío ya guardado: un puntaje bajo avisa por correo (una vez, con límite por hora).
+    alertas.avisar_publico(r["envio_id"], token)
     return jsonify({"ok": True, "id": r["envio_id"], "numero": r["numero"]}), 201
 
 
