@@ -250,12 +250,13 @@
     /* ── success modal ── */
     .modal-over {
       position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 500;
-      display: flex; align-items: center; justify-content: center; padding: 20px;
+      display: flex; align-items: safe center; justify-content: center; padding: 20px;
+      overflow-y: auto; overscroll-behavior: contain;
     }
     .modal-over.hidden { display: none; }
     .modal-box {
       background: var(--card); border-radius: 16px; padding: 36px 28px;
-      max-width: 400px; width: 100%; text-align: center;
+      max-width: 400px; width: 100%; text-align: center; margin: auto;
       animation: popIn .25s ease;
     }
     @keyframes popIn { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:scale(1); } }
@@ -264,6 +265,14 @@
     .modal-p { color: var(--mut); font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
     .succ-next { text-align: left; font-size: .86rem; line-height: 1.45; background: var(--bg); border: 1px solid var(--bor); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
   .succ-next a:not(.btn) { color: var(--pri-txt); }
+  .succ-score { display: flex; gap: 14px; align-items: center; text-align: left; border-radius: 10px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--bor); background: var(--bg); }
+  .succ-score .ss-pct { font-size: 2rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+  .succ-score .ss-txt { font-size: .84rem; line-height: 1.45; }
+  .succ-score.nv-alto { border-color: rgba(26,188,156,.5); } .succ-score.nv-alto .ss-pct { color: var(--ok); }
+  .succ-score.nv-medio { border-color: rgba(245,158,11,.5); } .succ-score.nv-medio .ss-pct { color: var(--warn); }
+  .succ-score.nv-bajo { border-color: rgba(248,113,113,.55); } .succ-score.nv-bajo .ss-pct { color: var(--err-txt); }
+  .sub-score { display: inline-block; margin-left: 8px; font-size: .74rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; background: var(--bor); }
+  .sub-score.nv-alto { color: var(--ok); } .sub-score.nv-medio { color: var(--warn); } .sub-score.nv-bajo { color: var(--err-txt); }
   .cond-oculto { display: none !important; }
   .modal-id { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 10px 14px; font-family: monospace; font-size: 0.78rem; color: var(--ok); margin-bottom: 20px; word-break: break-all; }
 
@@ -444,6 +453,7 @@
     <p class="modal-p">El registro fue guardado correctamente y quedará disponible para exportar a base de datos.</p>
     <div class="modal-id" id="successId"></div>
     <p class="modal-p hidden" id="successHz" style="margin-top:-10px;color:var(--err-txt)"></p>
+    <div class="succ-score hidden" id="successScore" role="status"></div>
     <div class="succ-next hidden" id="successNext" role="status"></div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-pri" style="justify-content:center" onclick="fillAgain()">Llenar otro registro</button>
@@ -1469,12 +1479,26 @@ function submitForm() {
     } else {
       hzMsg.classList.add('hidden');
     }
+    mostrarPuntaje(activeTmpl.campos, datosEnvio);
     document.getElementById('successModal').classList.remove('hidden');
     if (!isPublicFill) cierreSiguiente(envio);
   } catch (e) {
     console.error('[SEKaform] submitForm error:', e);
     toast('No se pudo enviar: ' + e.message, 'er');
   }
+}
+
+// Puntaje del registro recién enviado (ver skfPuntaje en field-types.js).
+const NIVEL_TXT = { alto: 'Cumplimiento alto', medio: 'Cumplimiento medio — revisar', bajo: 'Cumplimiento bajo — requiere acción' };
+function mostrarPuntaje(campos, datos) {
+  const box = document.getElementById('successScore');
+  const p = skfPuntaje(campos, datos);
+  if (!p) { box.classList.add('hidden'); return; }
+  const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  box.className = 'succ-score nv-' + p.nivel;
+  box.innerHTML = `<div class="ss-pct">${p.pct} %</div><div class="ss-txt"><b>${NIVEL_TXT[p.nivel]}</b><br>` +
+    `${p.ok} de ${p.total} punto${p.total!==1?'s':''} de control cumple${p.ok!==1?'n':''}.` +
+    (p.fallan.length ? `<br>No cumple: ${p.fallan.slice(0,4).map(esc).join(' · ')}${p.fallan.length>4?` y ${p.fallan.length-4} más`:''}.` : '') + `</div>`;
 }
 
 // Pantalla de cierre: qué cubrió este registro en el Mapa y cuál es el siguiente paso, para que
@@ -1536,6 +1560,7 @@ function showSubs(tmplId) {
   } else {
     el.innerHTML = subs.map(s => {
       const d = new Date(s.enviadoEn||s.creadoEn).toLocaleString('es-CO');
+      const pu = t ? skfPuntaje(t.campos, s.datos) : null;
       return `<div class="sub-card">
         <div class="sub-top">
           <span class="sub-name">${s.plantillaNombre}</span>
@@ -1543,6 +1568,7 @@ function showSubs(tmplId) {
         </div>
         <div class="sub-id">${s.id}</div>
         <span class="sub-badge${s.estado!=='enviado'?' draft':''}">${s.estado==='enviado'?'✓ Enviado':'Borrador'}</span>
+        ${pu ? `<span class="sub-score nv-${pu.nivel}" title="${pu.ok} de ${pu.total} puntos de control cumplen">${pu.pct} % · ${pu.nivel==='alto'?'alto':pu.nivel==='medio'?'medio':'bajo'}</span>` : ''}
       </div>`;
     }).join('');
   }

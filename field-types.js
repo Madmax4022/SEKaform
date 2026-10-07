@@ -110,3 +110,29 @@ function fieldIsVisible(c, campos, datos, depth) {
   var v = datos[ctl.id];
   return m.valores.indexOf(v == null ? '' : String(v)) !== -1;
 }
+
+// ── Puntaje de cumplimiento de un registro ──────────────────────────────────
+// Cuenta solo los «puntos de control»: preguntas Sí/No (N/A no cuenta), escalas 1–5, números con
+// rango y cualquier otra pregunta de selección a la que se le puso criticidad. Los datos generales
+// (nombre, área, fecha…) no suman ni restan. Un punto cumple si su respuesta NO sería un hallazgo.
+// Lo oculto por una condición no cuenta. Devuelve null si el formulario no tiene puntos de control.
+function skfPuntaje(campos, datos) {
+  var items = [];
+  (campos || []).forEach(function (c) {
+    var v = datos ? datos[c.id] : undefined;
+    if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) return;
+    if (!fieldIsVisible(c, campos, datos || {})) return;
+    var cuenta = false;
+    if (c.tipo === 'si_no') cuenta = (v === 'Sí' || v === 'No');
+    else if (c.tipo === 'escala_1_5') cuenta = true;
+    else if (c.tipo === 'numero') cuenta = (c.rangoMin !== undefined && c.rangoMin !== '' && c.rangoMin !== null) ||
+                                          (c.rangoMax !== undefined && c.rangoMax !== '' && c.rangoMax !== null);
+    else if (c.tipo === 'select' || c.tipo === 'radio' || c.tipo === 'checkbox_multi') cuenta = !!c.severidad;
+    if (cuenta) items.push({ etiqueta: c.etiqueta, ok: !answerIsFinding(c.tipo, v, c) });
+  });
+  if (!items.length) return null;
+  var ok = items.filter(function (i) { return i.ok; }).length;
+  var pct = Math.round(ok / items.length * 100);
+  return { total: items.length, ok: ok, pct: pct, nivel: pct >= 90 ? 'alto' : pct >= 70 ? 'medio' : 'bajo',
+           fallan: items.filter(function (i) { return !i.ok; }).map(function (i) { return i.etiqueta; }) };
+}
