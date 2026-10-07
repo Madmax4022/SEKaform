@@ -1675,6 +1675,25 @@ function buildCard(c,i) {
     </select>
   </div>` : '';
 
+  // «Mostrar solo si…»: depende de un campo anterior de respuesta única.
+  const ctls = tmpl.campos.slice(0, i).filter(x => fieldCondOptions(x).length);
+  const m = c.mostrarSi;
+  let condHtml = '';
+  if (c.tipo !== 'separador' && ctls.length) {
+    const ctl = m && ctls.find(x => x.id === m.campoId);
+    condHtml = `<div class="cond-row" style="margin-top:8px">
+      <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px" for="cc_${c.id}">🔀 Mostrar este campo solo si… (opcional)</label>
+      <select id="cc_${c.id}" onchange="setCondCampo('${c.id}',this.value)" style="width:100%">
+        <option value="">Siempre visible</option>
+        ${ctls.map(x => `<option value="${x.id}" ${ctl && ctl.id===x.id?'selected':''}>${esc(x.etiqueta || 'Campo sin nombre')}</option>`).join('')}
+      </select>
+      ${ctl ? `<div style="margin-top:6px;font-size:.78rem;color:var(--mut)">…la respuesta es:</div>
+      <div class="cond-vals" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px">
+        ${fieldCondOptions(ctl).map((o,k) => `<label style="display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:.85rem"><input type="checkbox" ${m.valores.includes(o)?'checked':''} onchange="setCondValor('${c.id}',${k},this.checked)">${esc(o)}</label>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }
+
   const qualWarn = (c._quality === 'ilegible' || c._quality === 'review') ? `<div class="qual-warn">
     ✏️ El escaneo no se leyó bien aquí${c._raw ? ` — decía algo como «<em>${esc(c._raw)}</em>»` : ''}. Escribe el nombre real mirando el original.
     <div class="qual-btns">
@@ -1705,7 +1724,7 @@ function buildCard(c,i) {
         <button class="fi-btn del" onclick="delC('${c.id}')">✕</button>
       </div>
     </div>
-    ${qualWarn}${optHtml}${reqChk}${rangoHtml}${sevHtml}
+    ${qualWarn}${optHtml}${reqChk}${rangoHtml}${sevHtml}${condHtml}
   </div>`;
 }
 
@@ -1732,6 +1751,25 @@ function addMissingField(f){
   tmpl.campos.push({id:`c${Date.now()}_${Math.random().toString(36).slice(2,5)}`,tipo:f.tipo,etiqueta:f.etiqueta,placeholder:'',requerido:f.tipo!=='separador',opciones:needsOptions(f.tipo)?opts:undefined,_quality:'ok'});
   renderSuggList();
   setTimeout(()=>document.querySelector(`#sc_${tmpl.campos[tmpl.campos.length-1].id}`)?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+function setCondCampo(id,campoId){
+  const c=tmpl.campos.find(x=>x.id===id); if(!c)return;
+  if(!campoId){delete c.mostrarSi;}
+  else{
+    const ctl=tmpl.campos.find(x=>x.id===campoId);
+    // Primera vez: propone la respuesta que suele pedir más detalle (No, o la primera opción).
+    const opts=fieldCondOptions(ctl);
+    c.mostrarSi={campoId,valores:[opts.includes('No')?'No':opts[0]]};
+  }
+  renderSuggList();
+}
+function setCondValor(id,k,on){
+  const c=tmpl.campos.find(x=>x.id===id); if(!c||!c.mostrarSi)return;
+  const ctl=tmpl.campos.find(x=>x.id===c.mostrarSi.campoId); const o=fieldCondOptions(ctl)[k];
+  const v=new Set(c.mostrarSi.valores); if(on)v.add(o);else v.delete(o);
+  c.mostrarSi.valores=[...v];
+  // Sin ninguna respuesta marcada la condición no significa nada: se quita.
+  if(!c.mostrarSi.valores.length){delete c.mostrarSi;renderSuggList();}
 }
 function setReq(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c)c.requerido=v;}
 function setSeveridad(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v)c.severidad=v;else delete c.severidad;}}
@@ -2112,6 +2150,12 @@ async function loadPreset(presetId, editMode, archiveOnly) {
     opciones: needsOptions(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
     _quality: 'ok'
   }));
+  // Las condiciones del catálogo se escriben por el nombre del campo; aquí se pasan a su id.
+  t.campos_clave.forEach((f, i) => {
+    if (!f.mostrarSi) return;
+    const j = t.campos_clave.findIndex(x => x.etiqueta === f.mostrarSi.campo);
+    if (j >= 0 && j < i) tmpl.campos[i].mostrarSi = { campoId: tmpl.campos[j].id, valores: f.mostrarSi.valores.slice() };
+  });
   const fNomEl = document.getElementById('fNom');
   if (fNomEl) fNomEl.value = t.nombre;
   tmpl.norma = t.norma || '';
