@@ -10,6 +10,7 @@
   <title>Panel de control — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
+  <script src="field-types.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -23,7 +24,14 @@
     .pg-sub{color:var(--mut);font-size:.88rem;margin-bottom:32px;}
 
     /* stat cards */
-    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:32px;}
+    .stat-card.nv-alto .stat-num{color:var(--ok);} .stat-card.nv-medio .stat-num{color:var(--warn);} .stat-card.nv-bajo .stat-num{color:var(--err-txt);}
+    .stat-card.c-score .stat-label{display:flex;align-items:center;gap:6px;}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+    .pf-row{flex-wrap:wrap;row-gap:4px;margin-bottom:10px;} .pf-row .rank-name{flex:1 1 100%;white-space:normal;overflow:visible;font-weight:700;}
+    .pf-row .rank-bar-track{flex:1 1 120px;} .pf-row .rank-count{min-width:0;}
+    .pf-row .pf-n{font-variant-numeric:tabular-nums;}
+    .pf-tr{font-size:.74rem;font-weight:700;white-space:nowrap;} .pf-tr.up{color:var(--ok);} .pf-tr.down{color:var(--err-txt);} .pf-tr.eq{color:var(--mut);}
     .stat-card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:22px 20px;}
     .stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-bottom:10px;}
     .stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-bottom:4px;}
@@ -226,6 +234,7 @@
 
     @media(max-width:900px){
       .stats-grid{grid-template-columns:repeat(2,1fr);}
+      .stat-card.c-score{grid-column:1/-1;}
       .chart-grid{grid-template-columns:1fr;}
     }
     @media(max-width:540px){
@@ -325,6 +334,15 @@
         <div class="stat-num" id="sWeek">0</div>
         <div class="stat-desc">envíos recientes</div>
       </div>
+      <div class="stat-card c-score" id="cardPuntaje">
+        <div class="stat-label">Puntaje de inspecciones<button class="skf-help" data-help-t="¿Cómo se calcula el puntaje?" data-help="Es el promedio del porcentaje de cumplimiento de cada inspección enviada.
+
+En cada inspección cuentan solo los puntos de control: preguntas Sí/No (sin N/A), escalas 1–5, números con rango y selecciones con criticidad. Cumple el punto cuya respuesta no es un hallazgo.
+
+La flecha compara los últimos 30 días con los 30 anteriores (con el mismo formulario y unidad que tengas filtrados).">?</button></div>
+        <div class="stat-num" id="sPuntaje">—</div>
+        <div class="stat-desc" id="sPuntajeDesc">sin inspecciones con puntaje</div>
+      </div>
     </div>
 
     <!-- Bloque avanzado: se oculta en «Vista simple» (gráficas, cumplimiento,
@@ -385,6 +403,12 @@
     <div class="chart-card" style="margin-bottom:32px">
       <div class="chart-title">🔁 Problemas recurrentes</div>
       <div id="recurrentList"></div>
+    </div>
+
+    <!-- puntaje por formulario -->
+    <h2 class="section-title">✅ Puntaje por formulario</h2>
+    <div class="chart-card" style="margin-bottom:24px">
+      <div id="puntajeForms"></div>
     </div>
 
     <!-- comparativo por unidad -->
@@ -646,6 +670,68 @@ async function loadData() {
   const sortFn = (a,b) => new Date(b.enviado_en||b.enviadoEn||b.creadoEn||0) - new Date(a.enviado_en||a.enviadoEn||a.creadoEn||0);
   envios.sort(sortFn);
   return { plantillas, envios, hallazgos, acciones, asignaciones, unidades, fromCloud };
+}
+
+// ── Puntaje de cumplimiento (skfPuntaje, field-types.js) ─────────────
+// Promedio de los porcentajes de cada inspección. El envío se puntúa con los campos de SU formulario.
+function _puntajeEnvio(e, plantillas) {
+  const id = fEnvPlantillaId(e);
+  const pl = plantillas.find(p => p.id === id) || plantillas.find(p => p.nombre && p.nombre === (e.plantilla_nombre||e.plantillaNombre));
+  if (!pl || !Array.isArray(pl.campos)) return null;
+  const r = skfPuntaje(pl.campos, e.datos || {});
+  return r ? r.pct : null;
+}
+const _prom = a => a.length ? Math.round(a.reduce((s,x)=>s+x,0)/a.length) : null;
+const _nivelPct = p => p >= 90 ? 'alto' : p >= 70 ? 'medio' : 'bajo';
+// Últimos 30 días contra los 30 anteriores, con el filtro de unidad y formulario pero sin el de periodo.
+function _tendenciaPuntaje(filas) {
+  const ahora = Date.now(), d30 = 30*864e5;
+  const t = f => new Date(fEnvCreado(f.e)).getTime();
+  const act = filas.filter(f => ahora - t(f) <= d30).map(f => f.pct);
+  const ant = filas.filter(f => ahora - t(f) > d30 && ahora - t(f) <= 2*d30).map(f => f.pct);
+  if (!act.length || !ant.length) return null;
+  return _prom(act) - _prom(ant);
+}
+function _txtTendencia(d) {
+  if (d === null) return '';
+  if (d === 0) return '<span class="pf-tr eq">= igual que antes</span>';
+  return d > 0 ? `<span class="pf-tr up">▲ +${d} pts</span>` : `<span class="pf-tr down">▼ ${d} pts</span>`;
+}
+function _puntajesFiltrados(ds) {
+  return ds.envios.map(e => ({ e, pct: _puntajeEnvio(e, ds.plantillas) })).filter(f => f.pct !== null);
+}
+function _puntajesPorFormulario(ds) {
+  const grupos = {};
+  _puntajesFiltrados(ds).forEach(f => { (grupos[envioGroupKey(f.e)] ||= { nombre: f.e.plantilla_nombre||f.e.plantillaNombre||'', filas: [] }).filas.push(f); });
+  // la tendencia usa todo el histórico del formulario (con la unidad elegida), no solo el periodo
+  const todos = (_bi.envios||[]).filter(_pasaUnidad).map(e => ({ e, pct: _puntajeEnvio(e, ds.plantillas) })).filter(f => f.pct !== null);
+  return Object.entries(grupos).map(([k, g]) => ({
+    nombre: g.nombre, n: g.filas.length, pct: _prom(g.filas.map(f=>f.pct)),
+    tend: _tendenciaPuntaje(todos.filter(f => envioGroupKey(f.e) === k)),
+  })).sort((a,b) => a.pct - b.pct);   // primero los más bajos: es lo que hay que atender
+}
+function renderPuntaje(ds) {
+  const filas = _puntajesFiltrados(ds);
+  const card = document.getElementById('cardPuntaje');
+  card.classList.remove('nv-alto','nv-medio','nv-bajo');
+  const pct = _prom(filas.map(f=>f.pct));
+  const el = document.getElementById('sPuntaje'), desc = document.getElementById('sPuntajeDesc');
+  if (pct === null) { el.textContent = '—'; desc.textContent = 'sin inspecciones con puntaje'; }
+  else {
+    card.classList.add('nv-' + _nivelPct(pct));
+    el.textContent = pct + ' %';
+    const todos = (_bi.envios||[]).filter(e => _pasaUnidad(e) && _pasaFormEnvio(e)).map(e => ({ e, pct: _puntajeEnvio(e, ds.plantillas) })).filter(f => f.pct !== null);
+    desc.innerHTML = `${_nivelPct(pct)==='alto'?'nivel alto':_nivelPct(pct)==='medio'?'nivel medio':'nivel bajo'} · ${filas.length} ${filas.length!==1?'inspecciones':'inspección'} ${_txtTendencia(_tendenciaPuntaje(todos))}`;
+  }
+  const lista = document.getElementById('puntajeForms');
+  const rows = _puntajesPorFormulario(ds);
+  if (!rows.length) { lista.innerHTML = '<div class="gap-empty">Aún no hay inspecciones con preguntas Sí/No, escalas o rangos para puntuar.</div>'; return; }
+  lista.innerHTML = `<div class="rank-list">${rows.map(r => `
+    <div class="rank-row pf-row">
+      <span class="rank-name" title="${escD(r.nombre)}">${escD(r.nombre)}</span>
+      <div class="rank-bar-track"><div class="rank-bar-fill ${r.pct>=90?'':r.pct>=70?'warn':'err'}" style="width:${r.pct}%"></div></div>
+      <span class="rank-count pf-n">${r.pct} % ${_txtTendencia(r.tend)}<span class="sr-only"> · nivel ${_nivelPct(r.pct)} · ${r.n} ${r.n!==1?'inspecciones':'inspección'}</span></span>
+    </div>`).join('')}</div>`;
 }
 
 // ── Stats ────────────────────────────────────────────────────────
@@ -1179,6 +1265,13 @@ function renderAuditoria(ds) {
       </div>`; }).join('');
 }
 
+function _tablaPuntajeForms(ds) {
+  const rows = _puntajesPorFormulario(ds);
+  if (!rows.length) return '';
+  return `<h2>Puntaje por formulario</h2><table><thead><tr><th style="text-align:left">Formulario</th><th>Inspecciones</th><th>Puntaje</th><th>Nivel</th><th>Tendencia (30 días)</th></tr></thead><tbody>${rows.map(r =>
+    `<tr><td style="text-align:left">${escD(r.nombre)}</td><td>${r.n}</td><td>${r.pct}%</td><td>${_nivelPct(r.pct)}</td><td>${r.tend===null?'—':r.tend===0?'igual':(r.tend>0?'+':'')+r.tend+' pts'}</td></tr>`).join('')}</tbody></table>`;
+}
+
 function reporteConsolidado() {
   const ds = datosFiltrados();
   const st = computeStats(ds.envios);
@@ -1189,6 +1282,7 @@ function reporteConsolidado() {
     <div class="k">Periodo / filtro</div><div class="v">${escD(_etiquetaFiltro())}</div>
     <div class="k">Envíos</div><div class="v">${st.total}</div>
     <div class="k">Cumplimiento de asignaciones</div><div class="v">${pct===null?'—':pct+'% ('+done+'/'+total+')'}</div>
+    <div class="k">Puntaje de inspecciones</div><div class="v">${(() => { const f=_puntajesFiltrados(ds); const p=_prom(f.map(x=>x.pct)); return p===null?'—':p+'% ('+f.length+' inspecciones)'; })()}</div>
     <div class="k">Hallazgos abiertos</div><div class="v">${abiertos.length} de ${ds.hallazgos.length}</div>
     <div class="k">Críticos sin resolver</div><div class="v">${criticos}</div>
   </div>`;
@@ -1224,7 +1318,7 @@ function reporteConsolidado() {
     ? `<table><thead><tr><th style="text-align:left">Hallazgo</th><th style="text-align:left">Severidad</th><th style="text-align:left">Estado</th><th style="text-align:left">Responsable</th><th style="text-align:left">Límite</th><th style="text-align:left">Cierre</th></tr></thead><tbody>${auRows.map(r=>`<tr><td style="text-align:left">${escD(r.form)} — ${escD(r.campo||'manual')}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${ESTADO_LBL[r.estado]||r.estado}</td><td style="text-align:left">${escD(r.resp)}</td><td style="text-align:left">${escD(r.limite)}</td><td style="text-align:left">${r.cerrado?'Cerrado':'Pendiente'}</td></tr>`).join('')}</tbody></table>`
     : `<p style="color:#9ca3af">Sin hallazgos en este periodo.</p>`;
 
-  printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Hallazgos y su cierre</h2>${tablaHz}<h2>Registros del periodo</h2>${tablaDet}`);
+  printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}${_tablaPuntajeForms(ds)}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Hallazgos y su cierre</h2>${tablaHz}<h2>Registros del periodo</h2>${tablaDet}`);
 }
 
 // Exporta el PANEL COMPLETO a PDF: los KPIs, las gráficas (capturadas como
@@ -1343,6 +1437,7 @@ async function exportarPanelPDF() {
     <div class="k">Envíos totales</div><div class="v">${st.total}</div>
     <div class="k">Este mes</div><div class="v">${st.month}</div>
     <div class="k">Últimos 7 días</div><div class="v">${st.week}</div>
+    <div class="k">Puntaje de inspecciones</div><div class="v">${(() => { const f=_puntajesFiltrados(ds); const p=_prom(f.map(x=>x.pct)); return p===null?'—':p+'% ('+f.length+' inspecciones)'; })()}</div>
   </div>`;
 
   const cumpl = `<div class="kv">
@@ -1388,7 +1483,7 @@ async function exportarPanelPDF() {
     ? `<table><thead><tr><th style="text-align:left">Hallazgo</th><th style="text-align:left">Severidad</th><th style="text-align:left">Estado</th><th style="text-align:left">Responsable</th><th style="text-align:left">Cierre</th></tr></thead><tbody>${auRows.map(r=>`<tr><td style="text-align:left">${escD(r.form)} — ${escD(r.campo||'manual')}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${ESTADO_LBL[r.estado]||r.estado}</td><td style="text-align:left">${escD(r.resp)}</td><td style="text-align:left">${r.cerrado?'Cerrado':'Pendiente'}</td></tr>`).join('')}</tbody></table>`
     : `<p style="color:#9ca3af">Sin hallazgos en este periodo. 👍</p>`;
 
-  const body = `<h2>Resumen del panel</h2>${kpis}${graficas}<h2>Cumplimiento y brechas</h2>${cumpl}${analisis}<h2>Hallazgos y su cierre</h2>${tablaHz}`;
+  const body = `<h2>Resumen del panel</h2>${kpis}${graficas}${_tablaPuntajeForms(ds)}<h2>Cumplimiento y brechas</h2>${cumpl}${analisis}<h2>Hallazgos y su cierre</h2>${tablaHz}`;
   printReport('Panel de control', body);
 }
 
@@ -1918,6 +2013,7 @@ function pintar() {
   document.getElementById('sMonth').textContent = stats.month;
   document.getElementById('sWeek').textContent  = stats.week;
 
+  renderPuntaje(ds);
   asegurarGraficas();   // carga Chart.js (si hace falta) y dibuja; en vista simple no hace nada
 
   _biEnvios = ds.envios; _biHallazgos = ds.hallazgos; _biUnidades = ds.unidades;
