@@ -30,6 +30,7 @@ BEGIN
     (pl_a, org_a, 'Lista A', 'A', '[{"id":"s0","tipo":"si_no","etiqueta":"Extintores"}]', true, 'tok-a', 'jefe@a.com'),
     (pl_b, org_b, 'Lista B', 'B', '[{"id":"s0","tipo":"si_no","etiqueta":"Salidas"}]',   true, 'tok-b', 'jefe@b.com'),
     (pl_priv, org_a, 'Privada', 'P', '[]', false, 'tok-priv', 'x@a.com');
+  UPDATE plantillas SET aviso_umbral = 85, aviso_max_hora = 2 WHERE id = pl_b;
   PERFORM set_config('app.is_super_admin', 'off', true);
   PERFORM set_config('app.user_id', '', true);
   PERFORM set_config('app.org_id', '', true);
@@ -55,6 +56,12 @@ BEGIN
   ok := skf_publico_aviso_marcar(e1, 'tok-b', 5);
   ASSERT ok = false, 'No se puede reservar un aviso con el token de otro formulario';
 
+  -- 2b · los ajustes por formulario salen con los datos (NULL = predeterminado)
+  SELECT * INTO d FROM skf_publico_aviso_datos(e1, 'tok-a');
+  ASSERT d.aviso_umbral IS NULL AND d.aviso_max_hora IS NULL, 'Sin ajustes debe devolver NULL (predeterminado)';
+  SELECT * INTO d FROM skf_publico_aviso_datos(e5, 'tok-b');
+  ASSERT d.aviso_umbral = 85 AND d.aviso_max_hora = 2, 'Debe devolver los ajustes propios del formulario';
+
   -- 3 · la primera reserva autoriza el envío; repetirla (reintento de la cola) NO
   ok := skf_publico_aviso_marcar(e1, 'tok-a', 3);
   ASSERT ok = true, 'La primera reserva debe autorizar el correo';
@@ -76,6 +83,23 @@ BEGIN
   -- 5 · el límite es POR formulario: otro cliente no se ve afectado
   ok := skf_publico_aviso_marcar(e5, 'tok-b', 3);
   ASSERT ok = true, 'El límite de un formulario no debe afectar a otro';
+
+  -- 5b · los topes y el umbral están acotados por la base (un valor absurdo no entra)
+  PERFORM set_config('app.user_id', super::text, true);
+  PERFORM set_config('app.is_super_admin', 'on', true);
+  BEGIN
+    UPDATE plantillas SET aviso_umbral = 101 WHERE id = pl_b;
+    ASSERT false, 'aviso_umbral > 100 no debe aceptarse';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  BEGIN
+    UPDATE plantillas SET aviso_max_hora = 0 WHERE id = pl_b;
+    ASSERT false, 'aviso_max_hora = 0 no debe aceptarse';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  UPDATE plantillas SET aviso_umbral = 0 WHERE id = pl_b;   -- 0 = «no avisar», es válido
+  PERFORM set_config('app.is_super_admin', 'off', true);
+  PERFORM set_config('app.user_id', '', true);
 
   -- 6 · formulario ya no público: no se avisa
   PERFORM set_config('app.user_id', super::text, true);

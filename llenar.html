@@ -60,6 +60,12 @@
     .btn-fav { background: transparent; border: 1px solid var(--bor); color: var(--mut); border-radius: 7px; padding: 5px 10px; font-size: 1rem; cursor: pointer; font-family: inherit; transition: all .15s; line-height: 1; }
     .btn-fav:hover { border-color: #f59e0b; color: #f59e0b; }
     .btn-fav.on { background: rgba(245,158,11,.12); border-color: #f59e0b; color: #f59e0b; }
+    .tmpl-aviso { background: none; border: none; color: var(--pri-txt); font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; padding: 0; min-height: 44px; text-align: left; }
+    .tmpl-aviso:hover { text-decoration: underline; }
+    #avisoModal .modal-box { padding: 22px 20px; }
+    #avisoModal .fg { border: none; background: none; padding: 0; margin: 0 0 12px; box-shadow: none; }
+    #avisoModal .fg label { font-size: .8rem; margin-bottom: 4px; }
+    .aviso-hint { font-size: .74rem; color: var(--mut); margin-top: 4px; line-height: 1.4; }
     .btn-danger { background: transparent; border: 1px solid rgba(239,68,68,.35); color: var(--err-txt); border-radius: 7px; padding: 6px 10px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
     .btn-danger:hover { background: rgba(239,68,68,.12); border-color: var(--err); }
     /* QR modal */
@@ -445,6 +451,31 @@
   </div>
 </div>
 
+<!-- AVISOS DE PUNTAJE BAJO (por formulario) -->
+<div class="modal-over hidden" id="avisoModal" role="dialog" aria-modal="true" aria-labelledby="avisoTit">
+  <div class="modal-box" style="text-align:left">
+    <h2 class="modal-h" id="avisoTit" style="font-size:1.15rem">🔔 Avisos de puntaje bajo</h2>
+    <p class="modal-p" id="avisoForm" style="margin-bottom:14px"></p>
+    <div class="fg"><label for="avCorreo">Correo que recibe el aviso</label>
+      <input type="email" id="avCorreo" placeholder="ej: supervisor@empresa.com">
+      <div class="aviso-hint">Sin correo no se envía ningún aviso.</div></div>
+    <div class="fg"><label for="avUmbral">Avisar si el cumplimiento queda por debajo de</label>
+      <select id="avUmbral">
+        <option value="">Predeterminado (70 %)</option><option value="0">No avisar nunca</option>
+        <option value="50">50 %</option><option value="60">60 %</option><option value="80">80 %</option><option value="90">90 %</option>
+      </select></div>
+    <div class="fg"><label for="avMax">Máximo de correos por hora (formularios por enlace público)</label>
+      <select id="avMax">
+        <option value="">Predeterminado (3)</option><option value="1">1</option><option value="5">5</option><option value="10">10</option><option value="20">20</option>
+      </select>
+      <div class="aviso-hint">Evita que un enlace abierto llene tu bandeja si alguien lo usa en exceso.</div></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+      <button class="btn btn-pri" style="justify-content:center" onclick="guardarAvisos()">Guardar</button>
+      <button class="btn btn-sec" style="justify-content:center" onclick="cerrarAvisos()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- SUCCESS MODAL -->
 <div class="modal-over hidden" id="successModal">
   <div class="modal-box">
@@ -516,6 +547,8 @@ function normalizePlantillaFromCloud(p) {
     norma: p.norma||p.norma||'',
     publica: p.publica||false, shareToken: p.share_token||p.shareToken||null,
     correoNotificacion: p.correo_notificacion||p.correoNotificacion||'',
+    avisoUmbral: p.aviso_umbral ?? p.avisoUmbral ?? null,
+    avisoMaxHora: p.aviso_max_hora ?? p.avisoMaxHora ?? null,
     creadoEn: p.creado_en||p.creadoEn, actualizadoEn: p.actualizado_en||p.actualizadoEn
   };
 }
@@ -834,6 +867,7 @@ function renderList() {
       <div class="tmpl-info">
         <div class="tmpl-name">${t.nombre}</div>
         <div class="tmpl-meta">${t.campos.length} preguntas · ${subs} registro${subs!==1?'s':''} · ${d}</div>
+        <button class="tmpl-aviso" onclick="abrirAvisos('${t.id}')">${resumenAviso(t)}</button>
       </div>
       <div class="tmpl-acts">
         <button class="btn-fav ${t.favorito?'on':''}" onclick="toggleFavorito('${t.id}')" title="Marcar como favorito">${t.favorito?'★':'☆'}</button>
@@ -844,6 +878,44 @@ function renderList() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Avisos de puntaje bajo por formulario ──────────────────────────
+function resumenAviso(t) {
+  const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  if (!t.correoNotificacion) return '🔕 Sin avisos · agregar un correo';
+  if (t.avisoUmbral === 0) return '🔕 Avisos desactivados';
+  return '🔔 Avisa si baja de ' + (t.avisoUmbral == null ? 70 : t.avisoUmbral) + ' %';
+}
+let _avisoId = null;
+function abrirAvisos(id) {
+  const t = JSON.parse(localStorage.getItem('skf_plantillas')||'[]').find(x=>x.id===id);
+  if (!t) return;
+  _avisoId = id;
+  document.getElementById('avisoForm').textContent = t.nombre;
+  document.getElementById('avCorreo').value = t.correoNotificacion || '';
+  document.getElementById('avUmbral').value = t.avisoUmbral == null ? '' : String(t.avisoUmbral);
+  document.getElementById('avMax').value = t.avisoMaxHora == null ? '' : String(t.avisoMaxHora);
+  document.getElementById('avisoModal').classList.remove('hidden');
+  document.getElementById('avCorreo').focus();
+}
+function cerrarAvisos() { document.getElementById('avisoModal').classList.add('hidden'); _avisoId = null; }
+function guardarAvisos() {
+  const correo = document.getElementById('avCorreo').value.trim();
+  if (correo && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) { toast('Escribe un correo válido','er'); document.getElementById('avCorreo').focus(); return; }
+  const num = id => { const v = document.getElementById(id).value; return v === '' ? null : parseInt(v, 10); };
+  const list = JSON.parse(localStorage.getItem('skf_plantillas')||'[]');
+  const t = list.find(x=>x.id===_avisoId);
+  if (!t) { cerrarAvisos(); return; }
+  t.correoNotificacion = correo;
+  t.avisoUmbral = num('avUmbral');
+  t.avisoMaxHora = num('avMax');
+  t.actualizadoEn = new Date().toISOString();
+  localStorage.setItem('skf_plantillas', JSON.stringify(list));
+  skfSyncOrQueue('plantilla', t);
+  cerrarAvisos();
+  toast('Avisos guardados ✓','ok');
+  renderList();
 }
 
 function toggleFavorito(id) {

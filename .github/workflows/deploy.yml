@@ -75,6 +75,7 @@ jobs:
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/005_paneles.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/006_turnos.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/007_aviso_publico.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/008_aviso_configurable.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -q -c "
             GRANT USAGE ON SCHEMA public TO skf_app;
             GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO skf_app;
@@ -115,6 +116,7 @@ jobs:
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/005_paneles.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/006_turnos.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/007_aviso_publico.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/008_aviso_configurable.sql
 
   desplegar:
     needs: pruebas
