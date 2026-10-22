@@ -22,6 +22,7 @@ const FIELD_TYPES = [
   {k:'radio',          grupo:'Selección',   ico:'◉',  lbl:'Opción única',             desc:'Radio buttons',      chip:'chip-smart', fieldClass:'fc-smart', needsOptions:true},
   {k:'checkbox',       grupo:'Selección',   ico:'☑',  lbl:'Casilla de verificación',  desc:'Marcar/Sin marcar',  chip:'chip-smart', fieldClass:'fc-smart'},
   {k:'checkbox_multi', grupo:'Selección',   ico:'📋', lbl:'Opción múltiple',          desc:'Varias casillas',    chip:'chip-smart', fieldClass:'fc-smart', needsOptions:true},
+  {k:'equipo',         grupo:'Selección',   ico:'🏷', lbl:'Equipo (código)',          desc:'EXT-001, GAB-002…',  chip:'chip-smart', fieldClass:'fc-smart'},
 
   {k:'firma',          grupo:'Multimedia',  ico:'✍',  lbl:'Firma digital',            desc:'Canvas táctil',      chip:'chip-sig',   fieldClass:'fc-sig'},
   {k:'foto',           grupo:'Multimedia',  ico:'📷', lbl:'Fotografía',               desc:'Cámara/galería',     chip:'chip-photo', fieldClass:'fc-media'},
@@ -135,4 +136,63 @@ function skfPuntaje(campos, datos) {
   var pct = Math.round(ok / items.length * 100);
   return { total: items.length, ok: ok, pct: pct, nivel: pct >= 90 ? 'alto' : pct >= 70 ? 'medio' : 'bajo',
            fallan: items.filter(function (i) { return !i.ok; }).map(function (i) { return i.etiqueta; }) };
+}
+
+// ── Equipos: extintores, gabinetes, botiquines… ─────────────────────────
+// Cada equipo se identifica con PREFIJO-consecutivo (EXT-001, EXT-002…). La
+// ubicación NO va en el código: si el equipo se mueve, el código y su historial
+// se mantienen. No hay inventario aparte: los equipos conocidos salen de los
+// registros ya hechos, así que funciona desde el primer día sin preparar nada.
+const SKF_EQUIPOS = [
+  {prefijo:'EXT', nombre:'Extintor',                 ico:'🧯'},
+  {prefijo:'GAB', nombre:'Gabinete contra incendio', ico:'🚒'},
+  {prefijo:'BOT', nombre:'Botiquín',                 ico:'🩹'},
+  {prefijo:'CAM', nombre:'Camilla',                  ico:'🛏'},
+  {prefijo:'LUZ', nombre:'Luz de emergencia',        ico:'💡'},
+  {prefijo:'ALA', nombre:'Pulsador / alarma',        ico:'🔔'},
+  {prefijo:'LAV', nombre:'Lavaojos / ducha',         ico:'🚿'},
+];
+function skfEquipoTipo(prefijo) {
+  const p = String(prefijo || 'EXT').toUpperCase();
+  return SKF_EQUIPOS.find(e => e.prefijo === p) || {prefijo:p, nombre:'Equipo', ico:'🏷'};
+}
+// «ext 3», «Ext-03», «EXT3» → «EXT-003». Lo que no tenga esa forma (la
+// numeración propia de la empresa) se respeta tal cual, solo sin espacios de más.
+function skfEquipoNormalizar(v) {
+  const t = String(v == null ? '' : v).trim().replace(/\s+/g, ' ');
+  const m = /^([A-Za-zÁÉÍÓÚÑáéíóúñ]{2,5})[\s\-_.]*0*(\d{1,4})$/.exec(t);
+  if (m) return m[1].toUpperCase() + '-' + m[2].padStart(3, '0');
+  return t;
+}
+function skfEquipoSiguiente(codigos, prefijo) {
+  const p = String(prefijo || 'EXT').toUpperCase();
+  const re = new RegExp('^' + p + '-(\\d+)$');
+  let max = 0;
+  (codigos || []).forEach(c => { const m = re.exec(skfEquipoNormalizar(c)); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  return p + '-' + String(max + 1).padStart(3, '0');
+}
+// Equipos ya registrados de un tipo, con su última inspección (de cualquier
+// formulario que tenga un campo «equipo» con ese prefijo).
+function skfEquiposConocidos(envios, plantillas, prefijo) {
+  const p = String(prefijo || 'EXT').toUpperCase();
+  const camposDe = {};
+  (plantillas || []).forEach(pl => {
+    camposDe[pl.id] = (pl.campos || []).filter(c => c.tipo === 'equipo' && String(c.prefijo || 'EXT').toUpperCase() === p);
+  });
+  const por = {};
+  (envios || []).forEach(e => {
+    if (e.estado && e.estado !== 'enviado') return;
+    const cs = camposDe[e.plantillaId || e.plantilla_id] || [];
+    const fecha = e.enviadoEn || e.enviado_en || e.creadoEn || e.creado_en || '';
+    cs.forEach(c => {
+      const cod = skfEquipoNormalizar((e.datos || {})[c.id]);
+      if (!cod) return;
+      const prev = por[cod];
+      if (!prev || String(fecha) > String(prev.ultima)) {
+        por[cod] = {codigo:cod, ultima:fecha, unidadId:e.unidadId || e.unidad_id || null,
+                    plantillaId:e.plantillaId || e.plantilla_id, datos:e.datos || {}, veces:(prev ? prev.veces : 0) + 1};
+      } else prev.veces++;
+    });
+  });
+  return Object.values(por).sort((a, b) => a.codigo.localeCompare(b.codigo, 'es', {numeric:true}));
 }

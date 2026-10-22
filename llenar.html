@@ -263,6 +263,19 @@
     }
     .gps-field:hover { background: rgba(37,99,235,.14); }
     .gps-field.got { color: var(--ok); border-color: var(--ok); background: rgba(26,188,156,.08); }
+    /* Equipo (EXT-001…): código grande, lista de los ya registrados al alcance del pulgar */
+    .eq-code { font-size: 1.15rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .eq-hint { font-size: .8rem; color: var(--mut); margin-top: 6px; line-height: 1.4; }
+    .eq-hint.ok { color: var(--ok); }
+    .eq-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .eq-list:empty { display: none; }
+    .eq-opt { display: flex; align-items: center; gap: 10px; min-height: 48px; width: 100%; text-align: left; padding: 8px 12px;
+      background: var(--inp); border: 1px solid var(--bor); border-radius: 10px; color: var(--txt); font: inherit; cursor: pointer; }
+    .eq-opt b { font-size: .95rem; letter-spacing: .03em; }
+    .eq-opt span { font-size: .78rem; color: var(--mut); }
+    .eq-opt.nuevo { border-style: dashed; color: var(--acc, #2563eb); }
+    .eq-opt:active { transform: scale(.99); }
+    .sub-eq { display: inline-block; margin-left: 6px; font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: rgba(37,99,235,.12); }
     .gps-txt { flex: 1; font-size: 0.82rem; }
 
     /* signature */
@@ -1025,7 +1038,7 @@ function openTemplate(id) {
   const t = list.find(p=>p.id===id);
   if (!t) { toast('Plantilla no encontrada','er'); return; }
   activeTmpl = t;
-  submission = {};
+  submission = {}; _fichaPuesta = {};
   signatures = {};
   draftId = null;
   hallazgos = [];
@@ -1284,6 +1297,12 @@ function buildFieldEl(c) {
       break;
     }
 
+    case 'equipo':
+      inner = document.createElement('div');
+      inner.id = `eq_${c.id}`;
+      _equipoRender(c, inner);
+      break;
+
     default:
       inner = document.createElement('input');
       inner.type='text';
@@ -1306,6 +1325,110 @@ function buildFieldEl(c) {
     }
   }
   return fg;
+}
+
+// ── Equipo (EXT-001, GAB-002…) ──────────────────────────────────────
+// Sin inventario que preparar: los equipos conocidos salen de los registros ya
+// hechos (skfEquiposConocidos, field-types.js). La primera vez se propone el
+// siguiente código libre; después se elige de la lista. Elegir uno ya conocido
+// copia su ficha (ubicación, tipo, capacidad…) de la última inspección.
+let _fichaPuesta = {};   // campoId del equipo → {campoId: valor copiado de la ficha}
+function _equiposDe(c) {
+  if (isPublicFill) return [];   // el visitante anónimo no ve los registros de la empresa
+  let envios = [], pls = [];
+  try { envios = JSON.parse(localStorage.getItem('skf_envios') || '[]'); } catch {}
+  try { pls = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch {}
+  return skfEquiposConocidos(envios, pls, c.prefijo);
+}
+function _haceDias(f) {
+  const d = Math.floor((Date.now() - new Date(f)) / 864e5);
+  return isNaN(d) ? '' : d <= 0 ? 'hoy' : d === 1 ? 'ayer' : `hace ${d} días`;
+}
+function _equipoRender(c, box) {
+  const tipo = skfEquipoTipo(c.prefijo);
+  const lista = _equiposDe(c);
+  const sig = skfEquipoSiguiente(lista.map(x => x.codigo), tipo.prefijo);
+  if (!submission[c.id] && !lista.length && !isPublicFill) submission[c.id] = sig;   // primer equipo: listo sin pensar
+  box.innerHTML = `<input type="text" class="eq-code" id="eqi_${c.id}" autocomplete="off" autocapitalize="characters" spellcheck="false"
+      placeholder="${isPublicFill ? 'Código de la etiqueta, ej. ' + tipo.prefijo + '-001' : sig}" aria-describedby="eqh_${c.id}">
+    <div class="eq-hint" id="eqh_${c.id}"></div><div class="eq-list" id="eql_${c.id}"></div>`;
+  const inp = box.querySelector('input');
+  inp.value = submission[c.id] || '';
+  inp.addEventListener('input', () => { submission[c.id] = inp.value; clearErr(c.id); updateProgress(); _equipoPintar(c, lista, sig); });
+  inp.addEventListener('change', () => _equipoElegir(c, inp.value, lista, sig, false));
+  setTimeout(() => _equipoPintar(c, lista, sig), 0);   // cuando ya esté en la página
+}
+function _equipoPintar(c, lista, sig) {
+  const tipo = skfEquipoTipo(c.prefijo);
+  const hint = document.getElementById('eqh_' + c.id), box = document.getElementById('eql_' + c.id);
+  if (!hint || !box) return;
+  const v = skfEquipoNormalizar(submission[c.id]);
+  const conocido = v && lista.find(x => x.codigo === v);
+  const uSel = document.getElementById('fillUnidad'), uAct = uSel ? uSel.value : '';
+  const uNom = id => { const u = getUnidades().find(x => x.id === id); return u ? u.nombre : ''; };
+  hint.classList.toggle('ok', !!conocido);
+  if (isPublicFill) hint.textContent = `Escribe el código que está en la etiqueta del ${tipo.nombre.toLowerCase()}.`;
+  else if (conocido) hint.textContent = `✓ ${conocido.codigo} · última inspección ${_haceDias(conocido.ultima)}${conocido.unidadId && uNom(conocido.unidadId) ? ' · ' + uNom(conocido.unidadId) : ''}`;
+  else if (v) hint.textContent = `${tipo.ico} ${tipo.nombre} nuevo: queda registrado como ${v}. Márcalo con ese código para encontrarlo la próxima vez.`;
+  else hint.textContent = lista.length ? `Elige el ${tipo.nombre.toLowerCase()} o crea uno nuevo.` : '';
+  if (conocido || isPublicFill) { box.innerHTML = ''; return; }
+  // Primero los de este lugar; luego los que llevan más tiempo sin revisar.
+  const q = String(submission[c.id] || '').trim().toUpperCase();
+  const ord = lista.filter(x => !q || x.codigo.toUpperCase().includes(q))
+    .sort((a, b) => ((b.unidadId === uAct && uAct) ? 1 : 0) - ((a.unidadId === uAct && uAct) ? 1 : 0) || String(a.ultima).localeCompare(String(b.ultima)))
+    .slice(0, 6);
+  const esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  let html = v && v !== sig ? '' : `<button type="button" class="eq-opt nuevo" data-cod="${sig}"><b>＋ ${sig}</b><span>${tipo.nombre} nuevo</span></button>`;
+  html += ord.map(x => {
+    const det = [uNom(x.unidadId), _haceDias(x.ultima)].filter(Boolean).join(' · ');
+    return `<button type="button" class="eq-opt" data-cod="${esc(x.codigo)}"><b>${esc(x.codigo)}</b><span>${esc(det)}</span></button>`;
+  }).join('');
+  box.innerHTML = lista.length ? html : '';
+  box.querySelectorAll('.eq-opt').forEach(b => {
+    b.onpointerdown = e => e.preventDefault();   // que el campo no pierda el foco: si no, su «change» redibuja la lista y el toque se pierde
+    b.onclick = () => _equipoElegir(c, b.dataset.cod, lista, sig, true);
+  });
+}
+function _equipoElegir(c, valor, lista, sig, tocado) {
+  const v = skfEquipoNormalizar(valor);
+  submission[c.id] = v;
+  const inp = document.getElementById('eqi_' + c.id);
+  if (inp) inp.value = v;
+  clearErr(c.id);
+  const eq = v && lista.find(x => x.codigo === v);
+  _equipoFicha(c, eq);
+  if (eq && eq.unidadId) {   // el lugar del equipo, si aún no se eligió
+    const sel = document.getElementById('fillUnidad');
+    if (sel && !sel.value && [...sel.options].some(o => o.value === eq.unidadId)) sel.value = eq.unidadId;
+  }
+  updateProgress();
+  _equipoPintar(c, lista, sig);
+  if (tocado && v) pasoRespondido(c);
+}
+function _equipoFicha(c, eq) {
+  const _n = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const antes = _fichaPuesta[c.id] || {};
+  const puesto = {};
+  let origen = null;
+  if (eq && eq.plantillaId !== activeTmpl.id) {
+    try { origen = JSON.parse(localStorage.getItem('skf_plantillas') || '[]').find(p => p.id === eq.plantillaId) || null; } catch {}
+  }
+  activeTmpl.campos.filter(x => x.equipoDato).forEach(x => {
+    const actual = submission[x.id];
+    const vacio = actual == null || String(actual).trim() === '';
+    if (!vacio && !(x.id in antes && antes[x.id] === actual)) return;   // lo escribió la persona: no se toca
+    let v;
+    if (eq) {
+      if (eq.plantillaId === activeTmpl.id) v = eq.datos[x.id];
+      else if (origen) { const o = (origen.campos || []).find(y => _n(y.etiqueta) === _n(x.etiqueta)); if (o) v = eq.datos[o.id]; }
+    }
+    if (v == null || v === '' || typeof v === 'object') v = '';
+    if (!v && vacio) return;
+    if (v) { submission[x.id] = v; puesto[x.id] = v; } else delete submission[x.id];
+    const el = document.querySelector(`#fg_${x.id} input:not([type=file]), #fg_${x.id} select, #fg_${x.id} textarea`);
+    if (el) el.value = v;
+  });
+  _fichaPuesta[c.id] = puesto;
 }
 
 // ── Hallazgos (detección automática + reporte manual) ───────────────
@@ -1563,6 +1686,9 @@ function submitForm() {
     // Lo que quedó oculto por una condición no se envía (ni sus hallazgos): podría ser una respuesta vieja.
     const datosEnvio = {...submission};
     activeTmpl.campos.forEach(c => { if (!_visible(c)) delete datosEnvio[c.id]; });
+    activeTmpl.campos.forEach(c => { if (c.tipo === 'equipo' && datosEnvio[c.id]) datosEnvio[c.id] = skfEquipoNormalizar(datosEnvio[c.id]); });
+    // Cada hallazgo dice de qué equipo es (EXT-003 · …): así se ubica sin abrir el registro.
+    const eqCod = activeTmpl.campos.filter(c => c.tipo === 'equipo' && datosEnvio[c.id]).map(c => datosEnvio[c.id]).join(', ');
     hallazgos = hallazgos.filter(h => { const c = activeTmpl.campos.find(x => x.id === h.campoId); return !c || _visible(c); });
 
     const envios = JSON.parse(localStorage.getItem('skf_envios')||'[]');
@@ -1593,7 +1719,7 @@ function submitForm() {
       campoEtiqueta: h.campoEtiqueta,
       origen: h.origen,
       severidad: h.severidad,
-      descripcion: h.descripcion || (h.valorDetectado ? `Respuesta registrada: ${h.valorDetectado}` : ''),
+      descripcion: [eqCod, h.descripcion || (h.valorDetectado ? `Respuesta registrada: ${h.valorDetectado}` : '')].filter(Boolean).join(' · '),
       foto: h.foto || null,
       estado: 'abierto',
       reportadoPor: envio.llenadoPor || ''
@@ -1869,13 +1995,14 @@ function showSubs(tmplId) {
     el.innerHTML = subs.map(s => {
       const d = new Date(s.enviadoEn||s.creadoEn).toLocaleString('es-CO');
       const pu = t ? skfPuntaje(t.campos, s.datos) : null;
+      const eq = t ? (t.campos || []).filter(c => c.tipo === 'equipo' && (s.datos || {})[c.id]).map(c => String(s.datos[c.id]).replace(/</g, '&lt;')).join(', ') : '';
       return `<div class="sub-card">
         <div class="sub-top">
           <span class="sub-name">${s.plantillaNombre}</span>
           <span class="sub-date">${d}</span>
         </div>
         <div class="sub-id">${s.id}</div>
-        <span class="sub-badge${s.estado!=='enviado'?' draft':''}">${s.estado==='enviado'?'✓ Enviado':'Borrador'}</span>
+        <span class="sub-badge${s.estado!=='enviado'?' draft':''}">${s.estado==='enviado'?'✓ Enviado':'Borrador'}</span>${eq ? `<span class="sub-eq">🏷 ${eq}</span>` : ''}
         ${pu ? `<span class="sub-score nv-${pu.nivel}" title="${pu.ok} de ${pu.total} puntos de control cumplen">${pu.pct} % · ${pu.nivel==='alto'?'alto':pu.nivel==='medio'?'medio':'bajo'}</span>` : ''}
       </div>`;
     }).join('');

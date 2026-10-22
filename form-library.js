@@ -239,8 +239,9 @@ async function skfAgregarKit(kit, paisCode, correo){
       correoNotificacion: correo || '', creadoEn: ahora, actualizadoEn: ahora,
       campos: t.campos_clave.map(function(f, i){ return {
         id: 'c' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
-        tipo: f.tipo, etiqueta: f.etiqueta, placeholder: '', requerido: f.tipo !== 'separador',
-        opciones: conOpciones(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined, _quality: 'ok' }; }),
+        tipo: f.tipo, etiqueta: f.etiqueta, placeholder: '', requerido: f.tipo !== 'separador' && f.requerido !== false,
+        opciones: conOpciones(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
+        prefijo: f.prefijo, equipoDato: f.equipoDato || undefined, _quality: 'ok' }; }),
     });
   });
   try { localStorage.setItem('skf_plantillas', JSON.stringify(lista.concat(nuevos))); } catch (e) { return 0; }
@@ -545,7 +546,8 @@ const FORM_LIBRARY = [
   {id:'inspeccion_botiquin',vertical:'sst',nucleo:true,freq:10,localizacion:SST_LOCAL,nombre:'Inspección de Botiquín y Brigada de Emergencias',
    keywords:['botiquin','brigada','emergencia','extintor','primeros auxilios','camilla','kit de emergencia','evacuacion','punto de encuentro'],
    campos_clave:[
-    {etiqueta:'Fecha de inspección',tipo:'fecha_auto'},{etiqueta:'Área / Ubicación',tipo:'texto'},
+    {etiqueta:'Fecha de inspección',tipo:'fecha_auto'},{etiqueta:'Botiquín',tipo:'equipo',prefijo:'BOT'},
+    {etiqueta:'Área / Ubicación',tipo:'texto',equipoDato:true},
     {etiqueta:'Inspector',tipo:'texto'},
     {etiqueta:'¿Botiquín visible y accesible?',tipo:'si_no'},
     {etiqueta:'¿Analgésicos disponibles?',tipo:'si_no'},{etiqueta:'¿Vendas y gasas?',tipo:'si_no'},
@@ -596,11 +598,13 @@ const FORM_LIBRARY = [
   {id:'inspeccion_extintores',vertical:'inmuebles',nombre:'Inspección de Extintores (NFPA 10)',norma:'NFPA 10',
    keywords:['extintor','extintores','nfpa 10','recarga','presion extintor','sello de seguridad'],
    campos_clave:[
-    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Ubicación del extintor',tipo:'texto'},
-    {etiqueta:'Tipo de extintor',tipo:'select',opciones:['ABC','CO2','Agente limpio','Agua','Espuma']},
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Extintor',tipo:'equipo',prefijo:'EXT'},
+    {etiqueta:'Ubicación del extintor',tipo:'texto',equipoDato:true},
+    {etiqueta:'Tipo de extintor',tipo:'select',opciones:['ABC','CO2','Agente limpio','Agua','Espuma'],equipoDato:true},
+    {etiqueta:'Capacidad (lb)',tipo:'texto',equipoDato:true,requerido:false},
     {etiqueta:'¿Presión en rango correcto?',tipo:'si_no'},{etiqueta:'¿Sello de seguridad intacto?',tipo:'si_no'},
     {etiqueta:'¿Señalización y acceso despejado?',tipo:'si_no'},{etiqueta:'¿Sin daños visibles en manguera o cilindro?',tipo:'si_no'},
-    {etiqueta:'Fecha de próxima recarga / vencimiento',tipo:'fecha'},{etiqueta:'Observaciones',tipo:'textarea'},
+    {etiqueta:'Fecha de próxima recarga / vencimiento',tipo:'fecha',equipoDato:true},{etiqueta:'Observaciones',tipo:'textarea'},
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma',tipo:'firma'},
   ]},
 
@@ -660,7 +664,8 @@ const FORM_LIBRARY = [
   {id:'inspeccion_gabinetes_mangueras',vertical:'inmuebles',nombre:'Inspección de Gabinetes y Mangueras Contra Incendio (NFPA 14)',
    keywords:['gabinete contra incendio','manguera','nfpa 14','valvula de manguera','hidrante','siamesa'],
    campos_clave:[
-    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Ubicación del gabinete',tipo:'texto'},
+    {etiqueta:'Fecha',tipo:'fecha_auto'},{etiqueta:'Gabinete',tipo:'equipo',prefijo:'GAB'},
+    {etiqueta:'Ubicación del gabinete',tipo:'texto',equipoDato:true},
     {etiqueta:'¿Gabinete accesible y sin obstrucciones?',tipo:'si_no'},{etiqueta:'¿Manguera en buen estado, sin grietas?',tipo:'si_no'},
     {etiqueta:'¿Válvula opera sin fugas?',tipo:'si_no'},{etiqueta:'Presión en el gabinete (PSI)',tipo:'numero'},
     {etiqueta:'¿Boquilla / pitón presente y funcional?',tipo:'si_no'},{etiqueta:'¿Señalización visible?',tipo:'si_no'},

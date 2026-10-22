@@ -71,7 +71,7 @@ check('field-types.js define el catálogo esperado', () => {
   vm.runInContext(FIELD_TYPES_SRC, sandbox, { filename: 'field-types.js' });
 
   const keys = vm.runInContext('FIELD_TYPES.map(t=>t.k)', sandbox);
-  const expected = ['fecha_auto','hora_auto','ubicacion','si_no','escala_1_5','select','radio','checkbox','checkbox_multi','firma','foto','texto','textarea','numero','email','telefono','fecha','separador'];
+  const expected = ['fecha_auto','hora_auto','ubicacion','si_no','escala_1_5','select','radio','checkbox','checkbox_multi','equipo','firma','foto','texto','textarea','numero','email','telefono','fecha','separador'];
   assert(JSON.stringify(keys) === JSON.stringify(expected), `claves inesperadas: ${JSON.stringify(keys)}`);
 
   const needsOpts = vm.runInContext("['select','radio','checkbox_multi','escala_1_5','si_no','texto'].map(fieldNeedsOptions)", sandbox);
