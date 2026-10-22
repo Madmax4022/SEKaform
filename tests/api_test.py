@@ -245,5 +245,21 @@ class Nombres(unittest.TestCase):
             self.assertTrue(callable(getattr(api.correo_avisos, f)), f)
 
 
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class Redireccion(unittest.TestCase):
+    """Escanear el QR de un equipo sin sesión debe volver al mismo equipo tras entrar."""
+    def test_login_conserva_la_consulta(self):
+        from urllib.parse import urlparse, parse_qs
+        with APP.test_client() as c:
+            r = c.get("/llenar.html?equipo=EXT-004")
+            self.assertEqual(r.status_code, 302)
+            nxt = parse_qs(urlparse(r.headers["Location"]).query)["next"][0]
+            self.assertEqual(nxt, "/llenar.html?equipo=EXT-004")
+            r = c.get("/plan.html")
+            self.assertEqual(parse_qs(urlparse(r.headers["Location"]).query)["next"][0], "/plan.html")
+            r = c.post("/login?next=" + nxt, data={"email": "x@nadie.co", "password": "malamala1!"})
+            self.assertNotIn("//", urlparse(r.headers.get("Location", "")).path or "")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

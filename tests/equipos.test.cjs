@@ -3,7 +3,7 @@
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = {}; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'field-types.js'), 'utf8') +
-  '\nthis.norm=skfEquipoNormalizar; this.sig=skfEquipoSiguiente; this.con=skfEquiposConocidos; this.tipo=skfEquipoTipo; this.pun=skfPuntaje;', ctx);
+  '\nthis.norm=skfEquipoNormalizar; this.sig=skfEquipoSiguiente; this.con=skfEquiposConocidos; this.tipo=skfEquipoTipo; this.pun=skfPuntaje; this.form=skfEquipoFormulario;', ctx);
 let ok = 0, fail = 0;
 const t = (n, c) => { if (c) ok++; else { fail++; console.error('FALLA:', n); } };
 
@@ -69,6 +69,17 @@ const muchos = ['EXT-004', 'EXT-005', 'EXT-006', 'EXT-007', 'EXT-008'].map(c => 
 const g = ag.agenda({ plantillas: plE, envios: muchos }, ahora).filter(i => i.tipo === 'equipo');
 t('tres o más se agrupan', g.length === 1 && g[0].titulo === '5 extintores · sin inspección al día' && /EXT-004, EXT-005, EXT-006, EXT-007 y 1 más/.test(g[0].detalle));
 t('el grupo va en Hoy', ag.hoyF(g).length === 1);
+
+// ── QR: qué formulario abre un código ────────────────────────────────
+t('QR: formulario de su última inspección', ctx.form('ext 2', envs, pls) === 'p1');
+t('QR: código nuevo de un tipo conocido', ctx.form('GAB-099', envs, pls) === 'p3');
+t('QR: formulario borrado → otro del mismo tipo', ctx.form('EXT-010', envs, pls.filter(p => p.id !== 'p2')) === 'p1');
+t('QR: tipo sin formulario', ctx.form('LUZ-001', envs, pls) === null);
+t('QR: vacío', ctx.form('', envs, pls) === null);
+const qr = {}; vm.createContext(qr);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'qrcode.js'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '..', 'etiquetas.js'), 'utf8') + '\nthis.svg=skfQrSvg;', qr);
+t('QR en el dispositivo: SVG', /^<svg[\s\S]*<path d="M/.test(qr.svg('https://sekaform.kanansentinel.com/llenar.html?equipo=EXT-004')));
+t('QR demasiado largo: vacío, sin romper', qr.svg('x'.repeat(5000)) === '');
 
 console.log(`${ok} pasaron, ${fail} fallaron (de ${ok + fail})`);
 process.exit(fail ? 1 : 0);

@@ -230,3 +230,20 @@ function skfEquiposEstado(envios, plantillas, ahora) {
   const peor = e => Math.min(e.diasInspeccion == null ? 999 : e.diasInspeccion, e.diasRecarga == null ? 999 : e.diasRecarga);
   return out.sort((a, b) => peor(a) - peor(b) || a.codigo.localeCompare(b.codigo, 'es', {numeric:true}));
 }
+
+// Qué formulario abre el QR de un equipo: el de su última inspección si sigue
+// existiendo; si no, cualquiera que tenga un campo de ese tipo de equipo.
+function skfEquipoFormulario(codigo, envios, plantillas) {
+  const cod = skfEquipoNormalizar(codigo);
+  if (!cod) return null;
+  const pls = plantillas || [];
+  const pref = (/^([A-Z]+)-\d+$/.exec(cod) || [])[1];
+  const prefijos = {};
+  pls.forEach(pl => (pl.campos || []).forEach(c => { if (c.tipo === 'equipo') prefijos[String(c.prefijo || 'EXT').toUpperCase()] = 1; }));
+  for (const p of Object.keys(prefijos)) {
+    const eq = skfEquiposConocidos(envios, pls, p).find(x => x.codigo === cod);
+    if (eq && pls.some(x => x.id === eq.plantillaId)) return eq.plantillaId;
+  }
+  const alguna = pref && pls.find(pl => (pl.campos || []).some(c => c.tipo === 'equipo' && String(c.prefijo || 'EXT').toUpperCase() === pref));
+  return alguna ? alguna.id : null;
+}
