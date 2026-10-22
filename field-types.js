@@ -143,18 +143,19 @@ function skfPuntaje(campos, datos) {
 // ubicación NO va en el código: si el equipo se mueve, el código y su historial
 // se mantienen. No hay inventario aparte: los equipos conocidos salen de los
 // registros ya hechos, así que funciona desde el primer día sin preparar nada.
+// dias: cada cuánto se inspecciona (NFPA 10, 14 y 101 piden revisión mensual).
 const SKF_EQUIPOS = [
-  {prefijo:'EXT', nombre:'Extintor',                 ico:'🧯'},
-  {prefijo:'GAB', nombre:'Gabinete contra incendio', ico:'🚒'},
-  {prefijo:'BOT', nombre:'Botiquín',                 ico:'🩹'},
-  {prefijo:'CAM', nombre:'Camilla',                  ico:'🛏'},
-  {prefijo:'LUZ', nombre:'Luz de emergencia',        ico:'💡'},
-  {prefijo:'ALA', nombre:'Pulsador / alarma',        ico:'🔔'},
-  {prefijo:'LAV', nombre:'Lavaojos / ducha',         ico:'🚿'},
+  {prefijo:'EXT', nombre:'Extintor',                 plural:'extintores',                ico:'🧯', dias:30},
+  {prefijo:'GAB', nombre:'Gabinete contra incendio', plural:'gabinetes contra incendio', ico:'🚒', dias:30},
+  {prefijo:'BOT', nombre:'Botiquín',                 plural:'botiquines',                ico:'🩹', dias:30},
+  {prefijo:'CAM', nombre:'Camilla',                  plural:'camillas',                  ico:'🛏', dias:30},
+  {prefijo:'LUZ', nombre:'Luz de emergencia',        plural:'luces de emergencia',       ico:'💡', dias:30},
+  {prefijo:'ALA', nombre:'Pulsador / alarma',        plural:'pulsadores / alarmas',      ico:'🔔', dias:30},
+  {prefijo:'LAV', nombre:'Lavaojos / ducha',         plural:'lavaojos / duchas',         ico:'🚿', dias:30},
 ];
 function skfEquipoTipo(prefijo) {
   const p = String(prefijo || 'EXT').toUpperCase();
-  return SKF_EQUIPOS.find(e => e.prefijo === p) || {prefijo:p, nombre:'Equipo', ico:'🏷'};
+  return SKF_EQUIPOS.find(e => e.prefijo === p) || {prefijo:p, nombre:'Equipo', plural:'equipos', ico:'🏷', dias:30};
 }
 // «ext 3», «Ext-03», «EXT3» → «EXT-003». Lo que no tenga esa forma (la
 // numeración propia de la empresa) se respeta tal cual, solo sin espacios de más.
@@ -195,4 +196,37 @@ function skfEquiposConocidos(envios, plantillas, prefijo) {
     });
   });
   return Object.values(por).sort((a, b) => a.codigo.localeCompare(b.codigo, 'es', {numeric:true}));
+}
+
+// Estado de cada equipo hoy: cuándo toca su próxima inspección y cuándo vence su
+// recarga (o prueba / vencimiento), tomada de un campo de fecha de su última
+// inspección cuya etiqueta lo diga. dias* < 0 = vencido; null = no aplica.
+const _SKF_RE_VENCE = /recarga|vencim|hidrost|caducidad/i;
+function _skfDiasHasta(fecha, ahora) {
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const s = String(fecha || '');
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + 'T00:00:00') : new Date(s);
+  if (isNaN(d.getTime())) return null;
+  return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - hoy) / 864e5);
+}
+function skfEquiposEstado(envios, plantillas, ahora) {
+  ahora = ahora || new Date();
+  const pls = plantillas || [];
+  const prefijos = {};
+  pls.forEach(pl => (pl.campos || []).forEach(c => { if (c.tipo === 'equipo') prefijos[String(c.prefijo || 'EXT').toUpperCase()] = 1; }));
+  const out = [];
+  Object.keys(prefijos).forEach(p => {
+    const tipo = skfEquipoTipo(p);
+    skfEquiposConocidos(envios, pls, p).forEach(eq => {
+      const pl = pls.find(x => x.id === eq.plantillaId);
+      const fv = pl && (pl.campos || []).find(c => c.tipo === 'fecha' && _SKF_RE_VENCE.test(c.etiqueta || '') && eq.datos[c.id]);
+      const recarga = fv ? String(eq.datos[fv.id]) : null;
+      const prox = new Date(new Date(eq.ultima).getTime() + tipo.dias * 864e5);
+      out.push({codigo:eq.codigo, tipo, unidadId:eq.unidadId, plantillaId:eq.plantillaId, ultima:eq.ultima,
+        proxima:isNaN(prox.getTime()) ? null : prox.toISOString(), diasInspeccion:_skfDiasHasta(prox.toISOString(), ahora),
+        recarga, diasRecarga:recarga ? _skfDiasHasta(recarga, ahora) : null});
+    });
+  });
+  const peor = e => Math.min(e.diasInspeccion == null ? 999 : e.diasInspeccion, e.diasRecarga == null ? 999 : e.diasRecarga);
+  return out.sort((a, b) => peor(a) - peor(b) || a.codigo.localeCompare(b.codigo, 'es', {numeric:true}));
 }

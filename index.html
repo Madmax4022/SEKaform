@@ -89,6 +89,7 @@
 <body>
   <script src="skf-api.js"></script>
   <script src="form-library.js"></script>
+  <script src="field-types.js"></script>
   <script src="agenda.js"></script>
   <script src="sidebar.js"></script>
 
@@ -201,7 +202,7 @@
       const lista = document.getElementById('hoyLista');
       if (hoyItems.length) {
         lista.innerHTML = hoyItems.slice(0, 5).map(i => `<a class="ag-item ${i.estado}" href="${i.href}">
-          <span class="ag-ico" aria-hidden="true">${SKF_AGENDA_TIPOS[i.tipo].ico}</span>
+          <span class="ag-ico" aria-hidden="true">${i.ico || SKF_AGENDA_TIPOS[i.tipo].ico}</span>
           <span><span class="ag-t">${_esc(i.titulo)}</span><span class="ag-d">${_esc(i.detalle)}</span></span>
           <span class="ag-cuando">${_esc(skfAgendaCuando(i))}</span></a>`).join('') +
           (hoyItems.length > 5 ? `<a class="skf-sheet-mas" href="plan.html">Y ${hoyItems.length - 5} más en el plan ›</a>` : '');
