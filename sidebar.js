@@ -202,57 +202,153 @@ async function skfApplyRoleGating() {
   else document.body.insertAdjacentElement('afterbegin', bar);
 }
 
+// ── Mapa de la app: secciones y a cuál pertenece cada página ────────────────
+// Hacer (Registrar) · Planear (Plan) · Seguir (Hallazgos) · Demostrar (Cumplimiento) · Configurar (Mi empresa)
+const SKF_SECCIONES = {
+  hoy:          { t: 'Hoy',          ico: '🏠', href: 'index.html' },
+  plan:         { t: 'Plan',         ico: '📅', href: 'plan.html' },
+  hallazgos:    { t: 'Hallazgos',    ico: '⚠️', href: 'hallazgos.html' },
+  cumplimiento: { t: 'Cumplimiento', ico: '🎯', href: 'cumplimiento.html' },
+  empresa:      { t: 'Mi empresa',   ico: '🏢', href: 'empresa.html' },
+};
+// página → [sección, título si es una subpágina (muestra «‹ sección» para volver)]
+const SKF_PAGINAS = {
+  '': ['hoy'], 'index.html': ['hoy'],
+  'plan.html': ['plan'], 'programadas.html': ['plan', 'Rutinas'], 'asignaciones.html': ['plan', 'Encargos'], 'turnos.html': ['plan', 'Turnos'],
+  'hallazgos.html': ['hallazgos'],
+  'cumplimiento.html': ['cumplimiento'], 'dashboard.html': ['cumplimiento', 'Panel y reportes'],
+  'empresa.html': ['empresa'], 'organizacion.html': ['empresa', 'Datos de la empresa'], 'unidades.html': ['empresa', 'Lugares'],
+  'plantillas.html': ['empresa', 'Catálogo'], 'llenar.html': ['empresa', 'Formularios'], 'digitalizador.html': ['empresa', 'Crear formulario'],
+  'bienvenida.html': ['empresa', 'Configurar'],
+};
+
+// ── Hoja inferior genérica (bottom sheet) ───────────────────────────────────
+// Se abre desde abajo, en la zona del pulgar. Se cierra tocando fuera, con Esc, con la ✕
+// o arrastrando hacia abajo. Devuelve el elemento del contenido.
+function skfSheet(titulo, cuerpoHtml, origen) {
+  skfSheetCerrar();
+  const w = document.createElement('div');
+  w.className = 'skf-sheet-wrap'; w.id = 'skfSheet';
+  w.innerHTML = `<div class="skf-sheet-bg" data-cerrar></div>
+    <div class="skf-sheet" role="dialog" aria-modal="true" aria-labelledby="skfSheetT">
+      <div class="skf-sheet-grab" aria-hidden="true"></div>
+      <div class="skf-sheet-hd"><h2 id="skfSheetT">${titulo}</h2><button type="button" class="skf-sheet-x" data-cerrar aria-label="Cerrar">✕</button></div>
+      <div class="skf-sheet-body">${cuerpoHtml}</div>
+    </div>`;
+  document.body.appendChild(w);
+  w._origen = origen || document.activeElement;
+  w.addEventListener('click', e => { if (e.target.closest('[data-cerrar]')) skfSheetCerrar(); });
+  // Arrastrar hacia abajo desde la cabecera para cerrar, como en una app nativa.
+  const hoja = w.querySelector('.skf-sheet'); let y0 = null, dy = 0;
+  hoja.addEventListener('touchstart', e => { if (hoja.scrollTop <= 0 && e.target.closest('.skf-sheet-grab,.skf-sheet-hd')) { y0 = e.touches[0].clientY; dy = 0; } }, { passive: true });
+  hoja.addEventListener('touchmove', e => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); hoja.style.transform = `translateY(${dy}px)`; }, { passive: true });
+  hoja.addEventListener('touchend', () => { if (y0 === null) return; y0 = null; hoja.style.transform = ''; if (dy > 90) skfSheetCerrar(); });
+  requestAnimationFrame(() => w.classList.add('on'));
+  document.documentElement.classList.add('skf-sheet-abierta');
+  const primero = w.querySelector('.skf-sheet-body a, .skf-sheet-body button');
+  if (primero) primero.focus({ preventScroll: true });
+  return w.querySelector('.skf-sheet-body');
+}
+function skfSheetCerrar() {
+  const w = document.getElementById('skfSheet');
+  if (!w) return;
+  document.documentElement.classList.remove('skf-sheet-abierta');
+  const origen = w._origen;
+  w.remove();
+  if (origen && origen.focus) origen.focus({ preventScroll: true });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') skfSheetCerrar(); });
+
+// ── «Registrar»: lo que se hace en campo, a un toque ────────────────────────
+// Primero los formularios propios (favoritos y los más usados); luego los reportes de SST que
+// cualquiera debe poder hacer sin buscar: un peligro, un accidente, una capacitación. Esos van al
+// catálogo con ?preset=…, que abre el formulario propio si ya existe (no crea copias).
+function skfRegistrar() {
+  if (document.documentElement.classList.contains('skf-lector')) {
+    skfSheet('Solo lectura', '<p class="skf-sheet-nota">Tu rol es de solo lectura: puedes ver todo, pero no registrar. Pídele a un administrador que cambie tu permiso.</p>');
+    return;
+  }
+  try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+  const lee = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } };
+  const plts = lee('skf_plantillas'), envs = lee('skf_envios');
+  const uso = {}; envs.forEach(e => { const id = e.plantillaId || e.plantilla_id; const f = e.enviadoEn || e.creadoEn || ''; if (id && (!uso[id] || f > uso[id])) uso[id] = f; });
+  const evento = /accidente|incidente/i;
+  const mios = plts.filter(p => p && p.id && !evento.test(p.nombre || ''))
+    .sort((a, b) => (b.favorito ? 1 : 0) - (a.favorito ? 1 : 0) || String(uso[b.id] || '').localeCompare(String(uso[a.id] || '')) || String(a.nombre).localeCompare(String(b.nombre)))
+    .slice(0, 5);
+  const fila = (href, ico, t, sub, cls) => `<a class="skf-opt${cls ? ' ' + cls : ''}" href="${href}"><span class="so-ico" aria-hidden="true">${ico}</span><span class="so-txt"><b>${_skfEsc(t)}</b>${sub ? `<small>${_skfEsc(sub)}</small>` : ''}</span><span class="so-arr" aria-hidden="true">›</span></a>`;
+  const formularios = mios.length
+    ? mios.map(p => fila('llenar.html?tmpl=' + encodeURIComponent(p.id), p.favorito ? '⭐' : '📋', p.nombre, uso[p.id] ? 'Último: ' + new Date(uso[p.id]).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : 'Aún sin registros')).join('')
+    : fila('digitalizador.html?preset=inspeccion_sst', '📋', 'Lista de verificación SST', 'La inspección básica de seguridad');
+  skfSheet('¿Qué vas a registrar?', `
+    <div class="skf-sheet-sec">Inspeccionar</div>${formularios}
+    <a class="skf-sheet-mas" href="llenar.html">Ver todos mis formularios ›</a>
+    <div class="skf-sheet-sec">Reportar</div>
+    ${fila('digitalizador.html?preset=reporte_condicion_acto_inseguro', '⚠️', 'Un peligro o acto inseguro', 'Algo que puede causar un accidente')}
+    ${fila('digitalizador.html?preset=incidente_accidente', '🚑', 'Un accidente o incidente', 'Lo que ya pasó: registrarlo es obligatorio', 'urgente')}
+    ${fila('digitalizador.html?preset=asistencia', '🎓', 'Asistencia a una capacitación', 'Quién asistió y firmas')}`);
+}
+
 function skfRenderSidebar() {
   const current = (location.pathname.split('/').pop() || 'index.html');
-  // Menú agrupado: la SST es la estrella; la configuración y las herramientas
-  // de creación quedan en un grupo colapsable ("segundo plano").
-  const GRUPOS = [
-    { h: '⛑️ Salud Ocupacional', links: [
-      { href: 'index.html',        ico: '⛑️', label: 'Centro de SST' },
-      { href: 'cumplimiento.html', ico: '🎯', label: 'Mapa de cumplimiento' },
-      { href: 'hallazgos.html',    ico: '⚠️', label: 'Hallazgos' },
-    ]},
-    { h: 'Día a día', links: [
-      { href: 'llenar.html',    ico: '📝', label: 'Mis formularios' },
-      { href: 'dashboard.html', ico: '📊', label: 'Panel de control' },
-    ]},
-    { h: 'Configuración y más', colapsable: true, links: [
-      { href: 'bienvenida.html',    ico: '🧭', label: 'Configurar mi empresa' },
-      { href: 'digitalizador.html', ico: '⚡', label: 'Crear formulario' },
-      { href: 'plantillas.html',    ico: '📋', label: 'Formularios listos' },
-      { href: 'asignaciones.html',  ico: '👥', label: 'Asignaciones' },
-      { href: 'turnos.html',        ico: '🔄', label: 'Control por turnos' },
-      { href: 'programadas.html',   ico: '📅', label: 'Programadas' },
-      { href: 'unidades.html',      ico: '🏢', label: 'Sedes y áreas' },
-      { href: 'organizacion.html',  ico: '⚙️', label: 'Organización' },
-    ]},
+  const [secActual, subTitulo] = SKF_PAGINAS[current] || ['hoy'];
+  const sec = SKF_SECCIONES[secActual];
+
+  // Escritorio: el mismo orden que la barra del teléfono — hacer, planear, seguir, demostrar;
+  // y aparte, «Mi empresa» para configurar. 8 enlaces en lugar de 13.
+  const PRINCIPAL = [
+    { href: 'index.html', s: 'hoy' }, { href: 'plan.html', s: 'plan' },
+    { href: 'hallazgos.html', s: 'hallazgos' }, { href: 'cumplimiento.html', s: 'cumplimiento' },
+    { href: 'dashboard.html', ico: '📊', label: 'Panel y reportes' },
   ];
-  const _sl = l => `<a href="${l.href}" class="sidebar-link${current === l.href ? ' active' : ''}"><span class="sidebar-ico">${l.ico}</span>${l.label}</a>`;
-  const links = GRUPOS.map(g => {
-    const items = g.links.map(_sl).join('');
-    if (g.colapsable) {
-      const aqui = g.links.some(l => l.href === current);
-      return `<details class="sidebar-group"${aqui ? ' open' : ''}><summary class="sidebar-group-h">${g.h}</summary>${items}</details>`;
-    }
-    return `<div class="sidebar-group"><div class="sidebar-group-h">${g.h}</div>${items}</div>`;
-  }).join('');
+  const EMPRESA = [
+    { href: 'empresa.html', s: 'empresa' },
+    { href: 'llenar.html', ico: '📋', label: 'Formularios' },
+    { href: 'unidades.html', ico: '📍', label: 'Lugares' },
+  ];
+  const _sl = l => {
+    const d = l.s ? SKF_SECCIONES[l.s] : l;
+    const activo = current === l.href || (l.s && l.s === secActual && !PRINCIPAL.concat(EMPRESA).some(x => x.href === current && x !== l));
+    return `<a href="${l.href}" class="sidebar-link${activo ? ' active' : ''}"${activo ? ' aria-current="page"' : ''}><span class="sidebar-ico">${d.ico}</span>${d.label || d.t}</a>`;
+  };
+  const links = `<button type="button" class="sidebar-registrar" onclick="skfRegistrar()">＋ Registrar</button>
+    <div class="sidebar-group">${PRINCIPAL.map(_sl).join('')}</div>
+    <div class="sidebar-group"><div class="sidebar-group-h">Mi empresa</div>${EMPRESA.map(_sl).join('')}</div>`;
+
+  // Teléfono: barra superior que siempre dice DÓNDE estás (sección, o «‹ sección» en una
+  // subpágina) y lleva a «Mi empresa»; y barra inferior para el pulgar con «Registrar» al centro.
+  // Las pantallas de tarea (llenar un formulario, crear uno) ya tienen su propia barra.
+  const tieneToolbar = !!document.querySelector('.page-toolbar') || /^(llenar|digitalizador)\.html$/.test(current);
+  const appbar = tieneToolbar ? '' : `
+    <header class="skf-appbar" id="skfAppbar">
+      ${subTitulo
+        ? `<a class="ab-back" href="${sec.href}" aria-label="Volver a ${sec.t}"><span aria-hidden="true">‹</span> ${sec.t}</a><span class="ab-sub">${subTitulo}</span>`
+        : `<span class="ab-title"><span aria-hidden="true">${sec.ico}</span> ${sec.t}</span>`}
+      ${typeof skfDemoActivo === 'function' && skfDemoActivo() ? '<span class="ab-demo" title="Datos de ejemplo: nada es real">🧪 Ejemplo</span>' : ''}
+      <a class="ab-empresa${secActual === 'empresa' ? ' on' : ''}" href="empresa.html" aria-label="Mi empresa" id="abEmpresa"><span id="abInicial">🏢</span></a>
+    </header>`;
+  const tab = k => {
+    const x = SKF_SECCIONES[k], on = k === secActual;
+    return `<a href="${x.href}" class="bb-tab${on ? ' active' : ''}" data-sec="${k}"${on ? ' aria-current="page"' : ''}><span class="bi" aria-hidden="true">${x.ico}</span><span class="bl">${x.t}</span></a>`;
+  };
 
   const html = `
     <div class="skf-sync-bar" id="skfSyncBar" style="display:none"></div>
     <button class="sidebar-toggle" id="sidebarToggle" onclick="skfToggleSidebar()" title="Mostrar/ocultar menú" aria-label="Mostrar/ocultar menú">☰</button>
     <aside class="sidebar" id="sidebar">
       <a href="index.html" class="sidebar-logo">SEK<span>a</span>form</a>
-      <nav class="sidebar-nav">${links}</nav>
+      <nav class="sidebar-nav" aria-label="Menú principal">${links}</nav>
       <div class="sidebar-bottom" id="sidebarAuth">
         <a class="auth-link" href="login.html">Iniciar sesión ☁</a>
       </div>
     </aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="skfToggleSidebar(false)"></div>
+    ${appbar}
     <nav class="skf-bottom-bar" id="skfBottomBar" aria-label="Navegación">
-      <a href="index.html"     class="bb-tab" data-page="index.html"><span class="bi">⛑️</span>SST</a>
-      <a href="llenar.html"    class="bb-tab" data-page="llenar.html"><span class="bi">📝</span>Llenar</a>
-      <a href="dashboard.html" class="bb-tab" data-page="dashboard.html"><span class="bi">📊</span>Panel</a>
-      <button type="button" class="bb-tab" onclick="skfToggleSidebar(true)"><span class="bi">⋯</span>Más</button>
+      ${tab('hoy')}${tab('plan')}
+      <button type="button" class="bb-fab" onclick="skfRegistrar()" aria-label="Registrar algo nuevo" aria-haspopup="dialog">
+        <span class="bb-fab-c" aria-hidden="true">＋</span><span class="bl">Registrar</span></button>
+      ${tab('hallazgos')}${tab('cumplimiento')}
     </nav>
   `;
   document.body.insertAdjacentHTML('afterbegin', html);
@@ -298,12 +394,11 @@ function skfRenderSidebar() {
     } catch (e) {}
   })();
 
-  // Marca la pestaña activa de la barra inferior según la página actual.
-  const _cur = (location.pathname.split('/').pop() || 'index.html');
-  document.querySelectorAll('#skfBottomBar .bb-tab[data-page]').forEach(t => {
-    const pg = t.getAttribute('data-page');
-    if (pg === _cur || (pg === 'index.html' && (_cur === '' || _cur === 'index.html'))) t.classList.add('active');
-  });
+  // «Mi empresa» con la inicial de la organización, para que se sienta propio.
+  if (typeof sbLoadOrg === 'function' && document.getElementById('abInicial')) {
+    sbLoadOrg().then(o => { const n = (o && o.nombre || '').trim(); if (n) document.getElementById('abInicial').textContent = n[0].toUpperCase(); }).catch(() => {});
+  }
+
 
   // En páginas con barra de herramientas (llenar, digitalizador) los botones
   // de la toolbar viven arriba a la derecha, justo donde flota la barra de

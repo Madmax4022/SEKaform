@@ -45,10 +45,12 @@ PAGINAS = {
     "turnos.html": "turnos.html",
     "dashboard.html": "dashboard.html",
     "organizacion.html": "organizacion.html",
+    "plan.html": "plan.html",
+    "empresa.html": "empresa.html",
 }
 
 ESTATICOS = {
-    "styles.css", "field-types.js", "form-library.js", "sidebar.js",
+    "styles.css", "field-types.js", "form-library.js", "sidebar.js", "agenda.js",
     "chart.min.js", "sw.js", "manifest.json", "skf-api.js",
     # login.html ya no es una pantalla: es un desvío a /login, que es donde
     # Flask sirve el formulario de verdad. Va aquí y no en PAGINAS porque no

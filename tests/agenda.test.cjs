@@ -1,0 +1,86 @@
+// Agenda única (agenda.js): rutinas, encargos y turnos en una sola lista ordenada.
+// Ejecutar: node tests/agenda.test.cjs
+const fs = require('fs'), path = require('path');
+const src = fs.readFileSync(path.join(__dirname, '..', 'form-library.js'), 'utf8') + '\n' +
+  fs.readFileSync(path.join(__dirname, '..', 'agenda.js'), 'utf8').replace(/if \(typeof module[^\n]*\n?$/, '') +
+  ';module.exports={skfAgenda,skfAgendaHoy,skfAgendaCuando};';
+const m = { exports: {} };
+new Function('module', 'require', src)(m, require);
+const { skfAgenda, skfAgendaHoy, skfAgendaCuando } = m.exports;
+
+let ok = 0, fail = 0;
+function t(n, fn) { try { fn(); ok++; } catch (e) { fail++; console.log('FAIL: ' + n + '\n   ' + e.message); } }
+function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg || '') + ' esperado ' + JSON.stringify(b) + ' pero fue ' + JSON.stringify(a)); }
+
+const AHORA = new Date(2026, 9, 22, 10, 0);       // 22-oct-2026 10:00 local
+const F = d => { const x = new Date(2026, 9, 22 + d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+const PL = [{ id: 'p1', nombre: 'Lista SST' }, { id: 'p2', nombre: 'Extintores' }, { id: 'p3', nombre: 'Entrega de turno' }];
+const UN = [{ id: 'u1', nombre: 'Bodega' }];
+
+t('rutinas: vencida, hoy, pronto, después; formas nube y local', () => {
+  const a = skfAgenda({ plantillas: PL, unidades: UN, inspecciones: [
+    { id: 'a', plantilla_id: 'p2', nombre: 'Extintores', proximo_en: F(-3), frecuencia: 'mensual', unidad_id: 'u1' },
+    { id: 'b', plantillaId: 'p1', proximoEn: F(0), frecuencia: 'semanal' },
+    { id: 'c', plantillaId: 'p1', proximoEn: F(5) },
+    { id: 'd', plantillaId: 'p1', proximoEn: F(30) },
+    { id: 'e', plantillaId: 'p1', proximoEn: F(-1), activa: false },
+  ] }, AHORA);
+  eq(a.map(i => i.estado), ['vencido', 'hoy', 'pronto', 'despues']);
+  eq(a[0].detalle, 'cada mes · Bodega');
+  eq(a[1].titulo, 'Lista SST', 'sin nombre propio usa el del formulario');
+  eq(a[0].href, 'llenar.html?tmpl=p2');
+});
+
+t('encargos: pendiente hasta que ESA persona envía, después de encargarlo', () => {
+  const asg = [{ id: 'x', plantillaId: 'p1', nombre: 'Ana Pérez', creadoEn: '2026-10-20T00:00:00' },
+               { id: 'y', plantillaId: 'p1', nombre: 'Beto', creadoEn: '2026-10-20T00:00:00' },
+               { id: 'z', plantillaId: 'p1', nombre: 'Cris', creadoEn: '2026-10-20T00:00:00' }];
+  const env = [{ plantillaId: 'p1', llenadoPor: 'ana perez', creadoEn: '2026-10-21T00:00:00' },   // Ana: hecho (sin tildes/mayúsculas)
+               { plantillaId: 'p1', llenadoPor: 'Beto', creadoEn: '2026-10-19T00:00:00' }];      // Beto: antes del encargo → no cuenta
+  const a = skfAgenda({ plantillas: PL, asignaciones: asg, envios: env }, AHORA);
+  eq(a.map(i => i.detalle), ['Para Beto', 'Para Cris']);
+  eq(a.every(i => i.estado === 'pendiente'), true, 'sin fecha límite → pendiente');
+});
+
+t('encargo con fecha límite vencida se ordena primero', () => {
+  const a = skfAgenda({ plantillas: PL, asignaciones: [
+    { id: 'x', plantillaId: 'p1', nombre: 'Ana', creadoEn: '2026-10-01', fecha_limite: F(-2) }],
+    inspecciones: [{ id: 'b', plantillaId: 'p1', proximoEn: F(0) }] }, AHORA);
+  eq(a.map(i => i.tipo), ['encargo', 'rutina']);
+});
+
+t('turnos: lo que falta del turno en curso y lo omitido hoy', () => {
+  const cfg = { turnos: [{ id: 'n', nombre: 'Noche', inicio: '22:00', fin: '06:00' }, { id: 'm', nombre: 'Mañana', inicio: '06:00', fin: '14:00' }],
+                esperado: ['p3'] };
+  const a = skfAgenda({ plantillas: PL, turnosConfig: cfg, envios: [] }, AHORA);
+  eq(a.map(i => [i.tipo, i.estado, i.titulo]), [['turno', 'vencido', 'Entrega de turno'], ['turno', 'hoy', 'Entrega de turno']]);
+  const b = skfAgenda({ plantillas: PL, turnosConfig: cfg,
+    envios: [{ plantillaId: 'p3', enviadoEn: new Date(2026, 9, 22, 7).toISOString() }] }, AHORA);
+  eq(b.map(i => i.estado), ['vencido'], 'el turno en curso ya cumplió; solo queda el de la noche');
+});
+
+t('sin datos: lista vacía, sin errores', () => { eq(skfAgenda({}, AHORA), []); eq(skfAgenda(null, AHORA), []); });
+
+t('Hoy = vencido + hoy + encargos sin fecha (no lo de la semana)', () => {
+  const a = skfAgenda({ plantillas: PL,
+    inspecciones: [{ id: 'a', plantillaId: 'p1', proximoEn: F(-1) }, { id: 'c', plantillaId: 'p1', proximoEn: F(3) }],
+    asignaciones: [{ id: 'x', plantillaId: 'p1', nombre: 'Ana', creadoEn: '2026-10-01' }] }, AHORA);
+  eq(skfAgendaHoy(a).map(i => i.estado), ['vencido', 'pendiente']);
+});
+
+t('textos de cuándo', () => {
+  eq(skfAgendaCuando({ tipo: 'rutina', dias: -1 }), 'Venció hace 1 día');
+  eq(skfAgendaCuando({ tipo: 'rutina', dias: -4 }), 'Venció hace 4 días');
+  eq(skfAgendaCuando({ tipo: 'rutina', dias: 0 }), 'Hoy');
+  eq(skfAgendaCuando({ tipo: 'rutina', dias: 1 }), 'Mañana');
+  eq(skfAgendaCuando({ tipo: 'encargo', dias: null }), 'Sin fecha');
+  eq(skfAgendaCuando({ tipo: 'turno', estado: 'vencido' }), 'Faltó');
+});
+
+t('formulario borrado: el enlace cae en la lista, no en uno inexistente', () => {
+  const a = skfAgenda({ plantillas: [], inspecciones: [{ id: 'a', plantillaId: 'zz', nombre: 'X', proximoEn: F(0) }] }, AHORA);
+  eq(a[0].href, 'llenar.html');
+});
+
+console.log(`${ok} pasaron, ${fail} fallaron (de ${ok + fail})`);
+process.exit(fail ? 1 : 0);

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Mi empresa — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 16px 40px; }
+    .org { display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 20px; margin-bottom: 6px;
+      background: linear-gradient(145deg, rgba(59,130,246,.16), var(--card) 70%); border: 1px solid var(--bor); }
+    .org-av { width: 60px; height: 60px; border-radius: 18px; flex: 0 0 60px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 900; color: #fff; background: linear-gradient(145deg, #3b82f6, #1d4ed8); overflow: hidden; }
+    .org-av img { width: 100%; height: 100%; object-fit: cover; }
+    .org-n { font-size: 1.25rem; font-weight: 900; letter-spacing: -.3px; line-height: 1.2; }
+    .org-s { color: var(--mut); font-size: .84rem; margin-top: 3px; }
+    .sec { margin: 24px 2px 10px; font-size: .74rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--mut); }
+    .sec-nota { color: var(--mut); font-size: .82rem; margin: -4px 2px 10px; line-height: 1.45; }
+    button.skf-opt { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+    .areas-list { display: flex; flex-direction: column; }
+    .area-btn { background: var(--pri); color: #fff; border: none; border-radius: 10px; min-height: 40px; padding: 0 14px; font: inherit; font-size: .84rem; font-weight: 800; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+    .area-btn.ok { background: var(--ok-dim); color: var(--ok); border: 1px solid rgba(26,188,156,.35); }
+    .area-btn[disabled] { opacity: .6; }
+    .opts-pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+    .opts-pick[hidden] { display: none; }
+    .opts-pick button { min-height: 44px; background: var(--card); border: 1px solid var(--bor); color: var(--txt); border-radius: 999px; padding: 0 15px; font: inherit; font-size: .86rem; cursor: pointer; }
+    .salir { color: var(--err-txt); }
+    .version { text-align: center; color: var(--mut); font-size: .74rem; margin-top: 26px; }
+  </style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <div class="org">
+    <div class="org-av" id="orgAv">🏢</div>
+    <div><div class="org-n" id="orgN">Mi empresa</div><div class="org-s" id="orgS">Todo lo que se configura una vez</div></div>
+  </div>
+
+  <div class="sec">Tu empresa</div>
+  <a class="skf-opt" href="organizacion.html"><span class="so-ico">🏷️</span><span class="so-txt"><b>Nombre, país y logo</b><small>Lo que aparece en tus reportes</small></span><span class="so-arr">›</span></a>
+  <a class="skf-opt" href="bienvenida.html"><span class="so-ico">🧭</span><span class="so-txt"><b>Perfil de seguridad y salud</b><small id="perfilS">Tamaño y nivel de riesgo: definen lo que la ley te exige</small></span><span class="so-arr">›</span></a>
+
+  <div class="sec">Dónde trabajas</div>
+  <a class="skf-opt" href="unidades.html"><span class="so-ico">📍</span><span class="so-txt"><b>Lugares</b><small id="lugS">Sedes, áreas y contratistas — para saber dónde pasó cada cosa</small></span><span class="so-arr">›</span></a>
+
+  <div class="sec">Con qué trabajas</div>
+  <a class="skf-opt" href="llenar.html"><span class="so-ico">📋</span><span class="so-txt"><b>Mis formularios</b><small id="frmS">Los que usas para inspeccionar y registrar</small></span><span class="so-arr">›</span></a>
+  <a class="skf-opt" href="plantillas.html"><span class="so-ico">📚</span><span class="so-txt"><b>Formularios listos</b><small>Catálogo por norma: SST, NFPA, alimentos, construcción, calidad…</small></span><span class="so-arr">›</span></a>
+  <a class="skf-opt" href="digitalizador.html"><span class="so-ico">📸</span><span class="so-txt"><b>Pasar un formulario de papel</b><small>Foto, PDF o texto: lo convertimos en digital</small></span><span class="so-arr">›</span></a>
+
+  <div id="areas" hidden>
+    <div class="sec">Otras áreas de tu empresa</div>
+    <p class="sec-nota">La seguridad y salud en el trabajo es el centro. Si además manejas cocina, edificio, obra, vigilancia o calidad, agrega su kit de formularios.</p>
+    <div id="areasList" class="areas-list"></div>
+    <button type="button" class="skf-opt" id="areaAdd"><span class="so-ico">＋</span><span class="so-txt"><b>Agregar otra área</b></span><span class="so-arr">›</span></button>
+    <div class="opts-pick" id="areaPick" hidden></div>
+  </div>
+
+  <div class="sec">Avisos</div>
+  <a class="skf-opt" href="llenar.html"><span class="so-ico">🔔</span><span class="so-txt"><b>Avisos de cumplimiento bajo</b><small>Correo cuando una inspección sale mal — se ajusta en cada formulario</small></span><span class="so-arr">›</span></a>
+  <button type="button" class="skf-opt" id="btnNotif"><span class="so-ico" id="notifIco">🔕</span><span class="so-txt"><b>Alertas de hallazgos críticos</b><small id="notifS">Notificación en este teléfono cuando se reporta algo crítico</small></span><span class="so-arr">›</span></button>
+
+  <div class="sec">Tu cuenta</div>
+  <div class="skf-opt" style="cursor:default"><span class="so-ico">👤</span><span class="so-txt"><b id="ctaMail">Sin sesión</b><small id="ctaRol"></small></span><span></span></div>
+  <button type="button" class="skf-opt" id="btnOffline"><span class="so-ico">📥</span><span class="so-txt"><b>Usar sin conexión</b><small id="offS">Prepara la app para inspeccionar sin señal</small></span><span class="so-arr">›</span></button>
+  <a class="skf-opt" href="/admin" id="lnkAdmin" hidden><span class="so-ico">🛡️</span><span class="so-txt"><b>Administración de la plataforma</b><small>Organizaciones y accesos (solo super administradores)</small></span><span class="so-arr">›</span></a>
+  <button type="button" class="skf-opt" id="btnSalir" hidden><span class="so-ico">🚪</span><span class="so-txt"><b class="salir">Cerrar sesión</b></span><span></span></button>
+  <a class="skf-opt" href="login.html" id="lnkLogin" hidden><span class="so-ico">☁</span><span class="so-txt"><b>Iniciar sesión</b><small>Para guardar en la nube y trabajar en equipo</small></span><span class="so-arr">›</span></a>
+
+  <p class="version">SEKaform · Kanan Sentinel</p>
+</div>
+
+<script>
+const ROLES = { dueno: 'Dueño de la cuenta', admin: 'Administrador', editor: 'Puede registrar y editar', lector: 'Solo lectura' };
+const PAIS = { co: 'Colombia', pa: 'Panamá', cr: 'Costa Rica', sv: 'El Salvador' };
+const PAIS_COD = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa', 'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
+const $ = id => document.getElementById(id);
+const lee = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } };
+
+(async () => {
+  let user = null, org = null;
+  try { user = await sbGetUser(); } catch (e) {}
+  try { org = await sbLoadOrg(); } catch (e) {}
+  const pc = PAIS_COD[String((org && org.pais) || '').trim().toLowerCase()] || 'co';
+
+  if (org && org.nombre) {
+    $('orgN').textContent = org.nombre;
+    $('orgAv').textContent = org.nombre.trim()[0].toUpperCase();
+    $('orgS').textContent = (PAIS[pc] || '') + (user && user.rol ? ' · ' + (ROLES[user.rol] || user.rol) : '');
+  }
+  const logo = org && (org.logo || org.logo_url);
+  if (logo) $('orgAv').innerHTML = `<img src="${String(logo).replace(/"/g, '&quot;')}" alt="">`;
+
+  const email = (user && user.email) || '';
+  const perfil = skfPerfilGet(email) || {};
+  if (perfil.completo) $('perfilS').textContent = 'Listo' + (perfil.trabajadores ? ' · ' + perfil.trabajadores + ' trabajadores' : '') + (perfil.riesgo ? ' · riesgo ' + perfil.riesgo : '');
+
+  const lug = lee('skf_unidades').length; if (lug) $('lugS').textContent = lug + ' lugar' + (lug !== 1 ? 'es' : '') + ' registrado' + (lug !== 1 ? 's' : '');
+  const frm = lee('skf_plantillas').length; if (frm) $('frmS').textContent = frm + ' formulario' + (frm !== 1 ? 's' : '') + ' — y sus avisos';
+
+  if (user) {
+    $('ctaMail').textContent = user.email;
+    $('ctaRol').textContent = ROLES[user.rol] || '';
+    $('btnSalir').hidden = false;
+    $('lnkAdmin').hidden = !user.esSuper;
+  } else {
+    $('lnkLogin').hidden = false;
+  }
+
+  // ── Kits por área (vienen del antiguo inicio) ──────────────────────────
+  const kitDe = id => AREA_KITS.find(k => k.id === id);
+  const areasSel = () => ((skfPerfilGet(email) || {}).areas || []).map(kitDe).filter(Boolean);
+  function pintarAreas() {
+    $('areas').hidden = false;
+    const sel = areasSel();
+    $('areasList').innerHTML = sel.map(k => {
+      const falta = skfKitFaltantes(k, pc).length;
+      const extra = k.extra && !falta ? ` · <a href="${k.extra.href}" style="color:var(--pri-txt)">${k.extra.label}</a>` : '';
+      return `<div class="skf-opt" data-id="${k.id}"><span class="so-ico">${k.ico}</span>
+        <span class="so-txt"><b>${k.nombre}</b><small>${falta ? falta + ' formulario' + (falta !== 1 ? 's' : '') + ' por agregar' : 'Kit listo en «Mis formularios»'}${extra}</small></span>
+        ${falta ? `<button class="area-btn" data-kit="${k.id}">Agregar</button>` : '<a class="area-btn ok" href="llenar.html">Abrir</a>'}</div>`;
+    }).join('');
+    const libres = AREA_KITS.filter(k => !sel.some(s => s.id === k.id));
+    $('areaAdd').hidden = !libres.length;
+    $('areaPick').innerHTML = libres.map(k => `<button type="button" data-pick="${k.id}">${k.ico} ${k.nombre}</button>`).join('');
+  }
+  $('areas').addEventListener('click', async e => {
+    const kb = e.target.closest('[data-kit]');
+    if (kb) { kb.disabled = true; kb.textContent = 'Agregando…'; await skfAgregarKit(kitDe(kb.dataset.kit), pc, email); pintarAreas(); return; }
+    const pk = e.target.closest('[data-pick]');
+    if (pk) { const p = skfPerfilGet(email) || {}; p.areas = (p.areas || []).concat(pk.dataset.pick); skfPerfilSet(email, p); $('areaPick').hidden = true; pintarAreas(); return; }
+    if (e.target.closest('#areaAdd')) $('areaPick').hidden = !$('areaPick').hidden;
+  });
+  if (user || areasSel().length) pintarAreas();
+  if (location.hash === '#areas') setTimeout(() => $('areas').scrollIntoView({ block: 'start' }), 50);
+
+  // ── Notificaciones y sin conexión ───────────────────────────────────────
+  const pintarNotif = () => {
+    const on = typeof skfNotificationsEnabled === 'function' && skfNotificationsEnabled();
+    $('notifIco').textContent = on ? '🔔' : '🔕';
+    $('notifS').textContent = typeof Notification === 'undefined' ? 'Este navegador no permite notificaciones'
+      : on ? 'Activadas en este teléfono' : 'Desactivadas · toca para activarlas en este teléfono';
+  };
+  pintarNotif();
+  $('btnNotif').addEventListener('click', async () => { if (typeof skfToggleNotifications === 'function') { await skfToggleNotifications(); } pintarNotif(); });
+  $('btnOffline').addEventListener('click', () => {
+    $('offS').textContent = '⏳ Preparando…';
+    if (!('serviceWorker' in navigator)) { $('offS').textContent = 'Este navegador no lo permite'; return; }
+    navigator.serviceWorker.getRegistrations()
+      .then(regs => regs.length ? Promise.all(regs.map(r => r.update())) : navigator.serviceWorker.register('sw.js'))
+      .then(() => { $('offS').textContent = '✓ Lista para trabajar sin señal'; })
+      .catch(() => { $('offS').textContent = 'No se pudo preparar. Inténtalo con conexión.'; });
+  });
+  $('btnSalir').addEventListener('click', () => sbSignOut().then(() => location.href = 'login.html'));
+})();
+</script>
+</body>
+</html>

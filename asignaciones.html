@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>Asignaciones — SEKaform</title>
+  <title>Encargos — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
   <script id="skfSidebarPre">
@@ -92,8 +92,8 @@
 <script src="sidebar.js"></script>
 
 <div class="wrap">
-  <div class="pg-eyebrow">Configuración y más</div>
-  <h1 class="pg-h">Asignaciones</h1>
+  <div class="pg-eyebrow">📅 Plan</div>
+  <h1 class="pg-h">Encargos</h1>
   <p class="pg-sub">Define quién debe llenar cada formulario y haz seguimiento de cumplimiento: quién ya respondió y quién falta. Los asignados no necesitan cuenta — llenan el formulario con un link, identificándose solo por su nombre.</p>
 
   <div class="setup-banner" id="setupBanner">
@@ -105,7 +105,7 @@
   </div>
 
   <div class="card asg-new">
-    <h2>+ Nueva asignación<button class="skf-help" data-help-t="¿Cómo creo una asignación?" data-help="1. Elige el formulario que deben llenar.
+    <h2>+ Nuevo encargo<button class="skf-help" data-help-t="¿Cómo creo una asignación?" data-help="1. Elige el formulario que deben llenar.
 2. Escribe una persona por línea.
 3. Si agregas su correo separado por coma (María Gómez, maria@empresa.com), le llegará un email con el link del formulario.
 
@@ -117,7 +117,7 @@ Las personas asignadas NO necesitan cuenta: abren el link, escriben su nombre y 
     <div class="fg">
       <label>Unidad — sede / área / contratista (opcional)</label>
       <select id="asgUnidad" aria-label="Unidad (sede o área)"></select>
-      <div class="fg-hint">¿No aparece la que buscas? <a href="unidades.html" style="color:var(--pri-txt)">Crea sedes y áreas aquí</a>.</div>
+      <div class="fg-hint">¿No aparece la que buscas? <a href="unidades.html" style="color:var(--pri-txt);display:inline-flex;align-items:center;min-height:44px">Crea un lugar aquí</a>.</div>
     </div>
     <div class="fg">
       <label>Personas asignadas</label>
@@ -127,7 +127,7 @@ Las personas asignadas NO necesitan cuenta: abren el link, escriben su nombre y 
     <button class="btn btn-pri" id="btnCreateAsg" onclick="createAsignacion()">Crear asignación →</button>
   </div>
 
-  <h2 class="asg-list-h">Cumplimiento por asignación<button class="skf-help" data-help-t="¿Cómo leo esta lista?" data-help="Cada tarjeta es un formulario asignado y muestra el avance:
+  <h2 class="asg-list-h">Avance de cada encargo<button class="skf-help" data-help-t="¿Cómo leo esta lista?" data-help="Cada tarjeta es un formulario asignado y muestra el avance:
 • Completado: la persona ya envió su respuesta (con fecha y hora).
 • Pendiente: aún no responde.
 • «🔗 Copiar link» te da el enlace para reenviárselo por WhatsApp o correo a quien le falte.">?</button></h2>
@@ -323,7 +323,7 @@ function renderGroups() {
   if (!asignaciones.length) {
     el.innerHTML = `<div class="empty-state">
       <span class="es-ico">👥</span>
-      <h2>Sin asignaciones todavía</h2>
+      <h2>Sin encargos todavía</h2>
       <p>Crea una asignación arriba para repartir un formulario entre tu equipo y ver quién ya lo llenó.</p>
     </div>`;
     return;

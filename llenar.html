@@ -245,7 +245,9 @@
     .form-footer { left: 232px; }
     html.sb-collapsed .form-footer { left: 0; }
     @media (max-width: 860px) {
-      .form-footer { left: 0; bottom: 54px; }
+      .form-footer { left: 0; bottom: calc(var(--bb-h) + env(safe-area-inset-bottom, 0px)); }
+      html.skf-tarea .form-footer { bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+      html.skf-tarea .toast { bottom: 150px !important; }
       .toast { bottom: 200px !important; }   /* barra de acciones de dos filas (≈125 px) + navegación (54 px) + aire */
     }
 
@@ -348,7 +350,7 @@
 <!-- VIEW: template list -->
 <div class="view on" id="vList">
   <div class="wrap">
-    <div class="pg-eyebrow">Día a día</div>
+    <div class="pg-eyebrow">🏢 Mi empresa</div>
     <h1 class="pg-h">Mis formularios<button class="skf-help" data-help-t="¿Qué puedo hacer aquí?" data-help="Estos son los formularios que ya activaste o creaste.
 • ▶ Llenar: abre el formulario para capturar datos.
 • QR: genera un link y código QR para que otras personas lo llenen desde su celular, sin necesidad de cuenta.
@@ -691,6 +693,9 @@ function goBack() {
 
 function show(id) {
   ['vList','vForm','vSubs'].forEach(v => document.getElementById(v).classList.toggle('on', v===id));
+  // Llenando un formulario: modo tarea, sin barra de navegación (como en una app nativa). Solo
+  // quedan las acciones del formulario, abajo, en la zona del pulgar.
+  document.documentElement.classList.toggle('skf-tarea', id === 'vForm');
   document.getElementById('backBtn').textContent = id==='vList' ? '← Inicio' : '← Atrás';
   document.getElementById('histBtn').style.display = id==='vForm' ? 'block' : 'none';
 }
@@ -866,7 +871,7 @@ function renderList() {
       ${ico}
       <div class="tmpl-info">
         <div class="tmpl-name">${t.nombre}</div>
-        <div class="tmpl-meta">${t.campos.length} preguntas · ${subs} registro${subs!==1?'s':''} · ${d}</div>
+        <div class="tmpl-meta">${t.campos.length} pregunta${t.campos.length!==1?'s':''} · ${subs} registro${subs!==1?'s':''} · ${d}</div>
         <button class="tmpl-aviso" onclick="abrirAvisos('${t.id}')">${resumenAviso(t)}</button>
       </div>
       <div class="tmpl-acts">
