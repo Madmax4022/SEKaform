@@ -42,10 +42,19 @@ async function skfPlanear(opts) {
   var cfgTurnos = (org && (org.turnosConfig || org.turnos_config)) || _pwLee('skf_turnos_cfg', null) || { turnos: [], esperado: [] };
   var hayTurnos = (cfgTurnos.turnos || []).length > 0, esAdmin = rol === 'dueno' || rol === 'admin';
   var demo = typeof skfDemoActivo === 'function' && skfDemoActivo();
+  // Personas conocidas (equipo + contactos de encargos y rutinas) para elegir en vez de escribir.
+  var equipo = null; try { equipo = typeof skfEquipo === 'function' ? await skfEquipo() : null; } catch (e) {}
+  // De la nube y del dispositivo (skfAgendaDatos une ambos): un encargo hecho en otro teléfono también cuenta.
+  var dAg = null; try { dAg = typeof skfAgendaDatos === 'function' ? await skfAgendaDatos() : null; } catch (e) {}
+  var conocidas = typeof skfPersonas === 'function'
+    ? skfPersonas(dAg || { asignaciones: _pwLee('skf_asignaciones', []), inspecciones: _pwLee('skf_inspecciones', []), plantillas: plantillas }, equipo)
+        .filter(function (p) { return p.tipo !== 'invitado' && (p.nombre || p.correo); }).slice(0, 12)
+    : [];
+  var _n = function (s) { return String(s || '').trim().toLowerCase(); };
 
   var st = { paso: 0, plantilla: opts.plantillaId ? plantillas.find(function (p) { return p.id === opts.plantillaId; }) || null : null,
     modo: opts.modo || null, frecuencia: 'mensual', inicio: _pwHoy(), limite: '', lugar: null, lugarNombre: '', nuevoLugar: '',
-    personas: [{ nombre: '', correo: '' }], responsable: '', buscar: '',
+    personas: [opts.persona ? { nombre: opts.persona.nombre || '', correo: opts.persona.correo || '' } : { nombre: '', correo: '' }], responsable: '', buscar: '',
     turnos: (cfgTurnos.turnos || []).map(function (t) { return t.nombre; }) };
 
   var PASOS = ['que', 'cuando', 'donde', 'quien', 'listo'];
@@ -126,13 +135,21 @@ async function skfPlanear(opts) {
 
     if (p === 'quien') {
       if (st.modo === 'una') {
-        html += '<h3 class="pw-q">¿A quién se lo encargas?</h3><p class="pw-nota">Le compartes un enlace para llenarlo, sin cuenta. Cuando lo envíe con su nombre, el encargo se marca hecho.</p>';
+        html += '<h3 class="pw-q">¿A quién se lo encargas?</h3><p class="pw-nota">Elige de tu gente o escribe a alguien nuevo. Quien no tiene cuenta lo llena por enlace; el encargo se marca hecho cuando lo envía.</p>';
+        if (conocidas.length) html += '<div class="pw-chips" style="margin-bottom:12px">' + conocidas.map(function (c, i) {
+          var on = st.personas.some(function (x) { return (c.correo && _n(x.correo) === _n(c.correo)) || (_n(x.nombre) && _n(x.nombre) === _n(c.nombre)); });
+          return '<button type="button" class="pw-chip' + (on ? ' on' : '') + '" data-per="' + i + '" aria-pressed="' + on + '">' + (c.tipo === 'cuenta' ? '👤 ' : '') + _pwEsc(c.nombre || c.correo) + '</button>';
+        }).join('') + '</div>';
         html += st.personas.map(function (x, i) {
           return '<div class="pw-persona"><input class="pw-inp" data-pn="' + i + '" placeholder="Nombre" aria-label="Nombre de la persona ' + (i + 1) + '" value="' + _pwEsc(x.nombre) + '">' +
             '<input class="pw-inp" data-pc="' + i + '" type="email" placeholder="Correo (opcional)" aria-label="Correo de la persona ' + (i + 1) + '" value="' + _pwEsc(x.correo) + '"></div>';
         }).join('') + '<button type="button" class="pw-mas" id="pwMasPersona">＋ Otra persona</button>';
       } else {
         html += '<h3 class="pw-q">¿Quién se encarga?</h3><p class="pw-nota">Opcional. Sirve para saber a quién preguntar si se atrasa.</p>';
+        if (conocidas.length) html += '<div class="pw-chips" style="margin-bottom:12px">' + conocidas.map(function (c, i) {
+          var on = _n(st.responsable) && _n(st.responsable) === _n(c.nombre || c.correo);
+          return '<button type="button" class="pw-chip' + (on ? ' on' : '') + '" data-resp="' + i + '" aria-pressed="' + !!on + '">' + _pwEsc(c.nombre || c.correo) + '</button>';
+        }).join('') + '</div>';
         html += '<input class="pw-inp" id="pwResp" placeholder="Nombre del responsable" aria-label="Responsable" value="' + _pwEsc(st.responsable) + '">';
       }
     }
@@ -163,6 +180,18 @@ async function skfPlanear(opts) {
       if (st.lugar === 'nuevo') $('pwNuevoLugar').focus();
       return;
     }
+    if ((t = e.target.closest('[data-per]'))) {
+      var c = conocidas[+t.dataset.per];
+      var idx = st.personas.findIndex(function (x) { return (c.correo && _n(x.correo) === _n(c.correo)) || (_n(x.nombre) && _n(x.nombre) === _n(c.nombre)); });
+      if (idx >= 0) { st.personas.splice(idx, 1); if (!st.personas.length) st.personas.push({ nombre: '', correo: '' }); }
+      else {
+        var vacia = st.personas.findIndex(function (x) { return !x.nombre.trim() && !x.correo; });
+        var nueva = { nombre: c.nombre || c.correo, correo: c.correo || '' };
+        if (vacia >= 0) st.personas[vacia] = nueva; else st.personas.push(nueva);
+      }
+      pintar(); return;
+    }
+    if ((t = e.target.closest('[data-resp]'))) { var r = conocidas[+t.dataset.resp]; st.responsable = _n(st.responsable) === _n(r.nombre || r.correo) ? '' : (r.nombre || r.correo); pintar(); return; }
     if (e.target.closest('#pwMasPersona')) { st.personas.push({ nombre: '', correo: '' }); pintar(); var ins = $('pwPaso').querySelectorAll('[data-pn]'); ins[ins.length - 1].focus(); }
   });
   $('pwPaso').addEventListener('input', function (e) {

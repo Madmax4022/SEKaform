@@ -47,6 +47,7 @@ PAGINAS = {
     "organizacion.html": "organizacion.html",
     "plan.html": "plan.html",
     "empresa.html": "empresa.html",
+    "personas.html": "personas.html",
 }
 
 ESTATICOS = {

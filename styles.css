@@ -528,3 +528,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
   border-radius: 14px; border: none; background: linear-gradient(145deg, #3b82f6, #1d4ed8); color: #fff;
   font: inherit; font-weight: 800; font-size: 1rem; cursor: pointer; box-shadow: 0 10px 24px -12px rgba(37,99,235,.8); }
 html.skf-lector .btn-planear-pg { display: none; }
+
+/* Aviso flotante base (las páginas pueden afinarlo con su propio estilo) */
+.toast { position: fixed; bottom: 24px; right: 16px; z-index: 2000; max-width: 320px; padding: 12px 16px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--bor); color: var(--txt); font-size: .88rem; font-weight: 700; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+.toast.ok { border-color: var(--ok); }
+.toast.er { border-color: var(--err); }
+
+.btn-planear-pg[hidden], .btn-planear[hidden] { display: none; }
