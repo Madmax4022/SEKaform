@@ -53,6 +53,11 @@
   <a class="skf-opt" href="organizacion.html"><span class="so-ico">🏷️</span><span class="so-txt"><b>Nombre, país y logo</b><small>Lo que aparece en tus reportes</small></span><span class="so-arr">›</span></a>
   <a class="skf-opt" href="bienvenida.html"><span class="so-ico">🧭</span><span class="so-txt"><b>Perfil de seguridad y salud</b><small id="perfilS">Tamaño y nivel de riesgo: definen lo que la ley te exige</small></span><span class="so-arr">›</span></a>
 
+  <div id="multi" hidden>
+    <button type="button" class="skf-opt" id="btnCambiar"><span class="so-ico">⇄</span><span class="so-txt"><b>Cambiar de empresa</b><small id="cambiarS">Trabajas con varias empresas</small></span><span class="so-arr">›</span></button>
+    <a class="skf-opt" href="clientes.html"><span class="so-ico">🗂️</span><span class="so-txt"><b>Mis clientes</b><small>Todas tus empresas y lo que necesita atención</small></span><span class="so-arr">›</span></a>
+  </div>
+
   <div class="sec">Tu gente</div>
   <a class="skf-opt" href="personas.html"><span class="so-ico">👥</span><span class="so-txt"><b>Personas</b><small id="perS">Tu equipo en la app, invitaciones y a quién le encargas cosas</small></span><span class="so-arr">›</span></a>
 
@@ -113,6 +118,28 @@ const lee = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } c
 
   const lug = lee('skf_unidades').length; if (lug) $('lugS').textContent = lug + ' lugar' + (lug !== 1 ? 'es' : '') + ' registrado' + (lug !== 1 ? 's' : '');
   const frm = lee('skf_plantillas').length; if (frm) $('frmS').textContent = frm + ' formulario' + (frm !== 1 ? 's' : '') + ' — y sus avisos';
+
+  // Varias empresas (asesores): cambiar entre ellas sin salir de la app.
+  let yo = null; try { yo = await skfYo(); } catch (e) {}
+  if (yo && (yo.esAsesor || (yo.nEmpresas || 0) > 1)) {
+    $('multi').hidden = false;
+    $('cambiarS').textContent = (yo.nEmpresas || 1) + ' empresa' + ((yo.nEmpresas || 1) !== 1 ? 's' : '') + (yo.esAsesor ? ' · cuenta de asesor' : '');
+    $('btnCambiar').onclick = async () => {
+      let r = null; try { r = await skfEmpresas(); } catch (e) { alert('Sin conexión: para cambiar de empresa se necesita señal.'); return; }
+      const fila = e => `<button type="button" class="skf-opt pw-btnopt" data-org="${e.id}" data-n="${String(e.nombre).replace(/"/g, '&quot;')}">
+        <span class="so-ico">${e.id === r.activa ? '✓' : (e.nombre || '?').trim()[0].toUpperCase()}</span>
+        <span class="so-txt"><b>${String(e.nombre).replace(/</g, '&lt;')}</b><small>${e.id === r.activa ? 'Estás aquí' : (ROLES[e.rol] || e.rol)}</small></span><span class="so-arr">›</span></button>`;
+      const cuerpo = skfSheet('¿En qué empresa trabajas?', r.empresas.map(fila).join('') +
+        (r.esAsesor ? '<a class="skf-sheet-mas" href="clientes.html">＋ Nueva empresa cliente · Mis clientes ›</a>' : ''));
+      cuerpo.addEventListener('click', async ev => {
+        const b = ev.target.closest('[data-org]'); if (!b) return;
+        if (b.dataset.org === r.activa) { skfSheetCerrar(); return; }
+        b.querySelector('small').textContent = 'Entrando…';
+        try { await skfCambiarEmpresa(b.dataset.org); location.href = 'index.html'; }
+        catch (e) { b.querySelector('small').textContent = e.message; }
+      });
+    };
+  }
 
   if (user) {
     $('ctaMail').textContent = user.email;

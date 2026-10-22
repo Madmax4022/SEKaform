@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Mis clientes — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 760px; margin: 0 auto; padding: 32px 16px 40px; }
+    .pg-eyebrow { font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--pri-txt); margin-bottom: 4px; }
+    .pg-h { font-size: 1.55rem; font-weight: 900; letter-spacing: -.5px; }
+    .pg-sub { color: var(--mut); font-size: .9rem; line-height: 1.5; margin: 4px 0 16px; }
+    .totales { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .tot { background: var(--card); border: 1px solid var(--bor); border-radius: 16px; padding: 12px; }
+    .tot b { display: block; font-size: 1.5rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .tot span { color: var(--mut); font-size: .76rem; font-weight: 700; line-height: 1.3; }
+    .tot.mal b { color: var(--err-txt); }
+    .cli { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; padding: 14px; margin-bottom: 10px; border-radius: 18px;
+      background: var(--card); border: 1px solid var(--bor); }
+    .cli.activa { border-color: var(--pri-txt); box-shadow: 0 0 0 2px rgba(110,168,254,.2); }
+    .cli svg { width: 64px; height: 64px; display: block; }
+    .cli .an { font-size: 1.3rem; font-weight: 900; fill: var(--txt); }
+    .cli .ade { font-size: .55rem; font-weight: 700; fill: var(--mut); }
+    .cn { font-weight: 900; font-size: 1.05rem; line-height: 1.2; }
+    .cd { color: var(--mut); font-size: .8rem; margin-top: 3px; line-height: 1.4; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { font-size: .72rem; font-weight: 800; border-radius: 999px; padding: 3px 9px; background: var(--bor); }
+    .chip.mal { background: rgba(248,113,113,.16); color: var(--err-txt); }
+    .chip.warn { background: rgba(245,158,11,.16); color: var(--warn); }
+    .chip.ok { background: var(--ok-dim); color: var(--ok); }
+    .cli-acc { grid-column: 1 / -1; display: flex; gap: 8px; }
+    .cli-acc button { flex: 1; min-height: 46px; border-radius: 12px; font: inherit; font-weight: 800; font-size: .92rem; cursor: pointer; }
+    .b-entrar { border: none; background: linear-gradient(145deg, #3b82f6, #1d4ed8); color: #fff; }
+    .b-aqui { border: 1px solid var(--pri-txt); background: none; color: var(--pri-txt); }
+    .aviso { padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px dashed var(--bor); color: var(--mut); font-size: .86rem; line-height: 1.45; margin-bottom: 10px; }
+    .pais { display: flex; flex-wrap: wrap; gap: 8px; }
+  </style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <div class="pg-eyebrow">🏢 Mi empresa</div>
+  <h1 class="pg-h">Mis clientes</h1>
+  <p class="pg-sub">Todas las empresas que atiendes, con lo que necesita atención primero. Toca «Entrar» para trabajar en una.</p>
+  <button type="button" class="btn-planear-pg" id="btnNueva" hidden>＋ Nueva empresa cliente</button>
+  <div id="totales" class="totales" hidden></div>
+  <div id="lista"><div class="aviso">Cargando tus empresas…</div></div>
+</div>
+
+<script>
+const PAIS = { co: 'Colombia', pa: 'Panamá', cr: 'Costa Rica', sv: 'El Salvador' };
+const PAIS_COD = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa', 'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
+const ROL = { dueno: 'Dueño', admin: 'Administrador', editor: 'Registra', lector: 'Solo mira' };
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const $ = id => document.getElementById(id);
+let datos = null, yo = null;
+
+function hace(f) {
+  if (!f) return 'Sin registros todavía';
+  const d = Math.floor((Date.now() - new Date(f).getTime()) / 864e5);
+  return 'Último registro ' + (d <= 0 ? 'hoy' : d === 1 ? 'ayer' : 'hace ' + d + ' días');
+}
+function anillo(n) {
+  const c = n === 9 ? 'var(--ok)' : n >= 5 ? 'var(--pri-txt)' : 'var(--warn)';
+  return `<svg viewBox="0 0 64 64" role="img" aria-label="${n} de 9 principios al día">
+    <circle cx="32" cy="32" r="26" fill="none" stroke="var(--bor)" stroke-width="7"/>
+    ${n ? `<circle cx="32" cy="32" r="26" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round"
+      stroke-dasharray="${(163.4 * n / 9).toFixed(1)} 163.4" transform="rotate(-90 32 32)"/>` : ''}
+    <text x="32" y="35" text-anchor="middle" class="an">${n}</text><text x="32" y="47" text-anchor="middle" class="ade">de 9</text></svg>`;
+}
+
+function pintar() {
+  const lista = $('lista');
+  if (!datos || datos.disponible === false) {
+    lista.innerHTML = '<div class="aviso">Para ver tus clientes falta preparar la base (migración 010). Pídeselo a tu administrador técnico.</div>';
+    return;
+  }
+  const emp = datos.empresas.map(e => {
+    const pc = PAIS_COD[String(e.pais || '').toLowerCase()] || 'co';
+    const ev = skfEvidenciaPrincipios(e.evidencia || [], pc);
+    const ok = SST_PRINCIPIOS.filter(p => skfEstadoPrincipio(ev[p.id]) === 'ok').length;
+    return Object.assign({}, e, { ok, pc, urgencia: e.accionesVencidas * 100 + e.criticosAbiertos * 10 + (9 - ok) });
+  }).sort((a, b) => b.urgencia - a.urgencia || a.nombre.localeCompare(b.nombre));
+
+  if (emp.length > 1) {
+    const t = (k) => emp.reduce((s, e) => s + (e[k] || 0), 0);
+    $('totales').hidden = false;
+    $('totales').innerHTML = `<div class="tot"><b>${emp.length}</b><span>empresas</span></div>
+      <div class="tot${t('accionesVencidas') ? ' mal' : ''}"><b>${t('accionesVencidas')}</b><span>acciones vencidas</span></div>
+      <div class="tot${t('criticosAbiertos') ? ' mal' : ''}"><b>${t('criticosAbiertos')}</b><span>hallazgos críticos abiertos</span></div>`;
+  }
+  if (!emp.length) {
+    lista.innerHTML = yo && yo.esAsesor
+      ? '<div class="aviso">Aún no tienes empresas clientes. Crea la primera con «＋ Nueva empresa cliente».</div>'
+      : '<div class="aviso">No perteneces a ninguna empresa todavía.</div>';
+    return;
+  }
+  lista.innerHTML = emp.map(e => {
+    const activa = e.id === datos.activa;
+    const chips = [
+      e.accionesVencidas ? `<span class="chip mal">${e.accionesVencidas} acción${e.accionesVencidas !== 1 ? 'es' : ''} vencida${e.accionesVencidas !== 1 ? 's' : ''}</span>` : '',
+      e.criticosAbiertos ? `<span class="chip mal">${e.criticosAbiertos} crítico${e.criticosAbiertos !== 1 ? 's' : ''}</span>` : '',
+      e.hallazgosAbiertos ? `<span class="chip warn">${e.hallazgosAbiertos} hallazgo${e.hallazgosAbiertos !== 1 ? 's' : ''} abierto${e.hallazgosAbiertos !== 1 ? 's' : ''}</span>` : '',
+      !e.hallazgosAbiertos && e.ok === 9 ? '<span class="chip ok">Al día</span>' : '',
+      e.rol === 'admin' && !e.tieneDueno ? '<span class="chip">Sin dueño: invita al cliente</span>' : '',
+    ].join('');
+    return `<div class="cli${activa ? ' activa' : ''}">
+      ${anillo(e.ok)}
+      <div style="min-width:0"><div class="cn">${esc(e.nombre)}</div>
+        <div class="cd">${esc(PAIS[e.pc] || '')} · ${esc(ROL[e.rol] || e.rol)} · ${e.envios30d} registro${e.envios30d !== 1 ? 's' : ''} en 30 días · ${hace(e.ultimoEnvio)}</div>
+        ${chips ? `<div class="chips">${chips}</div>` : ''}</div>
+      <div class="cli-acc">${activa ? '<button type="button" class="b-aqui" onclick="location.href=\'index.html\'">Estás aquí · Ir a Hoy</button>'
+        : `<button type="button" class="b-entrar" data-entrar="${esc(e.id)}" data-nombre="${esc(e.nombre)}">Entrar ›</button>`}</div>
+    </div>`;
+  }).join('');
+}
+
+async function entrar(id, nombre, destino) {
+  try {
+    await skfCambiarEmpresa(id);
+    toast('Ahora estás en ' + nombre);
+    setTimeout(() => location.href = destino || 'index.html', 350);
+  } catch (e) { toast(e.message, 'er'); }
+}
+$('lista').addEventListener('click', e => { const b = e.target.closest('[data-entrar]'); if (b) { b.disabled = true; b.textContent = 'Entrando…'; entrar(b.dataset.entrar, b.dataset.nombre).finally(() => { b.disabled = false; b.textContent = 'Entrar ›'; }); } });
+
+function nueva() {
+  let pais = 'CO';
+  const chips = () => [['CO', 'Colombia'], ['PA', 'Panamá'], ['CR', 'Costa Rica'], ['SV', 'El Salvador']].map(([k, t]) =>
+    `<button type="button" class="pw-chip${pais === k ? ' on' : ''}" data-p="${k}" aria-pressed="${pais === k}">${t}</button>`).join('');
+  skfSheet('Nueva empresa cliente', `
+    <label class="pw-sub" for="neNom" style="margin-top:4px">Nombre de la empresa</label>
+    <input class="pw-inp" id="neNom" placeholder="Ej.: Panadería La Espiga S.A.S." autocomplete="organization">
+    <div class="pw-sub">País (define la norma que aplica)</div><div class="pais" id="nePais">${chips()}</div>
+    <p class="pw-nota" style="margin-top:14px">Entrarás como Administrador. Después invita al cliente como Dueño: la cuenta y sus datos son suyos.</p>
+    <p class="pw-err" id="neErr" hidden></p>
+    <button type="button" class="pw-sig pw-fin" id="neOk">Crear y entrar</button>`);
+  setTimeout(() => $('neNom').focus(), 60);
+  $('nePais').onclick = e => { const b = e.target.closest('[data-p]'); if (b) { pais = b.dataset.p; $('nePais').innerHTML = chips(); } };
+  $('neOk').onclick = async () => {
+    const nombre = $('neNom').value.trim();
+    if (nombre.length < 2) { $('neErr').textContent = 'Escribe el nombre de la empresa.'; $('neErr').hidden = false; return; }
+    $('neOk').disabled = true; $('neOk').textContent = 'Creando…';
+    try {
+      const r = await skfAsesorCrearEmpresa(nombre, pais);
+      skfSheetCerrar();
+      await entrar(r.id, nombre, 'bienvenida.html');     // el asistente arma lo que la ley exige a esa empresa
+    } catch (e) {
+      $('neErr').textContent = e.message; $('neErr').hidden = false;
+      $('neOk').disabled = false; $('neOk').textContent = 'Crear y entrar';
+    }
+  };
+}
+$('btnNueva').onclick = nueva;
+
+function toast(m, tipo) {
+  document.querySelectorAll('.toast').forEach(x => x.remove());
+  const d = document.createElement('div'); d.className = 'toast ' + (tipo || 'ok'); d.setAttribute('role', 'status');
+  d.textContent = (tipo === 'er' ? '✕ ' : '✓ ') + m; document.body.appendChild(d); setTimeout(() => d.remove(), 3600);
+}
+
+(async () => {
+  try { yo = await skfYo(); } catch (e) {}
+  $('btnNueva').hidden = !(yo && yo.esAsesor);
+  try { datos = await skfAsesorResumen(); } catch (e) { datos = null; $('lista').innerHTML = '<div class="aviso">Sin conexión: el resumen de tus clientes necesita señal.</div>'; return; }
+  pintar();
+})();
+</script>
+</body>
+</html>

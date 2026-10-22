@@ -170,11 +170,21 @@ function skfFormularioParaPrincipio(principioId, paisCode, mias){
 
 // Perfil de la empresa (tamaño, riesgo, avance del asistente). La base solo guarda
 // nombre/logo/país, así que esto vive en el dispositivo, por usuario.
+// Por persona Y empresa: un asesor tiene un perfil distinto en cada cliente. Si aún no hay uno
+// para esta empresa, se usa el que la persona tenía antes (de cuando había una sola empresa).
+function _skfPerfilClave(email){
+  var org = null; try { org = localStorage.getItem('skf_org_actual'); } catch (e) {}
+  return 'skf_perfil:' + (email || '') + (org ? ':' + org : '');
+}
 function skfPerfilGet(email){
-  try { return JSON.parse(localStorage.getItem('skf_perfil:' + (email || '')) || 'null'); } catch (e) { return null; }
+  try {
+    var v = localStorage.getItem(_skfPerfilClave(email));
+    if (v === null) v = localStorage.getItem('skf_perfil:' + (email || ''));
+    return JSON.parse(v || 'null');
+  } catch (e) { return null; }
 }
 function skfPerfilSet(email, p){
-  try { localStorage.setItem('skf_perfil:' + (email || ''), JSON.stringify(p)); } catch (e) {}
+  try { localStorage.setItem(_skfPerfilClave(email), JSON.stringify(p)); } catch (e) {}
 }
 
 // ── Kits de inicio por actividad ─────────────────────────────────────────────

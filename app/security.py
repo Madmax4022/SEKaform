@@ -21,7 +21,8 @@ import json
 import logging
 from typing import Any, Callable, Optional
 
-from flask import abort, g, jsonify, request
+import psycopg2.errors
+from flask import abort, g, jsonify, request, session
 from flask_login import UserMixin, current_user
 
 from . import db
@@ -43,6 +44,8 @@ class Usuario(UserMixin):
         org_nombre: Optional[str] = None,
         es_super: bool = False,
         debe_cambiar_password: bool = False,
+        es_asesor: bool = False,
+        n_empresas: int = 1,
     ) -> None:
         self.id = str(user_id)
         self.email = email
@@ -52,6 +55,8 @@ class Usuario(UserMixin):
         self.org_nombre = org_nombre
         self.es_super = bool(es_super)
         self.debe_cambiar_password = bool(debe_cambiar_password)
+        self.es_asesor = bool(es_asesor)
+        self.n_empresas = int(n_empresas or 0)
 
     @property
     def puede_escribir(self) -> bool:
@@ -72,6 +77,8 @@ class Usuario(UserMixin):
             "rol": self.rol,
             "esSuper": self.es_super,
             "puedeEscribir": self.puede_escribir,
+            "esAsesor": self.es_asesor,
+            "nEmpresas": self.n_empresas,
         }
 
 
@@ -87,9 +94,22 @@ def cargar_usuario(user_id: str) -> Optional[Usuario]:
         # `users`: esa tabla está cerrada a la app, y su policy exige el
         # app.user_id que justamente estamos resolviendo aquí. Consultarla
         # directamente devolvería cero filas y nadie podría iniciar sesión.
+        # La empresa activa la elige la sesión (asesores con varias empresas); la base
+        # solo la acepta si el usuario es miembro. Sin la migración 010, como antes.
+        preferida = session.get("org_activa")
         with db.sesion_privilegiada() as cur:
-            cur.execute("SELECT * FROM skf_auth_perfil(%s)", (user_id,))
-            u = cur.fetchone()
+            cur.execute("SAVEPOINT sp_perfil")
+            try:
+                cur.execute("SELECT * FROM skf_auth_perfil_en(%s, %s)", (user_id, preferida))
+                u = cur.fetchone()
+                if preferida and u and not u["org_id"]:      # ya no es miembro: vuelve a la de siempre
+                    session.pop("org_activa", None)
+                    cur.execute("SELECT * FROM skf_auth_perfil_en(%s, NULL)", (user_id,))
+                    u = cur.fetchone()
+            except psycopg2.errors.UndefinedFunction:
+                cur.execute("ROLLBACK TO SAVEPOINT sp_perfil")
+                cur.execute("SELECT * FROM skf_auth_perfil(%s)", (user_id,))
+                u = cur.fetchone()
 
         if not u or not u["is_active"]:
             return None
@@ -103,6 +123,8 @@ def cargar_usuario(user_id: str) -> Optional[Usuario]:
             org_nombre=u["org_nombre"],
             es_super=u["es_super"],
             debe_cambiar_password=u["debe_cambiar"],
+            es_asesor=u.get("es_asesor", False),
+            n_empresas=u.get("n_empresas", 1),
         )
     except Exception:
         log.exception("No se pudo cargar el usuario %s", user_id)

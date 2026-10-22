@@ -19,6 +19,8 @@
     .wrapper { max-width: 720px; margin: 0 auto; padding: 36px 16px 40px; }
     .saludo { margin-bottom: 18px; }
     .saludo .fecha { color: var(--mut); font-size: .84rem; font-weight: 700; }
+    .en-empresa { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 8px; padding: 0 12px; border-radius: 999px;
+      background: var(--card); border: 1px solid var(--bor); color: var(--txt); text-decoration: none; font-weight: 800; font-size: .84rem; }
     .saludo h1 { font-size: 1.7rem; font-weight: 900; letter-spacing: -.8px; line-height: 1.15; margin-top: 2px; }
 
     /* Anillo de cumplimiento: el estado de la empresa de un vistazo */
@@ -94,6 +96,7 @@
     <div class="saludo">
       <div class="fecha" id="fecha"></div>
       <h1 id="hola">Hola 👋</h1>
+      <a class="en-empresa" id="enEmpresa" href="empresa.html" hidden></a>
     </div>
 
     <!-- Estado de cumplimiento (9 principios) -->
@@ -150,6 +153,17 @@
     })();
     const _esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
+    (async function empresaActual() {
+      let yo = null; try { yo = await skfYo(); } catch (e) {}
+      if (!yo) return;
+      if (!yo.orgId && yo.esAsesor) { location.href = 'clientes.html'; return; }   // asesor nuevo: crea su primer cliente
+      if ((yo.nEmpresas || 0) > 1 && yo.orgNombre) {
+        const a = document.getElementById('enEmpresa');
+        a.textContent = '🏢 ' + yo.orgNombre + ' · cambiar';
+        a.hidden = false;
+      }
+    })();
+
     (async function hoy() {
       let hz = null, env = null, acc = null, plt = null, ag = null;
       try {
@@ -175,6 +189,7 @@
       document.getElementById('anN').textContent = nOk;
       document.getElementById('anArco').setAttribute('stroke-dasharray', (276.5 * nOk / 9).toFixed(1) + ' 276.5');
       document.getElementById('anArco').setAttribute('stroke', nOk === 9 ? 'var(--ok)' : nOk >= 5 ? 'var(--pri-txt)' : 'var(--warn)');
+      document.getElementById('anArco').style.display = nOk ? '' : 'none';   // con 0 el extremo redondo dibujaría un punto suelto
       document.getElementById('anT').textContent = nOk === 9 ? '¡Los 9 principios al día!' : nOk + ' de 9 principios de SST con evidencia al día';
       document.getElementById('anChips').innerHTML =
         (atras.length ? `<span class="an-chip warn">${atras.length} atrasado${atras.length !== 1 ? 's' : ''}</span>` : '') +
