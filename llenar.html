@@ -262,6 +262,8 @@
       transition: background .15s; font-size: 0.88rem; color: var(--pri-txt);
     }
     .gps-field:hover { background: rgba(37,99,235,.14); }
+    .hz-foto-btn { display: flex; align-items: center; gap: 10px; min-height: 48px; margin-top: 8px; padding: 8px 12px; border: 1px dashed var(--bor); border-radius: 10px; cursor: pointer; font-size: .86rem; font-weight: 700; }
+    .hz-foto-btn img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; margin-left: auto; }
     .gps-field.got { color: var(--ok); border-color: var(--ok); background: rgba(26,188,156,.08); }
     /* Equipo (EXT-001…): código grande, lista de los ya registrados al alcance del pulgar */
     .eq-code { font-size: 1.15rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
@@ -501,6 +503,7 @@
       <label>Descripción</label>
       <textarea id="mhDesc" rows="3" placeholder="¿Qué encontraste?"></textarea>
     </div>
+    <label class="hz-foto-btn" style="margin-bottom:12px"><input type="file" id="mhFoto" accept="image/*" capture="environment" hidden onchange="setManualFoto(this)"><span>📷 Foto del problema (antes)</span><img id="mhFotoImg" alt="Foto del problema" hidden></label>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-pri" style="justify-content:center" onclick="saveManualHallazgo()">Agregar al envío</button>
       <button class="btn btn-sec" style="justify-content:center" onclick="closeManualHallazgo()">Cancelar</button>
@@ -1340,6 +1343,7 @@ function buildFieldEl(c) {
       const sevLbl = c.severidad==='critico'?'🔴 Hallazgo crítico':c.severidad==='mayor'?'🟠 Hallazgo mayor':'🟡 Hallazgo menor';
       hz.innerHTML = `<div class="hz-banner-top">${sevLbl} detectado en esta respuesta</div>
         <textarea class="hz-banner-desc" placeholder="Detalle del hallazgo (opcional)" oninput="setHallazgoDesc('${c.id}',this.value)"></textarea>
+        <label class="hz-foto-btn"><input type="file" accept="image/*" capture="environment" hidden onchange="setHallazgoFoto('${c.id}',this)"><span>📷 Foto del problema (antes)</span><img alt="Foto del problema" hidden></label>
         <button type="button" class="hz-banner-dismiss" onclick="dismissHallazgo('${c.id}')">No es un hallazgo real</button>`;
       fg.appendChild(hz);
     }
@@ -1474,6 +1478,17 @@ function onCampoRespondido(c) {
     if (banner) banner.classList.add('hidden');
   }
 }
+// La foto de «antes»: con la de «después» al cerrarlo, es la prueba de que se corrigió.
+async function setHallazgoFoto(campoId, input) {
+  const h = hallazgos.find(x => x.campoId === campoId && x.origen === 'automatico');
+  const f = input.files && input.files[0];
+  if (!h || !f) return;
+  try {
+    h.foto = await skfComprimirFoto(f);
+    const lbl = input.closest('.hz-foto-btn'), img = lbl.querySelector('img');
+    img.src = h.foto; img.hidden = false; lbl.querySelector('span').textContent = '📷 Cambiar foto';
+  } catch (e) { toast('No se pudo usar esa foto', 'er'); }
+}
 function setHallazgoDesc(campoId, v) {
   const h = hallazgos.find(h=>h.campoId===campoId && h.origen==='automatico');
   if (h) h.descripcion = v;
@@ -1489,7 +1504,19 @@ function openManualHallazgo() {
   manualHallazgo = { descripcion:'', severidad:'menor', foto:null };
   document.getElementById('mhDesc').value='';
   document.getElementById('mhSev').value='menor';
+  const _mi = document.getElementById('mhFotoImg'); _mi.hidden = true; _mi.removeAttribute('src');
+  document.getElementById('mhFoto').value = '';
+  _mi.previousElementSibling.textContent = '📷 Foto del problema (antes)';
   document.getElementById('manualHzModal').classList.remove('hidden');
+}
+async function setManualFoto(input) {
+  const f = input.files && input.files[0];
+  if (!f || !manualHallazgo) return;
+  try {
+    manualHallazgo.foto = await skfComprimirFoto(f);
+    const img = document.getElementById('mhFotoImg');
+    img.src = manualHallazgo.foto; img.hidden = false; img.previousElementSibling.textContent = '📷 Cambiar foto';
+  } catch (e) { toast('No se pudo usar esa foto', 'er'); }
 }
 function closeManualHallazgo() {
   document.getElementById('manualHzModal').classList.add('hidden');
@@ -1498,7 +1525,7 @@ function saveManualHallazgo() {
   const descripcion = document.getElementById('mhDesc').value.trim();
   const severidad = document.getElementById('mhSev').value;
   if (!descripcion) { toast('Describe el hallazgo','er'); return; }
-  hallazgos.push({ campoId:null, campoEtiqueta:null, origen:'manual', severidad, descripcion, foto:null });
+  hallazgos.push({ campoId:null, campoEtiqueta:null, origen:'manual', severidad, descripcion, foto: manualHallazgo.foto || null });
   closeManualHallazgo();
   toast('Hallazgo agregado al envío ✓','ok');
 }

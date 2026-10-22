@@ -246,6 +246,39 @@ class Nombres(unittest.TestCase):
 
 
 @unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class AntesDespues(unittest.TestCase):
+    """Cerrar un hallazgo con foto de antes y de después, por la cola de la app."""
+    def test_9_cierre_con_evidencia(self):
+        foto = "data:image/jpeg;base64," + "A" * 4000
+        hz, ac = str(uuid.uuid4()), str(uuid.uuid4())
+        with APP.test_client() as c:
+            self.assertEqual(c.post("/login", data={"email": MAIL_E, "password": CLAVE}).status_code, 302)
+            ops = [{"opId": "h", "tipo": "hallazgo", "datos": {"id": hz, "severidad": "mayor", "descripcion": "Extintor sin sello",
+                                                              "foto_url": foto, "estado": "abierto"}}]
+            res = c.post("/api/sync", json={"operaciones": ops}).get_json()["resultados"]
+            self.assertTrue(all(r["ok"] for r in res), res)
+            # «accionCorrectiva»: el nombre con que la app la manda (antes el servidor lo rechazaba)
+            ops = [{"opId": "a", "tipo": "accionCorrectiva", "datos": {"id": ac, "hallazgo_id": hz, "responsable": "Edgar",
+                                                                       "estado": "completada", "evidencia_url": foto,
+                                                                       "cerrado_en": "2026-10-22T10:00:00Z"}},
+                   {"opId": "h2", "tipo": "hallazgo", "datos": {"id": hz, "severidad": "mayor", "descripcion": "Extintor sin sello",
+                                                               "foto_url": foto, "estado": "cerrado"}}]
+            res = c.post("/api/sync", json={"operaciones": ops}).get_json()["resultados"]
+            self.assertTrue(all(r["ok"] for r in res), res)
+            d = c.get("/api/hallazgos").get_json()
+            h = next(x for x in d["hallazgos"] if x["id"] == hz)
+            a = next(x for x in d["acciones"] if x["id"] == ac)
+            self.assertEqual(h["foto_url"], foto, "la foto de antes se guarda entera")
+            self.assertEqual(a["evidencia_url"], foto, "la de después queda en la acción")
+            self.assertIsNotNone(h["cerrado_en"], "cerrar desde la app pone la fecha de cierre")
+            self.assertEqual(h["cerrado_por"], "Edgar")
+            ops = [{"opId": "h3", "tipo": "hallazgo", "datos": {"id": hz, "severidad": "mayor", "estado": "abierto"}}]
+            c.post("/api/sync", json={"operaciones": ops})
+            h = next(x for x in c.get("/api/hallazgos").get_json()["hallazgos"] if x["id"] == hz)
+            self.assertIsNone(h["cerrado_en"], "reabrirlo borra la fecha de cierre")
+
+
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
 class Bajas(unittest.TestCase):
     """Dar de baja y reactivar un equipo por la API."""
     def test_8_baja_y_reactivar(self):
