@@ -183,6 +183,57 @@ class Asesor(unittest.TestCase):
             self.assertFalse(c.get("/api/yo").get_json()["usuario"]["esAsesor"])
 
 
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class Portal(unittest.TestCase):
+    """El portal del cliente: en vivo, sin respuestas ni firmas, revocable y con límite por IP."""
+    @classmethod
+    def setUpClass(cls):
+        cls.app = APP
+
+    def test_6_portal(self):
+        with self.app.test_client() as c:
+            self.assertEqual(c.post("/login", data={"email": MAIL_D, "password": CLAVE}).status_code, 302)
+            pid = str(uuid.uuid4())
+            c.post("/api/sync", json={"operaciones": [{"opId": "p", "tipo": "plantilla", "datos": {
+                "id": pid, "nombre": "Ronda del portal", "campos": [{"id": "a", "tipo": "si_no", "etiqueta": "¿Orden?"},
+                                                                   {"id": "f", "tipo": "firma", "etiqueta": "Firma"}]}}]})
+            c.post("/api/sync", json={"operaciones": [{"opId": "e", "tipo": "envio", "datos": {
+                "id": str(uuid.uuid4()), "plantilla_id": pid, "plantilla_nombre": "Ronda del portal",
+                "datos": {"a": "No", "f": "data:image/png;base64,FIRMASECRETA"}, "estado": "enviado",
+                "llenado_por": "Pepa Secreta"}}]})
+            r = c.post("/api/portal")
+            self.assertEqual(r.status_code, 201, r.get_json())
+            url = r.get_json()["portal"]["url"]
+            token = url.split("t=")[1]
+            self.assertIn("/portal.html?t=", url)
+            c.post("/logout")
+            # sin sesión, como el cliente
+            r = c.get("/api/publico/portal/" + token)
+            self.assertEqual(r.status_code, 200)
+            txt = r.get_data(as_text=True)
+            for prohibido in ("FIRMASECRETA", "Pepa Secreta", '"datos"', '"campos"'):
+                self.assertNotIn(prohibido, txt, f"el portal no debe exponer {prohibido}")
+            j = r.get_json()
+            ins = [i for i in j["inspecciones"] if i["formulario"] == "Ronda del portal"][0]
+            self.assertEqual((ins["pct"], ins["nivel"]), (0, "bajo"), "el puntaje se calcula en el servidor")
+            self.assertEqual(r.headers.get("Cache-Control"), "no-store")
+            # la página del portal abre sin sesión con el parámetro
+            self.assertEqual(c.get("/portal.html?t=" + token).status_code, 200)
+            self.assertEqual(c.get("/portal.html").status_code, 302, "sin token, pide sesión")
+            # token inválido o con formato raro
+            self.assertEqual(c.get("/api/publico/portal/x").status_code, 404)
+            # desactivar
+            c.post("/login", data={"email": MAIL_D, "password": CLAVE})
+            self.assertEqual(c.delete("/api/portal").status_code, 200)
+            c.post("/logout")
+            self.assertEqual(c.get("/api/publico/portal/" + token).status_code, 404)
+
+    def test_7_limite_por_ip(self):
+        with self.app.test_client() as c:
+            codigos = [c.get("/api/publico/portal/" + "z" * 40).status_code for _ in range(65)]
+            self.assertIn(429, codigos, "tras 60 por minuto, el portal responde 429")
+
+
 class Nombres(unittest.TestCase):
     """Sin base: el módulo de avisos no puede quedar tapado por otra definición."""
     def test_modulo_de_avisos_es_un_modulo(self):

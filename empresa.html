@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
   <script src="form-library.js"></script>
+  <script src="portal-admin.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -76,6 +77,9 @@
     <button type="button" class="skf-opt" id="areaAdd"><span class="so-ico">＋</span><span class="so-txt"><b>Agregar otra área</b></span><span class="so-arr">›</span></button>
     <div class="opts-pick" id="areaPick" hidden></div>
   </div>
+
+  <div class="sec">Tu cliente</div>
+  <button type="button" class="skf-opt" onclick="skfPortalAdministrar(this)"><span class="so-ico">🔗</span><span class="so-txt"><b>Portal del cliente</b><small>Un enlace con su estado de cumplimiento siempre al día, sin cuenta</small></span><span class="so-arr">›</span></button>
 
   <div class="sec">Avisos</div>
   <a class="skf-opt" href="llenar.html"><span class="so-ico">🔔</span><span class="so-txt"><b>Avisos de cumplimiento bajo</b><small>Correo cuando una inspección sale mal — se ajusta en cada formulario</small></span><span class="so-arr">›</span></a>
