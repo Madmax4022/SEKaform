@@ -90,7 +90,7 @@ function skfAgenda(d, ahora) {
   // juntan en un solo ítem, para que 20 extintores no tapen el resto del día.
   if (typeof skfEquiposEstado === 'function') {
     var grupos = {};
-    skfEquiposEstado(envios, plantillas, ahora).forEach(function (q) {
+    skfEquiposEstado(envios, plantillas, ahora, d.equiposBaja).forEach(function (q) {
       var base = llenar(q.plantillaId);
       var href = base + (base !== 'llenar.html' ? '&equipo=' + encodeURIComponent(q.codigo) : '');
       var add = function (motivo, dias, cuando, titulo, detalle) {
@@ -147,7 +147,7 @@ function skfAgendaCuando(i) {
 async function skfAgendaDatos() {
   var local = function (k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } };
   var nube = async function (fn) { try { return typeof window[fn] === 'function' ? await window[fn]() : null; } catch (e) { return null; } };
-  var r = await Promise.all(['sbLoadPlantillas', 'sbLoadInspecciones', 'sbLoadAsignaciones', 'sbLoadEnvios', 'sbLoadUnidades', 'sbLoadOrg'].map(nube));
+  var r = await Promise.all(['sbLoadPlantillas', 'sbLoadInspecciones', 'sbLoadAsignaciones', 'sbLoadEnvios', 'sbLoadUnidades', 'sbLoadOrg', 'sbLoadEquiposBaja'].map(nube));
   var o = r[5] || {};
   var unir = function (cloud, loc) {   // la nube manda; lo local que aún no subió también cuenta
     if (!Array.isArray(cloud)) return loc;
@@ -165,6 +165,7 @@ async function skfAgendaDatos() {
     envios: unir(r[3], local('skf_envios')),
     unidades: unir(r[4], local('skf_unidades')),
     turnosConfig: o.turnos_config || o.turnosConfig || null,
+    equiposBaja: Array.isArray(r[6]) ? r[6] : local('skf_equipos_baja'),
     org: r[5],
   };
 }

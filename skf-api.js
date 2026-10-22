@@ -160,7 +160,7 @@ async function skfYo({ forzar = false } = {}) {
 // ella (skfProcessQueue), así nunca cae en la empresa equivocada.
 const SKF_ORG_LOCAL = 'skf_org_actual';
 const SKF_DATOS_EMPRESA = ['skf_plantillas', 'skf_envios', 'skf_hallazgos', 'skf_acciones_correctivas', 'skf_asignaciones',
-  'skf_unidades', 'skf_inspecciones', 'skf_turnos_cfg', 'skf_org'];
+  'skf_unidades', 'skf_inspecciones', 'skf_turnos_cfg', 'skf_org', 'skf_equipos_baja'];
 function skfOrgLocal() { try { return localStorage.getItem(SKF_ORG_LOCAL) || null; } catch (e) { return null; } }
 function _skfLimpiarDatosEmpresa() {
   try {
@@ -255,6 +255,26 @@ async function sbLoadPlantillas() {
 async function sbLoadUnidades() {
   const b = await _bootstrap();
   return b ? (b.unidades || []) : null;
+}
+
+// ── Equipos dados de baja (migración 012) ── con copia local para usar sin conexión.
+async function sbLoadEquiposBaja() {
+  try {
+    const l = (await skfFetch('/api/equipos/bajas')).bajas || [];
+    try { localStorage.setItem('skf_equipos_baja', JSON.stringify(l)); } catch (e) {}
+    return l;
+  } catch (e) { return null; }
+}
+function skfEquiposBajaLocal() { try { return JSON.parse(localStorage.getItem('skf_equipos_baja') || '[]'); } catch (e) { return []; } }
+function _skfGuardarBajas(l) { try { localStorage.setItem('skf_equipos_baja', JSON.stringify(l)); } catch (e) {} }
+async function skfEquipoDarBaja(codigo, motivo) {
+  const r = await skfFetch('/api/equipos/baja', { method: 'POST', body: JSON.stringify({ codigo, motivo }) });
+  _skfGuardarBajas(skfEquiposBajaLocal().filter(b => b.codigo !== codigo).concat([r.baja]));
+  return r.baja;
+}
+async function skfEquipoReactivar(codigo) {
+  await skfFetch('/api/equipos/baja/' + encodeURIComponent(codigo), { method: 'DELETE' });
+  _skfGuardarBajas(skfEquiposBajaLocal().filter(b => b.codigo !== codigo));
 }
 
 async function sbLoadAsignaciones() {

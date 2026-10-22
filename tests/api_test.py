@@ -246,6 +246,23 @@ class Nombres(unittest.TestCase):
 
 
 @unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class Bajas(unittest.TestCase):
+    """Dar de baja y reactivar un equipo por la API."""
+    def test_8_baja_y_reactivar(self):
+        with APP.test_client() as c:
+            self.assertEqual(c.post("/login", data={"email": MAIL_E, "password": CLAVE}).status_code, 302)
+            self.assertEqual(c.post("/api/equipos/baja", json={"codigo": "<x>"}).status_code, 400)
+            r = c.post("/api/equipos/baja", json={"codigo": "EXT-004", "motivo": "Retirado de servicio"})
+            self.assertEqual(r.status_code, 201, r.get_data(as_text=True))
+            self.assertEqual(c.post("/api/equipos/baja", json={"codigo": "EXT-004", "motivo": "Otro"}).status_code, 201)
+            bajas = c.get("/api/equipos/bajas").get_json()["bajas"]
+            self.assertEqual([(b["codigo"], b["motivo"]) for b in bajas], [("EXT-004", "Otro")])
+            self.assertEqual(c.delete("/api/equipos/baja/EXT-004").status_code, 200)
+            self.assertEqual(c.delete("/api/equipos/baja/EXT-004").status_code, 404)
+            self.assertEqual(c.get("/api/equipos/bajas").get_json()["bajas"], [])
+
+
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
 class Redireccion(unittest.TestCase):
     """Escanear el QR de un equipo sin sesión debe volver al mismo equipo tras entrar."""
     def test_login_conserva_la_consulta(self):

@@ -985,6 +985,72 @@ def equipo_agregar():
     return _equipo_resp(r)
 
 
+# ── Equipos dados de baja (migración 012) ───────────────────────────────────
+_RE_COD_EQUIPO = re.compile(r"^[^\x00-\x1f<>]{1,40}$")
+
+
+def _sin_012(e) -> bool:
+    return isinstance(e, psycopg2.errors.UndefinedTable)
+
+
+@bp.route("/equipos/bajas")
+@requiere_organizacion
+def equipos_bajas():
+    try:
+        with sesion_usuario(solo_lectura=True) as cur:
+            cur.execute("SELECT codigo, motivo, baja_en FROM equipos_baja WHERE org_id = %s ORDER BY codigo",
+                        (current_user.org_id,))
+            filas = cur.fetchall()
+    except Exception as e:
+        if _sin_012(e):
+            return jsonify({"disponible": False, "bajas": []})
+        raise
+    return jsonify({"disponible": True, "bajas": [{"codigo": f["codigo"], "motivo": f["motivo"], "bajaEn": f["baja_en"]} for f in filas]})
+
+
+@bp.route("/equipos/baja", methods=["POST"])
+@requiere_organizacion
+@requiere_escritura
+def equipo_dar_baja():
+    d = request.get_json(silent=True) or {}
+    codigo = str(d.get("codigo") or "").strip()
+    motivo = (str(d.get("motivo") or "").strip() or None)
+    if not _RE_COD_EQUIPO.match(codigo):
+        return jsonify({"error": "Código de equipo inválido."}), 400
+    if motivo and len(motivo) > 120:
+        motivo = motivo[:120]
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("""INSERT INTO equipos_baja (org_id, codigo, motivo) VALUES (%s, %s, %s)
+                           ON CONFLICT (org_id, codigo) DO UPDATE SET motivo = EXCLUDED.motivo, baja_en = NOW()
+                           RETURNING baja_en""", (current_user.org_id, codigo, motivo))
+            baja_en = cur.fetchone()["baja_en"]
+    except Exception as e:
+        if _sin_012(e):
+            return jsonify({"error": "Falta preparar la base (migración 012) para dar de baja equipos."}), 503
+        raise
+    auditar("equipo_baja", entidad="equipo", detalle={"codigo": codigo, "motivo": motivo})
+    return jsonify({"ok": True, "baja": {"codigo": codigo, "motivo": motivo, "bajaEn": baja_en}}), 201
+
+
+@bp.route("/equipos/baja/<path:codigo>", methods=["DELETE"])
+@requiere_organizacion
+@requiere_escritura
+def equipo_reactivar(codigo):
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("DELETE FROM equipos_baja WHERE org_id = %s AND codigo = %s", (current_user.org_id, codigo))
+            n = cur.rowcount
+    except Exception as e:
+        if _sin_012(e):
+            return jsonify({"error": "Falta preparar la base (migración 012)."}), 503
+        raise
+    if not n:
+        return jsonify({"error": "Ese equipo no estaba dado de baja."}), 404
+    auditar("equipo_reactivar", entidad="equipo", detalle={"codigo": codigo})
+    return jsonify({"ok": True})
+
+
 # ── Portal del cliente (migración 011): resumen en vivo por enlace ───────────
 def _sin_011(e) -> bool:
     return isinstance(e, psycopg2.errors.UndefinedFunction)

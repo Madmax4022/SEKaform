@@ -662,7 +662,8 @@ function normalizeEnvioFromCloud(e) {
     unidadId: e.unidad_id||e.unidadId||null,
     estado: e.estado||'enviado', datos: e.datos||{},
     llenadoPor: e.llenado_por||e.llenadoPor||null, llenadoCorreo: e.llenado_correo||e.llenadoCorreo||null,
-    creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn
+    creadoEn: e.creado_en||e.creadoEn, enviadoEn: e.enviado_en||e.enviadoEn,
+    capturadoEn: e.capturado_en||e.capturadoEn||null   // cuándo se llenó (la última inspección de un equipo)
   };
 }
 function normalizeUnidadFromCloud(u) {
@@ -695,6 +696,7 @@ async function syncFromCloud() {
     skfReconcile('skf_plantillas', cloudP, normalizePlantillaFromCloud);
     skfReconcile('skf_envios', cloudE, normalizeEnvioFromCloud);
     skfReconcile('skf_unidades', cloudU, normalizeUnidadFromCloud);
+    if (typeof sbLoadEquiposBaja === 'function') await sbLoadEquiposBaja();   // deja la copia local al día
   } catch(e) { /* offline-first: keep local data as-is */ }
 }
 
@@ -1358,14 +1360,17 @@ function _equiposDe(c) {
   try { pls = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch {}
   return skfEquiposConocidos(envios, pls, c.prefijo);
 }
+function _bajasEq() { return (!isPublicFill && typeof skfEquiposBajaLocal === 'function') ? skfEquiposBajaLocal() : []; }
 function _haceDias(f) {
   const d = Math.floor((Date.now() - new Date(f)) / 864e5);
   return isNaN(d) ? '' : d <= 0 ? 'hoy' : d === 1 ? 'ayer' : `hace ${d} días`;
 }
 function _equipoRender(c, box) {
   const tipo = skfEquipoTipo(c.prefijo);
-  const lista = _equiposDe(c);
-  const sig = skfEquipoSiguiente(lista.map(x => x.codigo), tipo.prefijo);
+  const todos = _equiposDe(c), bajas = _bajasEq();
+  const lista = todos.filter(eq => !skfEquipoDeBaja(eq, bajas));   // los dados de baja no se ofrecen…
+  // …pero su número tampoco se reasigna: el siguiente libre cuenta todos.
+  const sig = skfEquipoSiguiente(todos.map(x => x.codigo).concat(bajas.map(b => b.codigo)), tipo.prefijo);
   if (!submission[c.id] && !lista.length && !isPublicFill) submission[c.id] = sig;   // primer equipo: listo sin pensar
   box.innerHTML = `<input type="text" class="eq-code" id="eqi_${c.id}" autocomplete="off" autocapitalize="characters" spellcheck="false"
       placeholder="${isPublicFill ? 'Código de la etiqueta, ej. ' + tipo.prefijo + '-001' : sig}" aria-describedby="eqh_${c.id}">
@@ -1387,6 +1392,7 @@ function _equipoPintar(c, lista, sig) {
   hint.classList.toggle('ok', !!conocido);
   if (isPublicFill) hint.textContent = `Escribe el código que está en la etiqueta del ${tipo.nombre.toLowerCase()}.`;
   else if (conocido) hint.textContent = `✓ ${conocido.codigo} · última inspección ${_haceDias(conocido.ultima)}${conocido.unidadId && uNom(conocido.unidadId) ? ' · ' + uNom(conocido.unidadId) : ''}`;
+  else if (v && _bajasEq().some(b => skfEquipoNormalizar(b.codigo) === v)) hint.textContent = `${v} estaba dado de baja: al enviar esta inspección vuelve a estar activo.`;
   else if (v) hint.textContent = `${tipo.ico} ${tipo.nombre} nuevo: queda registrado como ${v}. Márcalo con ese código para encontrarlo la próxima vez.`;
   else hint.textContent = lista.length ? `Elige el ${tipo.nombre.toLowerCase()} o crea uno nuevo.` : '';
   if (conocido || isPublicFill) { box.innerHTML = ''; return; }

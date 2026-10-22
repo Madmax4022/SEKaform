@@ -61,6 +61,7 @@ correr migrations/008_aviso_configurable.sql
 correr migrations/009_equipo.sql
 correr migrations/010_asesores.sql
 correr migrations/011_portal.sql
+correr migrations/012_equipos_baja.sql
 
 echo "✓ Migraciones aplicadas."
 echo "→ Estado:"
