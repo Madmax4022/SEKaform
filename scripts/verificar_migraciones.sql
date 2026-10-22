@@ -13,5 +13,6 @@ FROM (VALUES
   ('007_aviso_publico',      to_regclass('public.avisos_puntaje') IS NOT NULL,                           'avisos de puntaje en formularios públicos'),
   ('008_aviso_configurable', EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'plantillas' AND column_name = 'aviso_umbral'), 'umbral y tope de avisos por formulario'),
   ('009_equipo',             to_regprocedure('skf_equipo_invitar(citext,text,integer)') IS NOT NULL,     'invitar y administrar el equipo desde la app'),
-  ('010_asesores',           to_regprocedure('skf_asesor_crear_empresa(text,text)') IS NOT NULL,         'asesores con varias empresas; datos solo de la empresa activa')
+  ('010_asesores',           to_regprocedure('skf_asesor_crear_empresa(text,text)') IS NOT NULL,         'asesores con varias empresas; datos solo de la empresa activa'),
+  ('011_portal',             to_regclass('public.portales') IS NOT NULL,                                 'portal del cliente (resumen en vivo)')
 ) AS m(migracion, ok, que_trae);

@@ -49,10 +49,11 @@ PAGINAS = {
     "empresa.html": "empresa.html",
     "personas.html": "personas.html",
     "clientes.html": "clientes.html",
+    "portal.html": "portal.html",
 }
 
 ESTATICOS = {
-    "styles.css", "field-types.js", "form-library.js", "sidebar.js", "agenda.js", "planear.js",
+    "styles.css", "field-types.js", "form-library.js", "sidebar.js", "agenda.js", "planear.js", "portal-admin.js",
     "chart.min.js", "sw.js", "manifest.json", "skf-api.js",
     # login.html ya no es una pantalla: es un desvío a /login, que es donde
     # Flask sirve el formulario de verdad. Va aquí y no en PAGINAS porque no
@@ -75,6 +76,7 @@ ESTATICOS = {
 ACCESO_PUBLICO = {
     "llenar.html": "pub",       # formulario compartido por enlace / QR
     "dashboard.html": "panel",  # panel compartido de solo lectura
+    "portal.html": "t",         # portal del cliente: resumen en vivo por enlace
 }
 
 

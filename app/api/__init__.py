@@ -31,7 +31,7 @@ from flask_login import current_user
 
 # «correo_avisos» y no «alertas»: más abajo hay una ruta que se llama alertas() y, con el
 # mismo nombre, tapaba al módulo — cada envío nuevo fallaba al intentar avisar.
-from .. import alertas as correo_avisos, db
+from .. import alertas as correo_avisos, db, limiter
 from ..security import (auditar, requiere_organizacion, requiere_escritura,
                         requiere_sesion, sesion_usuario)
 
@@ -983,6 +983,103 @@ def equipo_agregar():
     if r == "no_disponible":
         return jsonify({"error": "Ese correo no tiene cuenta en SEKaform: invítalo para que cree una.", "resultado": r}), 404
     return _equipo_resp(r)
+
+
+# ── Portal del cliente (migración 011): resumen en vivo por enlace ───────────
+def _sin_011(e) -> bool:
+    return isinstance(e, psycopg2.errors.UndefinedFunction)
+
+
+def _url_portal(token: str) -> str:
+    from ..config import Config
+    return f"{Config.URL_PUBLICA or request.host_url.rstrip('/')}/portal.html?t={token}"
+
+
+@bp.route("/portal")
+@requiere_organizacion
+def portal_actual():
+    try:
+        with sesion_usuario(solo_lectura=True) as cur:
+            cur.execute("SELECT * FROM skf_portal_actual()")
+            f = cur.fetchone()
+    except Exception as e:
+        if _sin_011(e):
+            return jsonify({"disponible": False})
+        raise
+    if not f:
+        return jsonify({"disponible": True, "portal": None})
+    return jsonify({"disponible": True, "portal": {"url": _url_portal(f["token"]), "creadoEn": f["creado_en"],
+                                                   "accesos": f["accesos"], "ultimoAcceso": f["ultimo_acceso"]}})
+
+
+@bp.route("/portal", methods=["POST"])
+@requiere_organizacion
+def portal_crear():
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT * FROM skf_portal_crear()")
+            r = cur.fetchone()
+    except Exception as e:
+        if _sin_011(e):
+            return jsonify({"error": "Falta preparar la base (migración 011) para el portal."}), 503
+        raise
+    if r["resultado"] != "ok":
+        return jsonify({"error": "Solo el dueño o un administrador puede crear el portal."}), 403
+    auditar("portal_crear", entidad="portal")
+    return jsonify({"ok": True, "portal": {"url": _url_portal(r["token"]), "accesos": 0, "ultimoAcceso": None}}), 201
+
+
+@bp.route("/portal", methods=["DELETE"])
+@requiere_organizacion
+def portal_revocar():
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT skf_portal_revocar() AS r")
+            r = cur.fetchone()["r"]
+    except Exception as e:
+        if _sin_011(e):
+            return jsonify({"error": "Falta preparar la base (migración 011)."}), 503
+        raise
+    if r == "sin_permiso":
+        return jsonify({"error": "Solo el dueño o un administrador puede desactivar el portal."}), 403
+    auditar("portal_revocar", entidad="portal")
+    return jsonify({"ok": True})
+
+
+# El portal es público y se abre por enlace: se limita por IP para que no se pueda usar
+# para adivinar tokens ni para cargar la base. (El límite va junto a la ruta: aplicado
+# después de registrarla, Flask-Limiter no lo reconoce.)
+@bp.route("/publico/portal/<token>")
+@limiter.limit("60 per minute")
+def portal_publico(token: str):
+    """Lo que ve el cliente. Las respuestas de cada inspección se usan aquí SOLO para
+    calcular su puntaje y no salen del servidor: el portal muestra resúmenes."""
+    from ..puntaje import puntaje
+    if not re.fullmatch(r"[A-Za-z0-9_\-]{32,128}", token or ""):
+        return jsonify({"error": "Portal no disponible."}), 404
+    try:
+        with db.sesion_privilegiada() as cur:
+            cur.execute("SELECT skf_portal_datos(%s) AS d", (token,))
+            d = cur.fetchone()["d"]
+    except Exception as e:
+        if _sin_011(e):
+            return jsonify({"error": "Portal no disponible."}), 404
+        raise
+    if not d or not d.get("org"):
+        return jsonify({"error": "Este portal ya no está disponible. Pide un enlace nuevo."}), 404
+    insp, pcts = [], []
+    for i in d.get("inspecciones") or []:
+        p = puntaje(i.get("campos"), i.get("datos"))
+        if p:
+            pcts.append(p["pct"])
+        insp.append({"formulario": i.get("formulario"), "fecha": i.get("fecha"), "lugar": i.get("lugar"),
+                     "pct": p["pct"] if p else None, "nivel": p["nivel"] if p else None})
+    resp = jsonify({"org": d["org"], "evidencia": d.get("evidencia") or [], "inspecciones": insp,
+                    "hallazgos": d.get("hallazgos") or [], "envios30d": d.get("envios_30d") or 0,
+                    "puntajePromedio": round(sum(pcts) / len(pcts)) if pcts else None})
+    resp.headers["Cache-Control"] = "no-store"
+    resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
 
 
 def registrar_api(app, csrf) -> None:

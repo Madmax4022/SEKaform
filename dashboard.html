@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
   <script src="field-types.js"></script>
+  <script src="portal-admin.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -303,6 +304,7 @@
       <div class="pa-group">
         <span class="pa-lbl">📈 Para gerencia · estatus</span>
         <button class="btn-export" onclick="exportarPanelPDF()">🖨 Panel (PDF)</button>
+        <button class="btn-export" onclick="skfPortalAdministrar(this)" title="Enlace con el estado siempre al día, sin cuenta">🔗 Portal del cliente</button>
         <button class="btn-export" onclick="abrirCompartirPanel()">📤 Compartir</button>
       </div>
       <div class="pa-group">
