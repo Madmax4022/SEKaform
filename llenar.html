@@ -609,9 +609,11 @@ async function syncFromCloud() {
 
 // ── Init ───────────────────────────────────────────────────────────
 let isPublicFill = false;
+let _yo = null;   // quién está llenando (con sesión): queda en el envío y cumple sus encargos
 let _rutinasHechas = []; // true cuando se llena vía ?pub=<token> sin sesión
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof skfYo === 'function') skfYo().then(u => { _yo = u; }).catch(() => {});
   window.addEventListener('beforeunload', e => {
     if (activeTmpl && Object.keys(submission).length > 0) {
       saveDraft(true);
@@ -1492,7 +1494,8 @@ function submitForm() {
       estado: 'enviado',
       datos: datosEnvio,
       unidadId: isPublicFill ? null : (document.getElementById('fillUnidad') ? document.getElementById('fillUnidad').value || null : null),
-      llenadoPor: isPublicFill ? document.getElementById('fillerName').value.trim() : '',
+      llenadoPor: isPublicFill ? document.getElementById('fillerName').value.trim() : (_yo ? (_yo.nombre || _yo.email || '') : ''),
+      llenadoCorreo: isPublicFill ? null : (_yo && _yo.email) || null,
       creadoEn: new Date().toISOString(),
       enviadoEn: new Date().toISOString()
     };

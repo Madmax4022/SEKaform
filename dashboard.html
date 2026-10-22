@@ -933,16 +933,18 @@ function computeCumplimiento(asignaciones, envios) {
   const groups = {};
   asignaciones.forEach(a => {
     const k = `${fAsgPlantillaId(a)}::${fAsgCreado(a)}`;
-    (groups[k] ||= { pId: fAsgPlantillaId(a), creado: fAsgCreado(a), personas: [] }).personas.push(a.nombre);
+    (groups[k] ||= { pId: fAsgPlantillaId(a), creado: fAsgCreado(a), personas: [] }).personas.push({ nombre: a.nombre, correo: a.correo || '' });
   });
   let done = 0, total = 0;
   Object.values(groups).forEach(g => {
-    g.personas.forEach(nombre => {
+    g.personas.forEach(p => {
       total++;
+      // Por nombre (quien llena por enlace) o por correo (quien llena desde la app con su cuenta).
       const match = envios.some(e =>
         fEnvPlantillaId(e) === g.pId &&
         new Date(fEnvCreado(e)) >= new Date(g.creado) &&
-        normTxt(fEnvLlenadoPor(e)) === normTxt(nombre)
+        (normTxt(fEnvLlenadoPor(e)) === normTxt(p.nombre) ||
+         (p.correo && normTxt(e.llenado_correo || e.llenadoCorreo) === normTxt(p.correo)))
       );
       if (match) done++;
     });

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Personas — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
+  <script src="agenda.js"></script>
+  <script src="planear.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 16px 40px; }
+    .pg-eyebrow { font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--pri-txt); margin-bottom: 4px; }
+    .pg-h { font-size: 1.55rem; font-weight: 900; letter-spacing: -.5px; }
+    .pg-sub { color: var(--mut); font-size: .9rem; line-height: 1.5; margin: 4px 0 18px; }
+    .sec { display: flex; align-items: center; gap: 8px; margin: 22px 2px 10px; font-size: .74rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--mut); }
+    .sec .cnt { background: var(--card); border: 1px solid var(--bor); border-radius: 999px; padding: 1px 8px; }
+    .sec-nota { color: var(--mut); font-size: .82rem; margin: -4px 2px 10px; line-height: 1.45; }
+    .per { display: grid; grid-template-columns: 46px 1fr auto; gap: 12px; align-items: center; width: 100%; min-height: 66px; padding: 9px 12px; margin-bottom: 8px;
+      border-radius: 16px; background: var(--card); border: 1px solid var(--bor); color: var(--txt); font: inherit; text-align: left; cursor: pointer; }
+    .per:active { transform: scale(.985); }
+    .per:hover { border-color: var(--pri); }
+    .av { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.05rem; color: #fff;
+      background: linear-gradient(145deg, #3b82f6, #1d4ed8); }
+    .per.contacto .av { background: linear-gradient(145deg, #475569, #334155); }
+    .per.invitado .av { background: none; border: 2px dashed var(--bor); color: var(--mut); }
+    .pn { font-weight: 800; font-size: .96rem; line-height: 1.25; display: block; }
+    .pd { font-size: .78rem; color: var(--mut); margin-top: 2px; line-height: 1.35; display: block; overflow: hidden; text-overflow: ellipsis; }
+    .rol { font-size: .72rem; font-weight: 800; white-space: nowrap; padding: 5px 9px; border-radius: 999px; background: var(--bor); }
+    .rol.dueno, .rol.admin { background: rgba(110,168,254,.18); color: var(--pri-txt); }
+    .rol.pend { background: rgba(245,158,11,.16); color: var(--warn); }
+    .yo { font-size: .66rem; font-weight: 800; color: var(--ok); margin-left: 6px; }
+    .aviso { padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px dashed var(--bor); color: var(--mut); font-size: .86rem; line-height: 1.45; margin-bottom: 8px; }
+    .rol-op { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; width: 100%; min-height: 60px; padding: 10px 14px; margin-bottom: 8px;
+      border-radius: 16px; border: 1.5px solid var(--bor); background: var(--bg); color: var(--txt); font: inherit; text-align: left; cursor: pointer; }
+    .rol-op b { display: block; font-size: .95rem; }
+    .rol-op small { display: block; color: var(--mut); font-size: .8rem; margin-top: 2px; line-height: 1.35; }
+    .rol-op.on { border-color: var(--pri-txt); background: rgba(110,168,254,.1); }
+    .rol-op .ck { font-weight: 900; color: var(--pri-txt); }
+    .peligro b { color: var(--err-txt); }
+  </style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <div class="pg-eyebrow">🏢 Mi empresa</div>
+  <h1 class="pg-h">Personas</h1>
+  <p class="pg-sub">Tu equipo en la app y la gente a la que le encargas formularios. Toca a alguien para encargarle algo o cambiar su permiso.</p>
+
+  <button type="button" class="btn-planear-pg" id="btnInvitar" hidden>＋ Invitar a alguien</button>
+  <div id="lista"><div class="esqueleto" style="height:66px;border-radius:16px;background:var(--card);margin-bottom:8px"></div></div>
+</div>
+
+<script>
+const ROL = {
+  dueno:  { t: 'Dueño', d: 'Dueño de la cuenta' },
+  admin:  { t: 'Administrador', d: 'Puede todo, incluido invitar y cambiar permisos' },
+  editor: { t: 'Registra', d: 'Llena formularios, reporta y corrige hallazgos' },
+  lector: { t: 'Solo mira', d: 'Ve la información, no cambia nada' },
+};
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const inicial = p => ((p.nombre || p.correo || '?').trim()[0] || '?').toUpperCase();
+let datos = null, equipo = null, personas = [], miRol = null;
+const esAdmin = () => miRol === 'dueno' || miRol === 'admin';
+
+function fila(p, i) {
+  const det = p.tipo === 'cuenta' ? p.correo
+    : p.tipo === 'invitado' ? 'Invitación enviada · aún no crea su cuenta'
+    : [p.pendientes ? p.pendientes + ' encargo' + (p.pendientes !== 1 ? 's' : '') + ' pendiente' + (p.pendientes !== 1 ? 's' : '') : '',
+       p.rutinas ? 'responsable de ' + p.rutinas + ' rutina' + (p.rutinas !== 1 ? 's' : '') : '', p.correo].filter(Boolean).join(' · ') || 'Sin cuenta en la app';
+  const badge = p.tipo === 'cuenta' ? `<span class="rol ${p.rol}">${ROL[p.rol] ? ROL[p.rol].t : p.rol}</span>`
+    : p.tipo === 'invitado' ? '<span class="rol pend">Pendiente</span>' : '';
+  return `<button type="button" class="per ${p.tipo}" data-i="${i}">
+    <span class="av" aria-hidden="true">${p.tipo === 'invitado' ? '✉' : esc(inicial(p))}</span>
+    <span style="min-width:0"><span class="pn">${esc(p.nombre || p.correo)}${p.soyYo ? '<span class="yo">TÚ</span>' : ''}</span><span class="pd">${esc(det)}</span></span>
+    ${badge}</button>`;
+}
+
+function pintar() {
+  personas = skfPersonas(datos, equipo);
+  const g = t => personas.map((p, i) => [p, i]).filter(([p]) => p.tipo === t);
+  let h = '';
+  if (equipo && equipo.disponible === false) h += '<div class="aviso">Para invitar personas desde la app falta preparar la base (migración 009). Mientras tanto ves a tus contactos.</div>';
+  if (!equipo) h += '<div class="aviso">Sin conexión: ves a tus contactos. El equipo con cuenta aparece cuando vuelva la señal.</div>';
+  const cuenta = g('cuenta'), inv = g('invitado'), cont = g('contacto');
+  if (cuenta.length) h += `<div class="sec">Con cuenta en la app <span class="cnt">${cuenta.length}</span></div>` + cuenta.map(([p, i]) => fila(p, i)).join('');
+  if (inv.length) h += `<div class="sec">Invitaciones pendientes <span class="cnt">${inv.length}</span></div>` + inv.map(([p, i]) => fila(p, i)).join('');
+  h += `<div class="sec">Sin cuenta <span class="cnt">${cont.length}</span></div>`;
+  h += cont.length ? '<p class="sec-nota">Personas a las que les encargaste algo o que son responsables de una rutina. Llenan por enlace, sin cuenta.</p>' + cont.map(([p, i]) => fila(p, i)).join('')
+    : '<div class="aviso">Aquí aparecerán las personas a las que les encargues formularios.</div>';
+  document.getElementById('lista').innerHTML = h;
+  document.getElementById('btnInvitar').hidden = !esAdmin() || !equipo || equipo.disponible === false;
+}
+
+async function cargar() {
+  datos = await skfAgendaDatos();
+  try { equipo = await skfEquipo(); miRol = equipo.miRol; } catch (e) { equipo = null; try { miRol = await skfRol(); } catch (e2) {} }
+  pintar();
+}
+
+// ── Acciones sobre una persona ─────────────────────────────────────────────
+const op = (id, ico, t, s, cls) => `<button type="button" class="skf-opt pw-btnopt ${cls || ''}" id="${id}"><span class="so-ico">${ico}</span><span class="so-txt"><b>${t}</b>${s ? `<small>${s}</small>` : ''}</span><span class="so-arr">›</span></button>`;
+
+function acciones(p, origen) {
+  const puede = esAdmin() && !p.soyYo && p.rol !== 'dueno' && !(p.rol === 'admin' && miRol !== 'dueno');
+  let h = `<p class="skf-sheet-nota" style="margin-top:-6px">${esc(p.correo || 'Sin correo')}${p.tipo === 'cuenta' ? ' · ' + esc(ROL[p.rol] ? ROL[p.rol].d : p.rol) : ''}</p>`;
+  if (!p.soyYo && p.tipo !== 'invitado') h += op('aEnc', '👤', 'Encargarle un formulario', 'Elige qué, dónde y para cuándo');
+  if (p.tipo === 'cuenta' && puede) h += op('aRol', '🔑', 'Cambiar permiso', 'Hoy: ' + (ROL[p.rol] ? ROL[p.rol].t : p.rol)) + op('aQuitar', '🚪', 'Quitar del equipo', 'Deja de entrar a la app de tu empresa', 'peligro');
+  if (p.tipo === 'invitado' && esAdmin()) h += op('aReenv', '✉️', 'Volver a enviar la invitación', 'Renueva la vigencia por 14 días') + op('aCancel', '✕', 'Cancelar la invitación', '', 'peligro');
+  if (p.tipo === 'contacto' && esAdmin() && equipo && equipo.disponible !== false) h += op('aInvitar', '📲', 'Invitar a la app', p.correo ? 'Con su correo ' + p.correo : 'Te pediremos su correo');
+  if (p.tipo === 'cuenta' && p.soyYo) h += '<p class="skf-sheet-nota">Este eres tú. Tu permiso lo cambia el dueño de la cuenta.</p>';
+  const body = skfSheet(esc(p.nombre || p.correo), h, origen);
+  const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
+  on('aEnc', () => skfPlanear({ modo: 'una', persona: { nombre: p.nombre || p.correo, correo: p.correo || '' }, plantillas: datos.plantillas, alCerrar: cargar }));
+  on('aRol', () => elegirRol(p));
+  on('aQuitar', async () => {
+    if (!confirm('¿Quitar a ' + (p.nombre || p.correo) + ' del equipo? Dejará de entrar a la app de tu empresa. Lo que registró se conserva.')) return;
+    try { await skfEquipoQuitar(p.userId); skfSheetCerrar(); toast('Quitado del equipo'); cargar(); } catch (e) { toast(e.message, 'er'); }
+  });
+  on('aReenv', () => invitar(p.correo, p.rol));
+  on('aCancel', async () => { try { await skfEquipoRevocar(p.invId); skfSheetCerrar(); toast('Invitación cancelada'); cargar(); } catch (e) { toast(e.message, 'er'); } });
+  on('aInvitar', () => formInvitar(p.correo, 'editor'));
+}
+
+function elegirRol(p) {
+  const opciones = ['admin', 'editor', 'lector'].filter(r => r !== 'admin' || miRol === 'dueno');
+  skfSheet('Permiso de ' + esc(p.nombre || p.correo), opciones.map(r =>
+    `<button type="button" class="rol-op${p.rol === r ? ' on' : ''}" data-rol="${r}"><span><b>${ROL[r].t}</b><small>${ROL[r].d}</small></span><span class="ck">${p.rol === r ? '✓' : ''}</span></button>`).join(''));
+  document.querySelectorAll('[data-rol]').forEach(b => b.onclick = async () => {
+    if (b.dataset.rol === p.rol) { skfSheetCerrar(); return; }
+    try { await skfEquipoRol(p.userId, b.dataset.rol); skfSheetCerrar(); toast('Permiso actualizado'); cargar(); } catch (e) { toast(e.message, 'er'); }
+  });
+}
+
+// ── Invitar ───────────────────────────────────────────────────────────────
+function formInvitar(correo, rol) {
+  let elegido = rol || 'editor';
+  const pintarRoles = () => ['editor', 'lector', 'admin'].filter(r => r !== 'admin' || miRol === 'dueno').map(r =>
+    `<button type="button" class="rol-op${elegido === r ? ' on' : ''}" data-r="${r}" aria-pressed="${elegido === r}"><span><b>${ROL[r].t}</b><small>${ROL[r].d}</small></span><span class="ck">${elegido === r ? '✓' : ''}</span></button>`).join('');
+  skfSheet('Invitar a alguien', `
+    <label class="pw-sub" for="invMail" style="margin-top:4px">Su correo</label>
+    <input class="pw-inp" id="invMail" type="email" inputmode="email" autocomplete="off" placeholder="nombre@empresa.com" value="${esc(correo || '')}">
+    <div class="pw-sub">¿Qué podrá hacer?</div><div id="invRoles">${pintarRoles()}</div>
+    <p class="pw-err" id="invErr" hidden></p>
+    <button type="button" class="pw-sig pw-fin" id="invOk">Enviar invitación</button>`);
+  document.getElementById('invRoles').onclick = e => { const b = e.target.closest('[data-r]'); if (!b) return; elegido = b.dataset.r; document.getElementById('invRoles').innerHTML = pintarRoles(); };
+  document.getElementById('invOk').onclick = () => invitar(document.getElementById('invMail').value.trim(), elegido);
+  if (!correo) setTimeout(() => document.getElementById('invMail').focus(), 60);
+}
+
+async function invitar(correo, rol) {
+  const err = document.getElementById('invErr'), btn = document.getElementById('invOk');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    const r = await skfEquipoInvitar(correo, rol);
+    const msg = 'Hola, te invité a la app de seguridad y salud en el trabajo de nuestra empresa (SEKaform). Crea tu cuenta aquí: ' + r.enlace;
+    skfSheet('Invitación lista', `<div class="pw-ok"><div class="pw-ok-ico">✓</div><h3 class="pw-q">${r.resultado === 'renovada' ? 'Invitación renovada' : 'Invitación creada'}</h3>
+      <div class="pw-resumen">${esc(correo)} podrá entrar como «${ROL[rol].t}». ${r.correoEnviado ? 'Le enviamos un correo.' : 'No pudimos enviarle el correo: mándale el enlace.'} Vence en 14 días.</div></div>
+      <div class="pw-sub">Envíale el enlace</div>
+      <a class="skf-opt" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}"><span class="so-ico">💬</span><span class="so-txt"><b>Enviar por WhatsApp</b><small>Con el mensaje ya escrito</small></span><span class="so-arr">›</span></a>
+      <button type="button" class="skf-opt pw-btnopt" id="invCopiar"><span class="so-ico">🔗</span><span class="so-txt"><b>Copiar enlace</b><small id="invCopS">${esc(r.enlace)}</small></span><span class="so-arr">›</span></button>
+      <button type="button" class="pw-sig pw-fin" onclick="skfSheetCerrar()">Listo</button>`, null, cargar);
+    document.getElementById('invCopiar').onclick = () => (navigator.clipboard ? navigator.clipboard.writeText(r.enlace) : Promise.reject())
+      .then(() => { document.getElementById('invCopS').textContent = '✓ Copiado'; }).catch(() => prompt('Copia el enlace:', r.enlace));
+  } catch (e) {
+    if (err) { err.textContent = e.message || 'No se pudo invitar.'; err.hidden = false; } else toast(e.message || 'No se pudo invitar.', 'er');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar invitación'; }
+  }
+}
+
+function toast(m, tipo) {
+  document.querySelectorAll('.toast').forEach(x => x.remove());
+  const d = document.createElement('div'); d.className = 'toast ' + (tipo || 'ok'); d.setAttribute('role', 'status');
+  d.textContent = (tipo === 'er' ? '✕ ' : '✓ ') + m; document.body.appendChild(d); setTimeout(() => d.remove(), 3200);
+}
+
+document.getElementById('lista').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) acciones(personas[+b.dataset.i], b); });
+document.getElementById('btnInvitar').addEventListener('click', () => formInvitar('', 'editor'));
+cargar();
+</script>
+</body>
+</html>

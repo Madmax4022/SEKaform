@@ -3,10 +3,10 @@
 const fs = require('fs'), path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', 'form-library.js'), 'utf8') + '\n' +
   fs.readFileSync(path.join(__dirname, '..', 'agenda.js'), 'utf8').replace(/if \(typeof module[^\n]*\n?$/, '') +
-  ';module.exports={skfAgenda,skfAgendaHoy,skfAgendaCuando,skfAvanzarFecha,skfRutinasCompletadas};';
+  ';module.exports={skfPersonas,skfAgenda,skfAgendaHoy,skfAgendaCuando,skfAvanzarFecha,skfRutinasCompletadas};';
 const m = { exports: {} };
 new Function('module', 'require', src)(m, require);
-const { skfAgenda, skfAgendaHoy, skfAgendaCuando, skfAvanzarFecha, skfRutinasCompletadas } = m.exports;
+const { skfPersonas, skfAgenda, skfAgendaHoy, skfAgendaCuando, skfAvanzarFecha, skfRutinasCompletadas } = m.exports;
 
 let ok = 0, fail = 0;
 function t(n, fn) { try { fn(); ok++; } catch (e) { fail++; console.log('FAIL: ' + n + '\n   ' + e.message); } }
@@ -117,6 +117,35 @@ t('una rutina atrasada varios ciclos salta hasta una fecha futura', () => {
 t('la rutina con lugar abre el formulario con ese lugar elegido', () => {
   const a = skfAgenda({ plantillas: PL, inspecciones: [{ id: 'a', plantillaId: 'p2', unidadId: 'u1', proximoEn: F(0) }] }, AHORA);
   eq(a[0].href, 'llenar.html?tmpl=p2&unidad=u1');
+});
+
+t('encargo a alguien con cuenta: se cumple cuando lo llena desde la app (por su correo)', () => {
+  const asg = [{ id: 'x', plantillaId: 'p1', nombre: 'Luisa', correo: 'luisa@x.co', creadoEn: '2026-10-20T00:00:00' }];
+  const env = [{ plantillaId: 'p1', llenadoPor: 'Luisa Fernanda Ríos', llenadoCorreo: 'LUISA@x.co', creadoEn: '2026-10-21T00:00:00' }];
+  eq(skfAgenda({ plantillas: PL, asignaciones: asg, envios: env }, AHORA).length, 0);
+});
+
+t('Personas: una lista sin duplicados, equipo primero, contactos con sus pendientes', () => {
+  const equipo = { miembros: [{ id: 'u1', email: 'ana@x.co', nombre: 'Ana Pérez', rol: 'dueno', soyYo: true },
+                              { id: 'u2', email: 'luis@x.co', nombre: 'Luis', rol: 'editor' }],
+                   invitaciones: [{ id: 'i1', email: 'nuevo@x.co', rol: 'lector' }] };
+  const d = { plantillas: PL,
+    asignaciones: [{ id: 'a1', plantillaId: 'p1', nombre: 'luis', correo: 'LUIS@x.co', creadoEn: '2026-10-20' },   // = Luis (por correo)
+                   { id: 'a2', plantillaId: 'p1', nombre: 'Carlos Ruiz', creadoEn: '2026-10-20' },
+                   { id: 'a3', plantillaId: 'p2', nombre: 'carlos ruiz', creadoEn: '2026-10-20' }],                 // = Carlos (por nombre)
+    inspecciones: [{ id: 'r1', plantillaId: 'p2', responsable: 'Carlos Ruiz', proximoEn: F(5) },
+                   { id: 'r2', plantillaId: 'p2', responsable: 'Marta', proximoEn: F(5), activa: false }],
+    envios: [] };
+  const ps = skfPersonas(d, equipo);
+  eq(ps.map(p => [p.tipo, p.nombre || p.correo]), [['cuenta', 'Ana Pérez'], ['cuenta', 'Luis'], ['invitado', 'nuevo@x.co'], ['contacto', 'Carlos Ruiz']]);
+  eq(ps[1].pendientes, 1, 'el encargo de Luis cuenta para Luis');
+  eq([ps[3].pendientes, ps[3].rutinas], [2, 1]);
+  eq(ps[0].soyYo, true);
+});
+
+t('Personas sin conexión (sin equipo): solo los contactos', () => {
+  const ps = skfPersonas({ asignaciones: [{ id: 'a', plantillaId: 'p1', nombre: 'Eva', creadoEn: '2026-10-20' }] }, null);
+  eq(ps.map(p => p.tipo + ':' + p.nombre), ['contacto:Eva']);
 });
 
 console.log(`${ok} pasaron, ${fail} fallaron (de ${ok + fail})`);

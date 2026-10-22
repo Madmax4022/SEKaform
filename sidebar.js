@@ -217,7 +217,7 @@ const SKF_PAGINAS = {
   'plan.html': ['plan'], 'programadas.html': ['plan', 'Rutinas'], 'asignaciones.html': ['plan', 'Encargos'], 'turnos.html': ['plan', 'Turnos'],
   'hallazgos.html': ['hallazgos'],
   'cumplimiento.html': ['cumplimiento'], 'dashboard.html': ['cumplimiento', 'Panel y reportes'],
-  'empresa.html': ['empresa'], 'organizacion.html': ['empresa', 'Datos de la empresa'], 'unidades.html': ['empresa', 'Lugares'],
+  'empresa.html': ['empresa'], 'organizacion.html': ['empresa', 'Datos de la empresa'], 'unidades.html': ['empresa', 'Lugares'], 'personas.html': ['empresa', 'Personas'],
   'plantillas.html': ['empresa', 'Catálogo'], 'llenar.html': ['empresa', 'Formularios'], 'digitalizador.html': ['empresa', 'Crear formulario'],
   'bienvenida.html': ['empresa', 'Configurar'],
 };
@@ -306,6 +306,7 @@ function skfRenderSidebar() {
   const EMPRESA = [
     { href: 'empresa.html', s: 'empresa' },
     { href: 'llenar.html', ico: '📋', label: 'Formularios' },
+    { href: 'personas.html', ico: '👥', label: 'Personas' },
     { href: 'unidades.html', ico: '📍', label: 'Lugares' },
   ];
   const _sl = l => {

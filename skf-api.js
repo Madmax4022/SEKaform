@@ -109,6 +109,15 @@ async function skfFetch(url, opciones = {}, _reintento = false) {
   return cuerpo;
 }
 
+// ── Equipo (migración 009): invitar y administrar a la gente de la empresa ──
+// Sin conexión no hay nada que hacer aquí: son decisiones que deben quedar en el
+// servidor al momento (no se encolan). Lanzan con el mensaje del servidor.
+async function skfEquipo() { return skfFetch('/api/equipo'); }
+async function skfEquipoInvitar(email, rol) { return skfFetch('/api/equipo/invitar', { method: 'POST', body: JSON.stringify({ email, rol }) }); }
+async function skfEquipoRevocar(id) { return skfFetch('/api/equipo/invitacion/' + encodeURIComponent(id), { method: 'DELETE' }); }
+async function skfEquipoRol(userId, rol) { return skfFetch('/api/equipo/' + encodeURIComponent(userId) + '/rol', { method: 'POST', body: JSON.stringify({ rol }) }); }
+async function skfEquipoQuitar(userId) { return skfFetch('/api/equipo/' + encodeURIComponent(userId), { method: 'DELETE' }); }
+
 // ── Traducción de nombres de campo ───────────────────────────────────────
 // Las páginas heredaron los nombres de Supabase (logo, foto, evidencia_cierre);
 // el esquema nuevo usa logo_url / foto_url / evidencia_url, que describen mejor

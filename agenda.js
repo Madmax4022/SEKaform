@@ -58,8 +58,9 @@ function skfAgenda(d, ahora) {
   (d.asignaciones || []).forEach(function (a) {
     var pid = a.plantilla_id || a.plantillaId, creado = new Date(a.creado_en || a.creadoEn || 0), quien = a.nombre || '';
     var hecho = envios.some(function (e) {
-      return (e.plantilla_id || e.plantillaId) === pid && _agFecha(e) >= creado &&
-        _agNorm(e.llenado_por || e.llenadoPor) === _agNorm(quien);
+      if ((e.plantilla_id || e.plantillaId) !== pid || _agFecha(e) < creado) return false;
+      var correo = _agNorm(a.correo), ec = _agNorm(e.llenado_correo || e.llenadoCorreo);
+      return _agNorm(e.llenado_por || e.llenadoPor) === _agNorm(quien) || (correo && ec === correo);
     });
     if (hecho || a.completado_en || a.completadoEn) return;
     var lim = a.fecha_limite || a.fechaLimite, dias = lim ? _agDias(lim, ahora) : null;
@@ -166,4 +167,38 @@ function skfRutinasCompletadas(inspecciones, plantillaId, unidadId, ahora) {
   });
 }
 
-if (typeof module !== 'undefined') module.exports = { skfAgenda: skfAgenda, skfAgendaHoy: skfAgendaHoy, skfAgendaCuando: skfAgendaCuando, skfAvanzarFecha: skfAvanzarFecha, skfRutinasCompletadas: skfRutinasCompletadas };
+// ── Personas: UNA lista con el equipo (con cuenta), las invitaciones y los contactos sin
+// cuenta que ya aparecen en encargos y rutinas. Así se elige a alguien en vez de escribirlo
+// cada vez. equipo = respuesta de /api/equipo (o null sin conexión / sin migración).
+function skfPersonas(d, equipo) {
+  d = d || {}; var porClave = {}, out = [];
+  var agregar = function (p) {
+    var k = p.correo ? 'c:' + _agNorm(p.correo) : 'n:' + _agNorm(p.nombre);
+    var kn = 'n:' + _agNorm(p.nombre);
+    var ya = porClave[k] || (p.nombre && porClave[kn]);
+    if (ya) {                                  // misma persona: se completa lo que falte
+      if (!ya.correo && p.correo) { ya.correo = p.correo; porClave['c:' + _agNorm(p.correo)] = ya; }
+      if (ya.tipo === 'contacto' && p.tipo !== 'contacto') { ya.tipo = p.tipo; ya.rol = p.rol; ya.userId = p.userId; ya.invId = p.invId; ya.soyYo = p.soyYo; }
+      if (!ya.nombre && p.nombre) ya.nombre = p.nombre;
+      return ya;
+    }
+    var n = Object.assign({ pendientes: 0, rutinas: 0 }, p);
+    porClave[k] = n; if (n.nombre) porClave[kn] = porClave[kn] || n; out.push(n); return n;
+  };
+  ((equipo && equipo.miembros) || []).forEach(function (m) { agregar({ tipo: 'cuenta', nombre: m.nombre || m.email, correo: m.email, rol: m.rol, userId: m.id, soyYo: !!m.soyYo }); });
+  ((equipo && equipo.invitaciones) || []).forEach(function (i) { agregar({ tipo: 'invitado', nombre: '', correo: i.email, rol: i.rol, invId: i.id, expira: i.expira }); });
+  var pend = {}; skfAgenda(d, new Date()).forEach(function (i) { if (i.tipo === 'encargo') pend[i.id.slice(2)] = 1; });
+  (d.asignaciones || []).forEach(function (a) {
+    if (!a.nombre) return;
+    var p = agregar({ tipo: 'contacto', nombre: a.nombre, correo: a.correo || '' });
+    if (pend[a.id]) p.pendientes++;
+  });
+  (d.inspecciones || []).forEach(function (i) {
+    if (!i.responsable || i.activa === false) return;
+    var p = agregar({ tipo: 'contacto', nombre: i.responsable, correo: i.correo || '' }); p.rutinas++;
+  });
+  var orden = { cuenta: 0, invitado: 1, contacto: 2 };
+  return out.sort(function (a, b) { return (orden[a.tipo] - orden[b.tipo]) || String(a.nombre || a.correo).localeCompare(String(b.nombre || b.correo)); });
+}
+
+if (typeof module !== 'undefined') module.exports = { skfPersonas: skfPersonas, skfAgenda: skfAgenda, skfAgendaHoy: skfAgendaHoy, skfAgendaCuando: skfAgendaCuando, skfAvanzarFecha: skfAvanzarFecha, skfRutinasCompletadas: skfRutinasCompletadas };
