@@ -51,7 +51,8 @@ function skfAgenda(d, ahora) {
     var partes = [SKF_FRECUENCIAS[i.frecuencia] || i.frecuencia, nombreLugar(i.unidad_id || i.unidadId), i.responsable]
       .filter(Boolean);
     items.push({ id: 'r:' + i.id, tipo: 'rutina', titulo: i.nombre || nombrePlantilla(pid) || 'Inspección',
-      detalle: partes.join(' · '), estado: _agEstado(dias), cuando: prox || null, dias: dias, href: llenar(pid) });
+      detalle: partes.join(' · '), estado: _agEstado(dias), cuando: prox || null, dias: dias,
+      href: llenar(pid) + ((i.unidad_id || i.unidadId) && llenar(pid) !== 'llenar.html' ? '&unidad=' + encodeURIComponent(i.unidad_id || i.unidadId) : '') });
   });
 
   (d.asignaciones || []).forEach(function (a) {
@@ -117,7 +118,11 @@ async function skfAgendaDatos() {
   };
   return {
     plantillas: unir(r[0], local('skf_plantillas')),
-    inspecciones: unir(r[1], local('skf_inspecciones')),
+    // Una rutina recién cumplida en este dispositivo puede no haber subido aún: gana la más reciente.
+    inspecciones: unir(r[1], local('skf_inspecciones')).map(function (i) {
+      var l = local('skf_inspecciones').find(function (x) { return x.id === i.id; });
+      return l && l !== i && String(l.ultimoCompletado || '') > String(i.ultimo_completado || i.ultimoCompletado || '') ? l : i;
+    }),
     asignaciones: unir(r[2], local('skf_asignaciones')),
     envios: unir(r[3], local('skf_envios')),
     unidades: unir(r[4], local('skf_unidades')),
@@ -126,4 +131,39 @@ async function skfAgendaDatos() {
   };
 }
 
-if (typeof module !== 'undefined') module.exports = { skfAgenda: skfAgenda, skfAgendaHoy: skfAgendaHoy, skfAgendaCuando: skfAgendaCuando };
+// ── Rutinas: llenar el formulario ES cumplir la rutina ────────────────────────
+// Antes había que ir a «Programadas» y marcarla a mano; si no, el plan la seguía mostrando
+// atrasada aunque la inspección ya estuviera hecha. Al enviar un formulario se completan las
+// rutinas de ese formulario (en ese lugar, o sin lugar) que vencen en ≤7 días o ya vencieron.
+var _SKF_PASO = { diaria: [0, 1], semanal: [0, 7], quincenal: [0, 15], mensual: [1, 0], bimestral: [2, 0],
+  trimestral: [3, 0], semestral: [6, 0], anual: [12, 0] };
+function _agISO(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function skfAvanzarFecha(fechaISO, frecuencia) {
+  var p = _SKF_PASO[frecuencia] || _SKF_PASO.mensual;
+  var d = new Date(String(fechaISO).slice(0, 10) + 'T00:00:00');
+  if (isNaN(d.getTime())) return fechaISO;
+  if (p[0]) {                       // meses: el 31 de enero + 1 mes = 28/29 de febrero, no 3 de marzo
+    var dia = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + p[0]);
+    d.setDate(Math.min(dia, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  } else d.setDate(d.getDate() + p[1]);
+  return _agISO(d);
+}
+// Devuelve las rutinas que este envío completa, ya actualizadas (no modifica las originales).
+function skfRutinasCompletadas(inspecciones, plantillaId, unidadId, ahora) {
+  ahora = ahora || new Date();
+  return (inspecciones || []).filter(function (i) {
+    if (i.activa === false || (i.plantillaId || i.plantilla_id) !== plantillaId) return false;
+    var u = i.unidadId || i.unidad_id || null;
+    if (u && u !== unidadId) return false;
+    var dias = _agDias(i.proximoEn || i.proximo_en, ahora);
+    return dias !== null && dias <= 7;
+  }).map(function (i) {
+    var n = Object.assign({}, i), hoy = _agISO(ahora), prox = n.proximoEn || n.proximo_en;
+    do { prox = skfAvanzarFecha(prox, n.frecuencia); } while (prox <= hoy);
+    n.proximoEn = prox; delete n.proximo_en;
+    n.ultimoCompletado = ahora.toISOString();
+    return n;
+  });
+}
+
+if (typeof module !== 'undefined') module.exports = { skfAgenda: skfAgenda, skfAgendaHoy: skfAgendaHoy, skfAgendaCuando: skfAgendaCuando, skfAvanzarFecha: skfAvanzarFecha, skfRutinasCompletadas: skfRutinasCompletadas };

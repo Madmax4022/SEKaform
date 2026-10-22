@@ -7,7 +7,7 @@
 // skf-api.js ya las encola para reintentarlas al volver la conexión (ver
 // SKF_QUEUE_KEY).
 
-const CACHE_VERSION = 'skf-shell-v57';
+const CACHE_VERSION = 'skf-shell-v59';
 
 const SHELL_ASSETS = [
   'index.html',
@@ -30,6 +30,7 @@ const SHELL_ASSETS = [
   'form-library.js',
   'sidebar.js',
   'agenda.js',
+  'planear.js',
   'skf-api.js',
   'chart.min.js',
   'manifest.json',

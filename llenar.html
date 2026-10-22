@@ -281,6 +281,7 @@
   .succ-score.nv-bajo { border-color: rgba(248,113,113,.55); } .succ-score.nv-bajo .ss-pct { color: var(--err-txt); }
   .sub-score { display: inline-block; margin-left: 8px; font-size: .74rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; background: var(--bor); }
   .sub-score.nv-alto { color: var(--ok); } .sub-score.nv-medio { color: var(--warn); } .sub-score.nv-bajo { color: var(--err-txt); }
+  .succ-rutina { text-align: left; font-size: .86rem; font-weight: 700; color: var(--ok); background: var(--ok-dim); border: 1px solid rgba(26,188,156,.35); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
   .cond-oculto { display: none !important; }
   .modal-id { background: var(--bg); border: 1px solid var(--bor); border-radius: 7px; padding: 10px 14px; font-family: monospace; font-size: 0.78rem; color: var(--ok); margin-bottom: 20px; word-break: break-all; }
 
@@ -332,6 +333,7 @@
   <script src="skf-api.js"></script>
   <script src="field-types.js"></script>
   <script src="form-library.js"></script>
+  <script src="agenda.js"></script>
 </head>
 <body>
 
@@ -487,6 +489,7 @@
     <div class="modal-id" id="successId"></div>
     <p class="modal-p hidden" id="successHz" style="margin-top:-10px;color:var(--err-txt)"></p>
     <div class="succ-score hidden" id="successScore" role="status"></div>
+    <div class="succ-rutina hidden" id="successRutina" role="status"></div>
     <div class="succ-next hidden" id="successNext" role="status"></div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-pri" style="justify-content:center" onclick="fillAgain()">Llenar otro registro</button>
@@ -605,7 +608,8 @@ async function syncFromCloud() {
 }
 
 // ── Init ───────────────────────────────────────────────────────────
-let isPublicFill = false; // true cuando se llena vía ?pub=<token> sin sesión
+let isPublicFill = false;
+let _rutinasHechas = []; // true cuando se llena vía ?pub=<token> sin sesión
 
 document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('beforeunload', e => {
@@ -971,6 +975,10 @@ function openTemplate(id) {
   else { fLogo.classList.add('hidden'); }
   document.getElementById('fg_fillerName').classList.add('hidden');
   populateFillUnidad();   // selector de unidad (solo llenado con sesión)
+  // Desde el plan, una rutina abre su formulario con su lugar ya elegido.
+  const _u = new URLSearchParams(location.search).get('unidad');
+  const _sel = document.getElementById('fillUnidad');
+  if (_u && _sel && [..._sel.options].some(o => o.value === _u)) _sel.value = _u;
 
   renderFields(t.campos);
   show('vForm');
@@ -1519,6 +1527,17 @@ function submitForm() {
       // Non-blocking cloud sync (encola si falla o no hay conexión)
       skfSyncOrQueue('envio', envio);
 
+      // Llenar el formulario cumple su rutina: la próxima fecha avanza sola (ver agenda.js).
+      try {
+        const rut = JSON.parse(localStorage.getItem('skf_inspecciones') || '[]');
+        const hechas = skfRutinasCompletadas(rut, activeTmpl.id, envio.unidadId, new Date());
+        if (hechas.length) {
+          localStorage.setItem('skf_inspecciones', JSON.stringify(rut.map(r => hechas.find(h => h.id === r.id) || r)));
+          hechas.forEach(h => skfSyncOrQueue('inspeccion', h));
+          _rutinasHechas = hechas;
+        }
+      } catch (e) { console.warn('[SEKaform] no se pudo actualizar la rutina:', e); }
+
       if (hallazgosEnvio.length) {
         const stored = JSON.parse(localStorage.getItem('skf_hallazgos')||'[]');
         stored.push(...hallazgosEnvio);
@@ -1557,6 +1576,14 @@ function submitForm() {
       hzMsg.classList.add('hidden');
     }
     mostrarPuntaje(activeTmpl.campos, datosEnvio);
+    const rh = document.getElementById('successRutina');
+    if (_rutinasHechas.length) {
+      const h = _rutinasHechas[0];
+      rh.textContent = '🔁 Rutina «' + (h.nombre || activeTmpl.nombre) + '» cumplida · próxima: ' +
+        new Date(h.proximoEn + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+      rh.classList.remove('hidden');
+    } else rh.classList.add('hidden');
+    _rutinasHechas = [];
     document.getElementById('successModal').classList.remove('hidden');
     if (!isPublicFill) cierreSiguiente(envio);
   } catch (e) {

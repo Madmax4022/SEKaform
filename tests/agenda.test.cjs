@@ -3,10 +3,10 @@
 const fs = require('fs'), path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', 'form-library.js'), 'utf8') + '\n' +
   fs.readFileSync(path.join(__dirname, '..', 'agenda.js'), 'utf8').replace(/if \(typeof module[^\n]*\n?$/, '') +
-  ';module.exports={skfAgenda,skfAgendaHoy,skfAgendaCuando};';
+  ';module.exports={skfAgenda,skfAgendaHoy,skfAgendaCuando,skfAvanzarFecha,skfRutinasCompletadas};';
 const m = { exports: {} };
 new Function('module', 'require', src)(m, require);
-const { skfAgenda, skfAgendaHoy, skfAgendaCuando } = m.exports;
+const { skfAgenda, skfAgendaHoy, skfAgendaCuando, skfAvanzarFecha, skfRutinasCompletadas } = m.exports;
 
 let ok = 0, fail = 0;
 function t(n, fn) { try { fn(); ok++; } catch (e) { fail++; console.log('FAIL: ' + n + '\n   ' + e.message); } }
@@ -28,7 +28,7 @@ t('rutinas: vencida, hoy, pronto, después; formas nube y local', () => {
   eq(a.map(i => i.estado), ['vencido', 'hoy', 'pronto', 'despues']);
   eq(a[0].detalle, 'cada mes · Bodega');
   eq(a[1].titulo, 'Lista SST', 'sin nombre propio usa el del formulario');
-  eq(a[0].href, 'llenar.html?tmpl=p2');
+  eq(a[0].href, 'llenar.html?tmpl=p2&unidad=u1');
 });
 
 t('encargos: pendiente hasta que ESA persona envía, después de encargarlo', () => {
@@ -80,6 +80,43 @@ t('textos de cuándo', () => {
 t('formulario borrado: el enlace cae en la lista, no en uno inexistente', () => {
   const a = skfAgenda({ plantillas: [], inspecciones: [{ id: 'a', plantillaId: 'zz', nombre: 'X', proximoEn: F(0) }] }, AHORA);
   eq(a[0].href, 'llenar.html');
+});
+
+t('avanzar fechas: días, semanas y meses sin desbordar el fin de mes', () => {
+  eq(skfAvanzarFecha('2026-10-22', 'diaria'), '2026-10-23');
+  eq(skfAvanzarFecha('2026-10-22', 'semanal'), '2026-10-29');
+  eq(skfAvanzarFecha('2026-10-22', 'quincenal'), '2026-11-06');
+  eq(skfAvanzarFecha('2026-01-31', 'mensual'), '2026-02-28');
+  eq(skfAvanzarFecha('2028-01-31', 'mensual'), '2028-02-29', 'bisiesto');
+  eq(skfAvanzarFecha('2026-11-30', 'trimestral'), '2027-02-28');
+  eq(skfAvanzarFecha('2026-10-22', 'anual'), '2027-10-22');
+});
+
+t('llenar el formulario completa la rutina de ese formulario y lugar', () => {
+  const ins = [
+    { id: 'a', plantillaId: 'p2', unidadId: 'u1', frecuencia: 'mensual', proximoEn: F(-3) },   // vencida, mismo lugar → sí
+    { id: 'b', plantillaId: 'p2', unidadId: 'u2', frecuencia: 'mensual', proximoEn: F(0) },    // otro lugar → no
+    { id: 'c', plantillaId: 'p2', frecuencia: 'semanal', proximoEn: F(2) },                    // sin lugar, vence pronto → sí
+    { id: 'd', plantillaId: 'p2', frecuencia: 'mensual', proximoEn: F(20) },                   // aún lejos → no
+    { id: 'e', plantillaId: 'p1', frecuencia: 'mensual', proximoEn: F(0) },                    // otro formulario → no
+    { id: 'f', plantillaId: 'p2', frecuencia: 'mensual', proximoEn: F(0), activa: false },     // inactiva → no
+  ];
+  const r = skfRutinasCompletadas(ins, 'p2', 'u1', AHORA);
+  eq(r.map(i => i.id), ['a', 'c']);
+  eq(r[0].proximoEn, '2026-11-19', 'vencida el 19-oct: la próxima es el 19-nov');
+  eq(r[1].proximoEn, '2026-10-31', 'semanal del 24-oct: la próxima es el 31-oct');
+  eq(!!r[0].ultimoCompletado, true);
+  eq(ins[0].proximoEn, F(-3), 'no modifica la lista original');
+});
+
+t('una rutina atrasada varios ciclos salta hasta una fecha futura', () => {
+  const r = skfRutinasCompletadas([{ id: 'a', plantillaId: 'p', frecuencia: 'semanal', proximoEn: F(-20) }], 'p', null, AHORA);
+  eq(r[0].proximoEn, F(1), '2-oct + 7 + 7 + 7 = 23-oct');
+});
+
+t('la rutina con lugar abre el formulario con ese lugar elegido', () => {
+  const a = skfAgenda({ plantillas: PL, inspecciones: [{ id: 'a', plantillaId: 'p2', unidadId: 'u1', proximoEn: F(0) }] }, AHORA);
+  eq(a[0].href, 'llenar.html?tmpl=p2&unidad=u1');
 });
 
 console.log(`${ok} pasaron, ${fail} fallaron (de ${ok + fail})`);

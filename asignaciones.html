@@ -10,6 +10,8 @@
   <title>Encargos — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
+  <script src="agenda.js"></script>
+  <script src="planear.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -104,7 +106,9 @@
     </div>
   </div>
 
-  <div class="card asg-new">
+  <button type="button" class="btn-planear-pg" onclick="skfPlanear({ modo: 'una', origen: this, alCerrar: () => location.reload() })">＋ Nuevo encargo</button>
+  <!-- La creación vive en «＋ Planear» (planear.js); este formulario queda oculto por compatibilidad. -->
+  <div class="card asg-new" style="display:none">
     <h2>+ Nuevo encargo<button class="skf-help" data-help-t="¿Cómo creo una asignación?" data-help="1. Elige el formulario que deben llenar.
 2. Escribe una persona por línea.
 3. Si agregas su correo separado por coma (María Gómez, maria@empresa.com), le llegará un email con el link del formulario.
@@ -166,7 +170,8 @@ function normalizeAsignacionFromCloud(a) {
   return {
     id: a.id, plantillaId: a.plantilla_id||a.plantillaId, plantillaNombre: a.plantilla_nombre||a.plantillaNombre,
     unidadId: a.unidad_id||a.unidadId||null,
-    nombre: a.nombre, correo: a.correo||null, creadoEn: a.creado_en||a.creadoEn
+    nombre: a.nombre, correo: a.correo||null, creadoEn: a.creado_en||a.creadoEn,
+    fechaLimite: a.fecha_limite||a.fechaLimite||null
   };
 }
 function normalizeUnidadFromCloud(u) {
@@ -280,7 +285,7 @@ async function createAsignacion() {
   });
 
   document.getElementById('asgNames').value = '';
-  toast(`Asignación creada — ${nuevas.length} persona${nuevas.length!==1?'s':''}`, 'ok');
+  toast(`Encargo creado — ${nuevas.length} persona${nuevas.length!==1?'s':''}`, 'ok');
   renderGroups();
   copyShareLink(t, true);
 }
@@ -358,11 +363,11 @@ function renderGroups() {
       <div class="asg-group-top" onclick="toggleGroup('${esc(k)}')">
         <div class="asg-group-info">
           <div class="asg-group-name">${esc(g.plantillaNombre)}</div>
-          <div class="asg-group-meta">Asignado el ${fecha} · ${total} persona${total!==1?'s':''}${g.unidadId && unidadNombre(g.unidadId) ? ' · '+esc(unidadNombre(g.unidadId)) : ''}</div>
+          <div class="asg-group-meta">Encargado el ${fecha} · ${total} persona${total!==1?'s':''}${g.unidadId && unidadNombre(g.unidadId) ? ' · '+esc(unidadNombre(g.unidadId)) : ''}</div>
         </div>
         <div class="asg-group-acts">
           ${t ? `<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();copyShareLinkById('${esc(t.id)}')">🔗 Copiar link</button>` : ''}
-          <button class="btn-danger" onclick="event.stopPropagation();deleteGroup('${esc(k)}')" title="Eliminar asignación">✕</button>
+          <button class="btn-danger" onclick="event.stopPropagation();deleteGroup('${esc(k)}')" title="Eliminar encargo">✕</button>
         </div>
       </div>
       <div class="asg-progress">
@@ -391,7 +396,7 @@ function deleteGroup(k) {
   const toDelete = asignaciones.filter(a => groupKey(a) === k);
   toDelete.forEach(a => skfSyncOrQueue('deleteAsignacion', { id: a.id }));
   setAsignaciones(asignaciones.filter(a => groupKey(a) !== k));
-  toast('Asignación eliminada','ok');
+  toast('Encargo eliminado','ok');
   renderGroups();
 }
 

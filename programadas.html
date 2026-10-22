@@ -10,6 +10,8 @@
   <title>Rutinas — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
+  <script src="agenda.js"></script>
+  <script src="planear.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -84,7 +86,9 @@ Cuando la completes, toca «Marcar hecha» y la fecha avanza sola al siguiente p
     </div>
   </div>
 
-  <div class="card">
+  <button type="button" class="btn-planear-pg" onclick="skfPlanear({ modo: 'repite', origen: this, alCerrar: () => location.reload() })">＋ Nueva rutina</button>
+  <!-- La creación vive en «＋ Planear» (planear.js); este formulario queda oculto por compatibilidad. -->
+  <div class="card" style="display:none">
     <h2>+ Nueva rutina</h2>
     <div class="fg">
       <label>Formulario a repetir</label>
