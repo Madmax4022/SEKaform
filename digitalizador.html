@@ -1665,6 +1665,19 @@ function buildCard(c,i) {
       <input type="number" step="any" placeholder="máx" value="${c.rangoMax ?? ''}" oninput="setRangoMax('${c.id}',this.value)" style="${inpSt}">
     </div>
   </div>` : '';
+  // Equipo: qué tipo de equipo (define el prefijo EXT-, GAB-…). Y en los demás campos,
+  // si son «ficha» del equipo: se copian de su inspección anterior.
+  const tieneEquipo = tmpl.campos.some(x => x.tipo === 'equipo');
+  const eqHtml = c.tipo === 'equipo' ? `<div class="eq-row" style="margin-top:8px">
+    <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px" for="eqp_${c.id}">🏷 Tipo de equipo — los códigos serán ${esc(skfEquipoTipo(c.prefijo).prefijo)}-001, ${esc(skfEquipoTipo(c.prefijo).prefijo)}-002…</label>
+    <select id="eqp_${c.id}" onchange="setEquipoPrefijo('${c.id}',this.value)" style="width:100%">
+      ${SKF_EQUIPOS.map(e => `<option value="${e.prefijo}" ${skfEquipoTipo(c.prefijo).prefijo===e.prefijo?'selected':''}>${e.ico} ${e.nombre} (${e.prefijo})</option>`).join('')}
+      ${SKF_EQUIPOS.some(e => e.prefijo === skfEquipoTipo(c.prefijo).prefijo) ? '' : `<option value="${esc(c.prefijo)}" selected>🏷 Otro (${esc(c.prefijo)})</option>`}
+      <option value="__otro">🏷 Otro equipo…</option>
+    </select>
+  </div>` : (tieneEquipo && ['texto','textarea','numero','fecha','select','email','telefono'].includes(c.tipo) ? `<div class="chk-row" style="margin-top:8px">
+    <input type="checkbox" id="eqd_${c.id}" ${c.equipoDato?'checked':''} onchange="setEquipoDato('${c.id}',this.checked)">
+    <label for="eqd_${c.id}">Dato fijo del equipo (se copia de su inspección anterior)</label></div>` : '');
   const sevHtml = fieldCanHaveSeveridad(c.tipo) ? `<div class="sev-row" style="margin-top:8px">
     <label style="font-size:.78rem;color:var(--mut);display:block;margin-bottom:4px">⚠️ ${fieldUsaRango(c.tipo) ? 'Si el valor queda fuera del rango, márcalo como' : 'Si la respuesta indica incumplimiento, repórtalo como'}</label>
     <select onchange="setSeveridad('${c.id}',this.value)" style="width:100%">
@@ -1724,7 +1737,7 @@ function buildCard(c,i) {
         <button class="fi-btn del" onclick="delC('${c.id}')">✕</button>
       </div>
     </div>
-    ${qualWarn}${optHtml}${reqChk}${rangoHtml}${sevHtml}${condHtml}
+    ${qualWarn}${optHtml}${reqChk}${eqHtml}${rangoHtml}${sevHtml}${condHtml}
   </div>`;
 }
 
@@ -1773,6 +1786,15 @@ function setCondValor(id,k,on){
 }
 function setReq(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c)c.requerido=v;}
 function setSeveridad(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v)c.severidad=v;else delete c.severidad;}}
+function setEquipoPrefijo(id,v){
+  const c=tmpl.campos.find(x=>x.id===id);if(!c)return;
+  if(v==='__otro'){
+    const p=(prompt('Prefijo de 2 a 5 letras para este equipo (ej. DET para detectores):','')||'').trim().toUpperCase().normalize('NFD').replace(/[^A-Z]/g,'');
+    if(p.length>=2&&p.length<=5)c.prefijo=p;
+  } else c.prefijo=v;
+  renderSuggList();
+}
+function setEquipoDato(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v)c.equipoDato=true;else delete c.equipoDato;}}
 function setRangoMin(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v==='')delete c.rangoMin;else c.rangoMin=v;}}
 function setRangoMax(id,v){const c=tmpl.campos.find(x=>x.id===id);if(c){if(v==='')delete c.rangoMax;else c.rangoMax=v;}}
 function setOpt(id,j,v){const c=tmpl.campos.find(x=>x.id===id);if(c&&c.opciones)c.opciones[j]=v;}
@@ -1828,6 +1850,8 @@ function changeType(cId,k){
   if(k==='escala_1_5'&&!c.opciones){c.opciones=['1 - Deficiente','2 - Regular','3 - Bueno','4 - Muy Bueno','5 - Excelente'];}
   else if(needsOptions(k)&&!c.opciones){const _so=sugerirOpciones(c.etiqueta);c.opciones=_so.length?_so:[''];}
   if(!needsOptions(k))delete c.opciones;
+  if(k==='equipo'&&!c.prefijo){const _e=String(c.etiqueta||'').toLowerCase();c.prefijo=/gabinete|manguera/.test(_e)?'GAB':/botiqu/.test(_e)?'BOT':/camilla/.test(_e)?'CAM':/luz|luces|lámpara|lampara/.test(_e)?'LUZ':/alarma|pulsador/.test(_e)?'ALA':/lavaojos|ducha/.test(_e)?'LAV':'EXT';}
+  if(k!=='equipo')delete c.prefijo;
   if(!fieldCanHaveSeveridad(k))delete c.severidad;
   closeMenu();renderSuggList();
 }
@@ -1896,6 +1920,10 @@ function prevField(c,ds,ts){
       return`${W}<div style="background:var(--inp);border:1.5px dashed var(--bor);border-radius:8px;padding:22px;text-align:center;color:var(--mut);font-size:.82rem"><span style="font-size:2rem;display:block;margin-bottom:6px">📷</span>Capturar foto o seleccionar de galería</div>${E}`;
     case 'ubicacion':
       return`${W}<div style="background:var(--pri-dim);border:1.5px solid var(--pri);border-radius:8px;padding:12px 15px;display:flex;align-items:center;gap:9px;font-size:.82rem;color:var(--pri-txt)"><span style="font-size:1.2rem">📍</span>Ubicación GPS — se captura automáticamente</div>${E}`;
+    case 'equipo':{
+      const _t=skfEquipoTipo(c.prefijo);
+      return`${W}<input type="text" value="${_t.prefijo}-001" disabled style="font-weight:700;letter-spacing:.04em"><div style="font-size:.75rem;color:var(--mut);margin-top:4px">${_t.ico} Propone el siguiente código libre o se elige un ${esc(_t.nombre.toLowerCase())} ya registrado</div>${E}`;
+    }
     default:
       return`${W}<input type="text" placeholder="..." disabled>${E}`;
   }
@@ -2146,8 +2174,10 @@ async function loadPreset(presetId, editMode, archiveOnly) {
     tipo: f.tipo,
     etiqueta: f.etiqueta,
     placeholder: '',
-    requerido: f.tipo !== 'separador',
+    requerido: f.tipo !== 'separador' && f.requerido !== false,
     opciones: needsOptions(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
+    prefijo: f.prefijo,
+    equipoDato: f.equipoDato || undefined,
     _quality: 'ok'
   }));
   // Las condiciones del catálogo se escriben por el nombre del campo; aquí se pasan a su id.

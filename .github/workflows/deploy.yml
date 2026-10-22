@@ -42,6 +42,7 @@ jobs:
           node tests/principios.test.cjs
           node tests/condicional.test.cjs
           node tests/agenda.test.cjs
+          node tests/equipos.test.cjs
 
       # Compresión gzip: comprime texto grande y NO comprime el token CSRF, las
       # pantallas de acceso ni lo que pone cookies (ataque BREACH).
