@@ -75,7 +75,7 @@
     .qr-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 4px; }
     .qr-sub { color: var(--mut); font-size: .82rem; margin-bottom: 18px; line-height: 1.5; }
     .qr-img-wrap { background: #1e293b; border-radius: 12px; padding: 14px; display: inline-block; margin-bottom: 16px; border: 1px solid var(--bor); }
-    .qr-img-wrap img { display: block; border-radius: 6px; }
+    .qr-img-wrap svg { display: block; width: 100%; height: 100%; border-radius: 6px; }
     .qr-url-row { display: flex; gap: 8px; margin-bottom: 16px; }
     .qr-url-inp { flex: 1; background: rgba(0,0,0,.3); border: 1px solid var(--bor); border-radius: 8px; color: var(--mut); font-size: .72rem; padding: 8px 10px; outline: none; font-family: monospace; word-break: break-all; }
     .qr-copy { background: var(--pri); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .15s; }
@@ -406,6 +406,8 @@
   </style>
   <script src="skf-api.js"></script>
   <script src="field-types.js"></script>
+  <script src="qrcode.js"></script>
+  <script src="etiquetas.js"></script>
   <script src="form-library.js"></script>
   <script src="agenda.js"></script>
 </head>
@@ -521,7 +523,7 @@
     <div class="qr-title">📱 Compartir formulario</div>
     <p class="qr-sub" id="qrFormName"></p>
     <div class="qr-img-wrap">
-      <img id="qrImg" src="" alt="QR" width="200" height="200">
+      <div id="qrImg" style="width:200px;height:200px"></div>
     </div>
     <div class="qr-url-row">
       <input class="qr-url-inp" id="qrUrlInp" readonly>
@@ -607,7 +609,8 @@ function encodeTemplateForShare(tmpl) {
   const d = {
     v:1, n:tmpl.nombre, d:tmpl.descripcion||'', c:tmpl.codigo||'',
     f:tmpl.campos.map(c=>[c.id,c.tipo,c.etiqueta,c.requerido?1:0,
-       needsOpts(c.tipo)&&c.opciones&&c.opciones[0]!==''?c.opciones:null, c.mostrarSi||null])
+       needsOpts(c.tipo)&&c.opciones&&c.opciones[0]!==''?c.opciones:null, c.mostrarSi||null,
+       ...(c.prefijo||c.equipoDato ? [{p:c.prefijo||undefined, q:c.equipoDato?1:undefined}] : [])])
   };
   try { return btoa(unescape(encodeURIComponent(JSON.stringify(d)))); } catch(e) { return null; }
 }
@@ -619,10 +622,11 @@ function decodeSharedTemplate(encoded) {
   return {
     id: 'sh_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     nombre:d.n, descripcion:d.d, codigo:d.c,
-    campos: d.f.map(([id,tipo,etiqueta,req,opts,cond])=>({
+    campos: d.f.map(([id,tipo,etiqueta,req,opts,cond,eq])=>({
       id, tipo, etiqueta, placeholder:'', requerido:!!req,
       opciones: needsOpts(tipo)?(opts||['']):undefined,
-      mostrarSi: cond||undefined
+      mostrarSi: cond||undefined,
+      prefijo: (eq && eq.p) || undefined, equipoDato: (eq && eq.q) ? true : undefined
     })),
     creadoEn:new Date().toISOString(), actualizadoEn:new Date().toISOString(), _shared:true
   };
@@ -727,6 +731,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { toast('Enlace de formulario inválido','er'); renderList(); }
   } else if (urlTmpl) {
     openTemplate(urlTmpl);
+  } else if (params.get('equipo')) {
+    // QR pegado en el equipo: busca su formulario y lo abre con el equipo ya elegido.
+    let envios = [], pls = [];
+    try { envios = JSON.parse(localStorage.getItem('skf_envios') || '[]'); pls = JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch {}
+    const pid = skfEquipoFormulario(params.get('equipo'), envios, pls);
+    if (pid) openTemplate(pid);
+    else { renderList(); toast('No encontramos un formulario para ' + params.get('equipo') + ' en esta empresa', 'er'); }
   } else {
     renderList();
     if (quitados) toast('Se quitaron ' + quitados + ' formulario' + (quitados !== 1 ? 's' : '') + ' repetido' + (quitados !== 1 ? 's' : '') + ' (sin registros)', 'ok');
@@ -864,9 +875,9 @@ function showQR(id) {
     shareUrl = `${base}?shared=${encoded}`;
   }
 
-  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=1e293b&color=f8fafc&margin=8&format=svg`;
   document.getElementById('qrFormName').textContent = t.nombre;
-  document.getElementById('qrImg').src = qrApiUrl;
+  document.getElementById('qrImg').innerHTML = skfQrSvg(shareUrl) ||
+    '<p style="font-size:.8rem;color:var(--mut);padding:40px 10px">El enlace es demasiado largo para un QR. Actívalo como enlace público (botón de abajo) o compártelo copiándolo.</p>';
   document.getElementById('qrUrlInp').value = shareUrl;
 
   document.getElementById('qrNote').classList.toggle('hidden', isPublic);
@@ -906,7 +917,7 @@ async function activatePublicShare(id) {
 
 function closeQRModal() {
   document.getElementById('qrModal').classList.add('hidden');
-  document.getElementById('qrImg').src = '';
+  document.getElementById('qrImg').innerHTML = '';
 }
 
 function copyShareUrl() {

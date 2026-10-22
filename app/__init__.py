@@ -54,7 +54,7 @@ PAGINAS = {
 
 ESTATICOS = {
     "styles.css", "field-types.js", "form-library.js", "sidebar.js", "agenda.js", "planear.js", "portal-admin.js",
-    "chart.min.js", "sw.js", "manifest.json", "skf-api.js",
+    "chart.min.js", "qrcode.js", "etiquetas.js", "sw.js", "manifest.json", "skf-api.js",
     # login.html ya no es una pantalla: es un desvío a /login, que es donde
     # Flask sirve el formulario de verdad. Va aquí y no en PAGINAS porque no
     # puede exigir sesión — la pide justo quien no la tiene. Además el service
@@ -103,7 +103,8 @@ def crear_app(config: type[Config] = Config) -> Flask:
         if request.path.startswith("/api/"):
             return jsonify({"error": "Necesitas iniciar sesión.", "codigo": "sin_sesion"}), 401
         from flask import redirect, url_for
-        return redirect(url_for("auth.login", next=request.path))
+        # Con su consulta: un QR de equipo (?equipo=EXT-004) debe llegar entero tras iniciar sesión.
+        return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
 
     from .auth.routes import bp as auth_bp
     from .admin.routes import bp as admin_bp
@@ -173,7 +174,7 @@ def _registrar_frontend(app: Flask) -> None:
             # puerta a alguien que por definición no tiene cuenta.
             publico = ACCESO_PUBLICO.get(ruta)
             if not current_user.is_authenticated and not (publico and request.args.get(publico)):
-                return redirect(url_for("auth.login", next="/" + ruta))
+                return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
             return _enviar(PAGINAS[ruta], cache=False)
         if ruta in ESTATICOS:
             return _enviar(ruta, cache=True)
