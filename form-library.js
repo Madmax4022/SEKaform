@@ -190,7 +190,7 @@ const AREA_KITS = [
     forms:['control_acceso_obra','permiso_altura_obra','inspeccion_seguridad_obra'] },
   { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia, rondas y turnos', desc:'Entrega de turno, ronda de vigilancia y salidas',   vertical:'inmuebles',
     forms:['entrega_turno','ronda_vigilancia','inspeccion_salidas_emergencia'],
-    extra:{ label:'Control por turnos', href:'turnos.html' } },
+    extra:{ label:'Turnos', href:'turnos.html' } },
   { id:'calidad',      ico:'🏆', nombre:'Calidad ISO 9001',         desc:'Auditoría interna, no conformidad y acción correctiva', vertical:'calidad',
     forms:['auditoria_interna_iso','no_conformidad_iso','capa_iso'] },
   { id:'salud',        ico:'🏥', nombre:'Clínica o laboratorio',    desc:'Triage, consentimiento y evento adverso',           vertical:'salud',

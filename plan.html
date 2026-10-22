@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Plan — SEKaform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
+  <script src="agenda.js"></script>
+  <script id="skfSidebarPre">
+    if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
+        (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
+      document.documentElement.classList.add('sb-collapsed');
+    }
+  </script>
+  <style>
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 16px 40px; }
+    .pg-h { font-size: 1.55rem; font-weight: 900; letter-spacing: -.5px; }
+    .pg-sub { color: var(--mut); font-size: .9rem; line-height: 1.5; margin: 4px 0 18px; }
+
+    .filtros { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; margin: 0 -16px 8px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
+    .filtros::-webkit-scrollbar { display: none; }
+    .filtros button { flex: 0 0 auto; min-height: 44px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--bor);
+      background: var(--card); color: var(--mut); font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; }
+    .filtros button[aria-pressed="true"] { background: var(--txt); color: var(--bg); border-color: var(--txt); }
+    .filtros .n { opacity: .7; margin-left: 4px; font-variant-numeric: tabular-nums; }
+
+    .grupo-h { display: flex; align-items: center; gap: 8px; margin: 22px 2px 10px; font-size: .74rem; font-weight: 800;
+      letter-spacing: .07em; text-transform: uppercase; color: var(--mut); }
+    .grupo-h .cnt { background: var(--card); border: 1px solid var(--bor); border-radius: 999px; padding: 1px 8px; font-size: .72rem; }
+    .grupo-h.vencido { color: var(--err-txt); }
+    .grupo-h.hoy { color: var(--pri-txt); }
+
+    .ag-item { display: grid; grid-template-columns: 46px 1fr auto; gap: 12px; align-items: center;
+      min-height: 68px; padding: 10px 12px; margin-bottom: 8px; border-radius: 16px;
+      background: var(--card); border: 1px solid var(--bor); color: var(--txt); text-decoration: none; transition: transform .1s, border-color .15s; }
+    .ag-item:active { transform: scale(.985); }
+    .ag-item:hover { border-color: var(--pri); }
+    .ag-item.vencido { border-left: 4px solid var(--err); }
+    .ag-item.hoy { border-left: 4px solid var(--pri); }
+    .ag-ico { width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; background: rgba(110,168,254,.12); }
+    .ag-txt { min-width: 0; }
+    .ag-t, .ag-d { display: block; }
+    .ag-t { font-weight: 800; font-size: .97rem; line-height: 1.25; }
+    .ag-d { font-size: .8rem; color: var(--mut); margin-top: 2px; line-height: 1.35; }
+    .ag-cuando { font-size: .74rem; font-weight: 800; white-space: nowrap; padding: 5px 9px; border-radius: 999px; background: var(--bor); color: var(--txt); }
+    .ag-item.vencido .ag-cuando { background: rgba(248,113,113,.16); color: var(--err-txt); }
+    .ag-item.hoy .ag-cuando { background: rgba(110,168,254,.18); color: var(--pri-txt); }
+
+    .vacio { text-align: center; padding: 34px 18px; background: var(--card); border: 1px dashed var(--bor); border-radius: 18px; margin-top: 8px; }
+    .vacio .e { font-size: 2.4rem; }
+    .vacio h2 { font-size: 1.1rem; font-weight: 800; margin: 8px 0 4px; }
+    .vacio p { color: var(--mut); font-size: .88rem; line-height: 1.5; margin-bottom: 16px; }
+
+    .btn-planear { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; min-height: 52px; margin-top: 18px;
+      border-radius: 14px; border: 1px solid var(--pri); background: var(--pri-dim); color: var(--txt); font: inherit; font-weight: 800; font-size: .98rem; cursor: pointer; }
+    .btn-planear:active { transform: scale(.99); }
+
+    .admin-h { margin: 30px 2px 10px; font-size: .74rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--mut); }
+    .cargando { color: var(--mut); font-size: .9rem; padding: 18px 2px; }
+  </style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div class="wrap">
+  <h1 class="pg-h">Tu plan</h1>
+  <p class="pg-sub">Qué se revisa, dónde, quién y cuándo — rutinas que se repiten, encargos a personas y lo que espera cada turno, en una sola lista.</p>
+
+  <div class="filtros" role="group" aria-label="Filtrar el plan" id="filtros"></div>
+  <div id="lista"><p class="cargando">Cargando tu plan…</p></div>
+
+  <button type="button" class="btn-planear" id="btnPlanear">＋ Planear algo nuevo</button>
+
+  <div class="admin-h">Ver y editar</div>
+  <a class="skf-opt" href="programadas.html"><span class="so-ico">🔁</span><span class="so-txt"><b>Rutinas</b><small id="nRut">Inspecciones que se repiten: extintores cada mes, botiquín cada semana…</small></span><span class="so-arr">›</span></a>
+  <a class="skf-opt" href="asignaciones.html"><span class="so-ico">👤</span><span class="so-txt"><b>Encargos</b><small id="nEnc">Formularios que le pides a una persona, con su avance</small></span><span class="so-arr">›</span></a>
+  <a class="skf-opt" href="turnos.html"><span class="so-ico">🕒</span><span class="so-txt"><b>Turnos</b><small id="nTur">Mañana, tarde, noche… y qué se espera en cada uno</small></span><span class="so-arr">›</span></a>
+</div>
+
+<script>
+const TIPOS = { todo: 'Todo', rutina: 'Rutinas', encargo: 'Encargos', turno: 'Turnos' };
+const GRUPOS = [
+  ['vencido', 'Atrasado'], ['hoy', 'Hoy'], ['pronto', 'Próximos 7 días'], ['pendiente', 'Encargos sin fecha'], ['despues', 'Más adelante'],
+];
+let items = [], filtro = 'todo';
+const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+function pintar() {
+  const cuenta = k => k === 'todo' ? items.length : items.filter(i => i.tipo === k).length;
+  document.getElementById('filtros').innerHTML = Object.keys(TIPOS).map(k =>
+    `<button type="button" data-f="${k}" aria-pressed="${filtro === k}">${TIPOS[k]}<span class="n">${cuenta(k)}</span></button>`).join('');
+  const vis = items.filter(i => filtro === 'todo' || i.tipo === filtro);
+  const el = document.getElementById('lista');
+  if (!vis.length) {
+    el.innerHTML = `<div class="vacio"><div class="e">🗓️</div>
+      <h2>${items.length ? 'Nada en este filtro' : 'Aún no hay nada planeado'}</h2>
+      <p>${items.length ? 'Prueba con «Todo».' : 'Planea lo que debe revisarse con regularidad y la app te avisará qué toca hoy y qué se atrasó.'}</p></div>`;
+    return;
+  }
+  el.innerHTML = GRUPOS.map(([k, t]) => {
+    const g = vis.filter(i => i.estado === k);
+    if (!g.length) return '';
+    return `<div class="grupo-h ${k}">${t} <span class="cnt">${g.length}</span></div>` + g.map(i => `
+      <a class="ag-item ${i.estado}" href="${i.href}">
+        <span class="ag-ico" aria-hidden="true">${SKF_AGENDA_TIPOS[i.tipo].ico}</span>
+        <span class="ag-txt"><span class="ag-t">${esc(i.titulo)}</span><span class="ag-d"><span class="sr-only">${SKF_AGENDA_TIPOS[i.tipo].nombre}: </span>${esc(i.detalle)}</span></span>
+        <span class="ag-cuando">${esc(skfAgendaCuando(i))}</span>
+      </a>`).join('');
+  }).join('');
+}
+
+document.getElementById('filtros').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  filtro = b.dataset.f; pintar();
+});
+
+document.getElementById('btnPlanear').addEventListener('click', e => {
+  skfSheet('¿Qué quieres planear?', `
+    <a class="skf-opt" href="programadas.html"><span class="so-ico">🔁</span><span class="so-txt"><b>Una rutina que se repite</b><small>Ej.: extintores cada mes en la bodega</small></span><span class="so-arr">›</span></a>
+    <a class="skf-opt" href="asignaciones.html"><span class="so-ico">👤</span><span class="so-txt"><b>Encargarle un formulario a alguien</b><small>Le llega el enlace y ves si ya lo llenó</small></span><span class="so-arr">›</span></a>
+    <a class="skf-opt" href="turnos.html"><span class="so-ico">🕒</span><span class="so-txt"><b>Lo que se revisa en cada turno</b><small>Ej.: entrega de turno y ronda nocturna</small></span><span class="so-arr">›</span></a>`, e.currentTarget);
+});
+
+(async () => {
+  const d = await skfAgendaDatos();
+  items = skfAgenda(d, new Date());
+  const act = (d.inspecciones || []).filter(i => i.activa !== false).length;
+  if (act) document.getElementById('nRut').textContent = act + ' rutina' + (act !== 1 ? 's' : '') + ' activa' + (act !== 1 ? 's' : '');
+  const enc = items.filter(i => i.tipo === 'encargo').length;
+  if ((d.asignaciones || []).length) document.getElementById('nEnc').textContent = enc ? enc + ' encargo' + (enc !== 1 ? 's' : '') + ' sin completar' : 'Todos los encargos están completos';
+  const tn = ((d.turnosConfig && d.turnosConfig.turnos) || []).length;
+  if (tn) document.getElementById('nTur').textContent = tn + ' turno' + (tn !== 1 ? 's' : '') + ' definido' + (tn !== 1 ? 's' : '');
+  pintar();
+})();
+</script>
+</body>
+</html>

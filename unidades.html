@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>Sedes y áreas — SEKaform</title>
+  <title>Lugares — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
   <script id="skfSidebarPre">
@@ -73,8 +73,8 @@
 <script src="sidebar.js"></script>
 
 <div class="wrap">
-  <div class="pg-eyebrow">Configuración y más</div>
-  <h1 class="pg-h">Sedes y áreas<button class="skf-help" data-help-t="¿Para qué sirven las unidades?" data-help="Una unidad es un lugar o grupo por el que quieres separar y comparar tus registros: una sede, un área, o un contratista.
+  <div class="pg-eyebrow">🏢 Mi empresa</div>
+  <h1 class="pg-h">Lugares<button class="skf-help" data-help-t="¿Para qué sirven las unidades?" data-help="Una unidad es un lugar o grupo por el que quieres separar y comparar tus registros: una sede, un área, o un contratista.
 
 Cuando etiquetas tus formularios y hallazgos con una unidad, después el panel puede compararlas entre sí (por ejemplo: cumplimiento de la Sede Norte vs la Sede Sur, o qué contratista deja más pendientes).
 
@@ -90,7 +90,7 @@ Crea aquí las que uses. Puedes empezar con pocas y agregar más cuando las nece
   </div>
 
   <div class="card">
-    <h2>+ Nueva unidad</h2>
+    <h2>+ Nuevo lugar</h2>
     <div class="u-form">
       <div class="u-fg">
         <label for="uNombre">Nombre</label>
@@ -202,7 +202,7 @@ function render(){
   if (!list.length){
     el.innerHTML = `<div class="empty-state">
       <span class="es-ico">🏢</span>
-      <h2>Aún no tienes unidades</h2>
+      <h2>Aún no tienes lugares</h2>
       <p>Crea tu primera sede, área o contratista arriba. Podrás elegirla al llenar y asignar formularios, y comparar resultados entre unidades en el panel.</p>
     </div>`;
     return;

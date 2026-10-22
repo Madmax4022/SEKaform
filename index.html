@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>SEKaform</title>
+  <title>Hoy — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
@@ -16,227 +16,104 @@
     }
   </script>
   <style>
-    .wrapper { max-width: 720px; margin: 0 auto; padding: 48px 20px 60px; }
+    .wrapper { max-width: 720px; margin: 0 auto; padding: 36px 16px 40px; }
+    .saludo { margin-bottom: 18px; }
+    .saludo .fecha { color: var(--mut); font-size: .84rem; font-weight: 700; }
+    .saludo h1 { font-size: 1.7rem; font-weight: 900; letter-spacing: -.8px; line-height: 1.15; margin-top: 2px; }
 
-    /* ── Header ─────────────────────────────────────────────────── */
-    header { margin-bottom: 36px; }
-    header h1 { font-size: 2rem; margin: 0 0 5px; font-weight: 900; letter-spacing: -1px; }
-    header p  { color: var(--mut); font-size: .9rem; margin: 0; }
+    /* Anillo de cumplimiento: el estado de la empresa de un vistazo */
+    .anillo { display: grid; grid-template-columns: 104px 1fr; gap: 16px; align-items: center; padding: 16px 18px;
+      border-radius: 20px; background: var(--card); border: 1px solid var(--bor); text-decoration: none; color: inherit; margin-bottom: 14px; }
+    .anillo:active { transform: scale(.99); }
+    .anillo svg { width: 104px; height: 104px; display: block; }
+    .anillo .an-n { font-size: 1.7rem; font-weight: 900; fill: var(--txt); }
+    .anillo .an-de { font-size: .62rem; font-weight: 700; fill: var(--mut); }
+    .an-t { font-size: 1.02rem; font-weight: 800; line-height: 1.3; }
+    .an-s { color: var(--mut); font-size: .82rem; margin-top: 4px; line-height: 1.4; }
+    .an-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .an-chip { font-size: .72rem; font-weight: 800; border-radius: 999px; padding: 3px 9px; background: var(--bor); }
+    .an-chip.warn { background: rgba(245,158,11,.16); color: var(--warn); }
+    .an-chip.ok { background: var(--ok-dim); color: var(--ok); }
+    .an-ver { color: var(--pri-txt); font-weight: 800; font-size: .84rem; margin-top: 8px; display: inline-block; }
 
-    /* ── Acción principal — ¿Qué quieres hacer? ─────────────────── */
-    .actions-hd {
-      font-size: .7rem; font-weight: 800; text-transform: uppercase;
-      letter-spacing: .9px; color: var(--mut); margin: 0 0 12px;
-    }
-
-    /* ── SST — la estrella: recorrido guiado ───────────────────── */
-    .next-step { display: grid; grid-template-columns: 52px 1fr auto; gap: 15px; align-items: center;
-      background: var(--pri); color: #fff; border-radius: 16px; padding: 18px 20px; margin: 0 0 22px;
-      text-decoration: none; box-shadow: 0 10px 28px -10px rgba(37,99,235,.55); transition: transform .15s; }
-    .next-step:hover { transform: translateY(-2px); }
-    .next-step.ok { background: var(--ok); color: #06281f; box-shadow: 0 10px 28px -10px rgba(26,188,156,.5); }
-    .next-step.warn { background: #b45309; box-shadow: 0 10px 28px -10px rgba(180,83,9,.5); }
-    .next-step .ns-ico { width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,.2);
-      display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
-    .next-step .ns-kick { font-size: .68rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; opacity: .85; }
-    .next-step .ns-t { font-size: 1.12rem; font-weight: 800; line-height: 1.25; margin-top: 2px; }
-    .next-step .ns-s { font-size: .84rem; opacity: .92; margin-top: 3px; line-height: 1.4; }
+    /* Tu siguiente paso */
+    .next-step { display: grid; grid-template-columns: 50px 1fr auto; gap: 14px; align-items: center;
+      background: linear-gradient(145deg, #3b82f6, #1d4ed8); color: #fff; border-radius: 20px; padding: 16px 18px; margin: 0 0 14px;
+      text-decoration: none; box-shadow: 0 14px 30px -14px rgba(37,99,235,.85); }
+    .next-step:active { transform: scale(.99); }
+    .next-step.ok { background: linear-gradient(145deg, #2dd4bf, #0f9d84); color: #04211b; box-shadow: 0 14px 30px -14px rgba(26,188,156,.7); }
+    .next-step.warn { background: linear-gradient(145deg, #d97706, #b45309); box-shadow: 0 14px 30px -14px rgba(180,83,9,.7); }
+    .next-step .ns-ico { width: 50px; height: 50px; border-radius: 15px; background: rgba(255,255,255,.2);
+      display: flex; align-items: center; justify-content: center; font-size: 1.55rem; }
+    .next-step .ns-kick { font-size: .66rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; opacity: .85; }
+    .next-step .ns-t { font-size: 1.08rem; font-weight: 800; line-height: 1.25; margin-top: 2px; }
+    .next-step .ns-s { font-size: .82rem; opacity: .92; margin-top: 3px; line-height: 1.4; }
     .next-step .ns-arr { font-size: 1.5rem; font-weight: 700; }
-    .demo-link { display: block; width: 100%; margin: -8px 0 22px; padding: 11px 14px; background: none; border: 1px dashed var(--bor);
-      border-radius: 12px; color: var(--mut); font-size: .84rem; font-family: inherit; cursor: pointer; text-align: center; line-height: 1.4; }
-    .demo-link:hover { border-color: var(--pri); color: var(--txt); }
-    .areas-list { display: flex; flex-direction: column; gap: 10px; }
-    .area-card { display: grid; grid-template-columns: 42px 1fr auto; gap: 13px; align-items: center; background: var(--card);
-      border: 1px solid var(--bor); border-radius: 14px; padding: 13px 15px; }
-    .area-card .ico { width: 42px; height: 42px; border-radius: 11px; background: rgba(37,99,235,.1); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
-    .area-card .t { font-weight: 800; font-size: .96rem; line-height: 1.2; }
-    .area-card .s { font-size: .78rem; color: var(--mut); margin-top: 2px; line-height: 1.35; }
-    .area-card .s a { color: var(--pri-txt); text-decoration: none; font-weight: 700; }
-    .area-btn { background: var(--pri); color: #fff; border: none; border-radius: 9px; padding: 9px 13px; font-size: .8rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; }
-    .area-btn.ok { background: var(--ok-dim); color: var(--ok); border: 1px solid rgba(26,188,156,.35); text-decoration: none; display: inline-block; }
-    .area-btn[disabled] { opacity: .6; cursor: default; }
-    .area-add { min-height: 44px; margin-top: 10px; background: none; border: 1px dashed var(--bor); color: var(--mut); border-radius: 10px; padding: 9px 14px; font-size: .82rem; font-family: inherit; cursor: pointer; width: 100%; }
-    .area-add:hover { border-color: var(--pri); color: var(--txt); }
-    .opts-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .opts-pick[hidden] { display: none; }
-    .opts-pick button { background: var(--card); border: 1px solid var(--bor); color: var(--txt); border-radius: 20px; padding: 8px 14px; font-size: .82rem; font-family: inherit; cursor: pointer; }
-    .opts-pick button:hover { border-color: var(--pri); }
-    .sst-hd { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; color: var(--ok); margin: 0 0 13px; display:flex; align-items:center; gap:8px; }
-    .sst-hd::after { content:""; flex:1; height:1px; background:var(--bor); }
-    .sst-journey { display: flex; flex-direction: column; gap: 10px; }
-    .sst-step { display: grid; grid-template-columns: 46px 1fr auto; gap: 15px; align-items: center;
-      background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 15px 17px;
-      text-decoration: none; color: inherit; min-height: 64px; transition: border-color .18s, transform .15s, box-shadow .18s; }
-    .sst-step:hover { border-color: var(--pri); transform: translateY(-2px); box-shadow: 0 10px 26px -8px rgba(0,0,0,.4); }
-    .sst-step .ico { width: 46px; height: 46px; border-radius: 12px; background: rgba(37,99,235,.1);
-      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-    .sst-step .lbl { font-size: 1.02rem; font-weight: 800; line-height: 1.2; }
-    .sst-step .num { color: var(--pri-txt); }
-    .sst-step .sub { font-size: .82rem; color: var(--mut); margin-top: 3px; line-height: 1.4; }
-    .sst-step .arr { color: var(--mut); font-size: 1.25rem; }
-    .sst-step:hover .arr { color: var(--pri-txt); }
-    /* Enlace al mapa de cumplimiento — mismo lenguaje que la ruta, con acento SST */
-    .sst-maplink { display: grid; grid-template-columns: 46px 1fr auto; gap: 15px; align-items: center;
-      background: var(--pri-dim, rgba(37,99,235,.08)); border: 1px solid var(--pri); border-radius: 14px;
-      padding: 15px 17px; margin-top: 14px; text-decoration: none; color: inherit; min-height: 64px;
-      transition: transform .15s, box-shadow .18s; }
-    .sst-maplink:hover { transform: translateY(-2px); box-shadow: 0 10px 26px -8px rgba(0,0,0,.4); }
-    .sst-maplink .ico { width: 46px; height: 46px; border-radius: 12px; background: rgba(37,99,235,.16);
-      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-    .sst-maplink .lbl { font-size: 1.02rem; font-weight: 800; line-height: 1.2; }
-    .sst-maplink .sub { font-size: .82rem; color: var(--mut); margin-top: 3px; line-height: 1.4; }
-    .sst-maplink .arr { color: var(--pri-txt); font-size: 1.25rem; }
-    /* estado vivo por paso (datos reales del SG-SST) */
-    .sst-status { display: none; font-size: .8rem; color: var(--mut); font-weight: 600; margin: -4px 0 14px; }
-    .sst-status b { color: var(--err-txt); }
-    .st-stat { margin-top: 8px; display: inline-flex; align-items: center; font-size: .74rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
-    .st-stat.neutral { background: rgba(37,99,235,.12); color: var(--pri-txt); }
-    .st-stat.ok { background: rgba(26,188,156,.14); color: var(--ok); }
-    .st-stat.warn { background: rgba(217,138,31,.16); color: var(--warn, #d98a1f); }
-    .st-stat.risk { background: rgba(239,68,68,.13); color: var(--err-txt); }
 
-    /* ── Otras áreas (segundo plano, colapsable) ───────────────── */
-    details.mas { margin-top: 34px; border: 1px solid var(--bor); border-radius: 14px; background: var(--card); overflow: hidden; }
-    details.mas > summary { cursor: pointer; list-style: none; padding: 16px 18px; display: flex; align-items: center; gap: 13px; font-weight: 800; font-size: 1rem; }
-    details.mas > summary::-webkit-details-marker { display: none; }
-    details.mas > summary .plus { width: 27px; height: 27px; border-radius: 8px; background: rgba(37,99,235,.1); color: var(--pri-txt); display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; font-size: 1.1rem; }
-    details.mas > summary .msub { display: block; font-weight: 400; color: var(--mut); font-size: .78rem; margin-top: 2px; }
-    details.mas > summary .chev { margin-left: auto; color: var(--mut); transition: transform .2s; }
-    details.mas[open] > summary .chev { transform: rotate(180deg); }
-    .mas-body { padding: 2px 18px 20px; }
-    .mas-body .tools-sep:first-child, .mas-body .sec-sep:first-of-type { margin-top: 8px; }
+    .bloque-h { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 2px 10px; }
+    .bloque-h h2 { font-size: 1.05rem; font-weight: 800; }
+    .bloque-h a { color: var(--pri-txt); font-weight: 700; font-size: .86rem; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
 
-    /* ── Onboarding guiado (solo usuarios nuevos) ───────────────── */
-    .onb { background: linear-gradient(135deg, rgba(37,99,235,.1), var(--card)); border: 1px solid rgba(37,99,235,.3); border-radius: 16px; padding: 22px 24px; margin-bottom: 32px; }
-    .onb-h { font-size: 1.15rem; font-weight: 900; margin: 0 0 4px; }
-    .onb-sub { color: var(--mut); font-size: .86rem; margin: 0 0 16px; line-height: 1.5; }
-    .onb-steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
-    .onb-step { display: flex; align-items: center; gap: 11px; font-size: .92rem; color: var(--txt); text-decoration: none; padding: 9px 10px; border-radius: 9px; transition: background .15s; }
-    .onb-step:hover { background: rgba(255,255,255,.04); }
-    .onb-num { width: 25px; height: 25px; border-radius: 50%; background: var(--bor); color: var(--mut); display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0; }
-    .onb-step.done .onb-num { background: var(--ok); color: #fff; }
-    .onb-step.done .onb-lbl { color: var(--mut); text-decoration: line-through; }
-    .onb-lbl { flex: 1; font-weight: 600; }
-    .onb-arr { color: var(--mut); }
-    .onb-step.done .onb-arr { visibility: hidden; }
-    .onb-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-    .onb-btn { display: inline-flex; align-items: center; gap: 7px; border-radius: 10px; padding: 11px 18px; font-size: .9rem; font-weight: 700; text-decoration: none; cursor: pointer; border: 1px solid var(--bor); font-family: inherit; }
-    .onb-btn.prim { background: var(--pri); color: #fff; border-color: var(--pri); }
-    .onb-btn.sec { background: transparent; color: var(--txt); }
-    .onb-btn.sec:hover { border-color: var(--pri); }
-    .onb-dismiss { background: none; border: none; color: var(--mut); font-size: .76rem; cursor: pointer; margin-top: 14px; text-decoration: underline; font-family: inherit; padding: 0; }
+    .ag-item { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; min-height: 66px; padding: 10px 12px; margin-bottom: 8px;
+      border-radius: 16px; background: var(--card); border: 1px solid var(--bor); color: var(--txt); text-decoration: none; }
+    .ag-item:active { transform: scale(.985); }
+    .ag-item.vencido { border-left: 4px solid var(--err); }
+    .ag-item.hoy { border-left: 4px solid var(--pri); }
+    .ag-ico { width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; background: rgba(110,168,254,.12); }
+    .ag-t { font-weight: 800; font-size: .95rem; line-height: 1.25; }
+    .ag-d { font-size: .78rem; color: var(--mut); margin-top: 2px; line-height: 1.35; display: block; }
+    .ag-cuando { font-size: .72rem; font-weight: 800; white-space: nowrap; padding: 5px 9px; border-radius: 999px; background: var(--bor); }
+    .ag-item.vencido .ag-cuando { background: rgba(248,113,113,.16); color: var(--err-txt); }
+    .ag-item.hoy .ag-cuando { background: rgba(110,168,254,.18); color: var(--pri-txt); }
+    .hoy-vacio { display: flex; gap: 12px; align-items: center; padding: 16px; border-radius: 16px; background: var(--card); border: 1px dashed var(--bor); color: var(--mut); font-size: .88rem; line-height: 1.45; }
+    .hoy-vacio b { color: var(--txt); display: block; }
+    .hoy-vacio a { color: var(--pri-txt); font-weight: 700; text-decoration: none; }
 
-    .action-card {
-      display: flex; align-items: center; gap: 18px;
-      background: var(--card); border: 1px solid var(--bor); border-radius: 14px;
-      padding: 20px 22px; text-decoration: none; color: inherit;
-      transition: border-color .18s, transform .15s, box-shadow .18s;
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-    .action-card:last-of-type { margin-bottom: 0; }
-    .action-card:hover {
-      border-color: var(--pri); transform: translateY(-2px);
-      box-shadow: 0 10px 28px -6px rgba(0,0,0,.45);
-    }
-    /* Card 1 — primary accent */
-    .action-card.ac-primary {
-      border-left: 3px solid var(--pri);
-      background: linear-gradient(135deg, rgba(37,99,235,.06) 0%, var(--card) 60%);
-    }
+    .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .tile { display: block; padding: 14px 16px; border-radius: 18px; background: var(--card); border: 1px solid var(--bor); text-decoration: none; color: inherit; min-height: 96px; }
+    .tile:active { transform: scale(.985); }
+    .tile .tn { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+    .tile .tl { color: var(--mut); font-size: .8rem; font-weight: 700; line-height: 1.3; }
+    .tile.alerta .tn { color: var(--err-txt); }
+    .tile.bien .tn { color: var(--ok); }
 
-    .ac-ico  { font-size: 2rem; flex-shrink: 0; line-height: 1; }
-    .ac-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .ac-label { font-size: 1.03rem; font-weight: 800; line-height: 1.2; }
-    .ac-sub   { font-size: .82rem; color: var(--mut); line-height: 1.4; }
-    .ac-arr   {
-      font-size: 1.1rem; color: var(--mut); flex-shrink: 0;
-      transition: transform .15s, color .15s;
-    }
-    .action-card:hover .ac-arr { transform: translateX(5px); color: var(--pri-txt); }
-
-    /* ── Enlace secundario debajo del card 3 ───────────────────── */
-    .ac-alt {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: .78rem; font-weight: 600; color: var(--mut);
-      text-decoration: none; padding: 6px 4px 16px;
-      transition: color .15s;
-    }
-    .ac-alt:hover { color: var(--txt); }
-
-    /* ── Herramientas secundarias ───────────────────────────────── */
-    .tools-sep { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; color: var(--mut); margin: 28px 0 10px; }
-    .tools-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 48px; }
-    .tool-chip {
-      display: inline-flex; align-items: center; gap: 7px;
-      background: var(--card); border: 1px solid var(--bor); border-radius: 9px;
-      min-height: 44px; padding: 9px 16px; text-decoration: none; color: var(--mut);
-      font-size: .82rem; font-weight: 600;
-      transition: border-color .15s, color .15s;
-    }
-    .tool-chip:hover { border-color: var(--pri); color: var(--txt); }
-
-    /* ── Verticales (formularios por sector) ────────────────────── */
-    .sec-sep   { border: none; border-top: 1px solid var(--bor); margin: 0 0 36px; }
-    .sec-hd    { margin-bottom: 18px; }
-    .sec-tag   { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: var(--ok); margin-bottom: 5px; }
-    .sec-title { font-size: 1.25rem; font-weight: 900; margin: 0 0 4px; letter-spacing: -.5px; }
-    .sec-sub   { color: var(--mut); font-size: .84rem; line-height: 1.5; margin: 0; }
-
-    .grid-v { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-    .vcard {
-      background: var(--card); border: 1px solid var(--bor); border-radius: 13px;
-      padding: 18px; display: flex; flex-direction: column; gap: 6px;
-      text-decoration: none; color: inherit;
-      transition: border-color .18s, transform .18s, box-shadow .18s;
-    }
-    .vcard:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -4px rgba(0,0,0,.4); }
-    .vcard.live { border-left: 3px solid var(--ok); }
-    .vcard.live:hover { border-color: var(--ok); box-shadow: 0 8px 20px -4px rgba(26,188,156,.2); }
-
-    .vcard-head { display: flex; align-items: center; justify-content: space-between; }
-    .vcard-ico  { font-size: 1.7rem; line-height: 1; }
-    .vbadge {
-      font-size: .6rem; font-weight: 800; text-transform: uppercase;
-      letter-spacing: .5px; padding: 2px 8px; border-radius: 20px;
-    }
-    .vbadge.live { background: rgba(26,188,156,.15); color: var(--ok); border: 1px solid rgba(26,188,156,.3); }
-
-    .vcard-sector { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--mut); }
-    .vcard h3    { font-size: .9rem; font-weight: 800; margin: 0; line-height: 1.3; }
-    .vcard-reg   { font-size: .7rem; color: var(--mut); margin: 0; line-height: 1.4; }
-    .vcard-risk  { font-size: .7rem; font-weight: 600; color: #fca5a5; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.22); border-radius: 7px; padding: 6px 9px; margin-top: 3px; line-height: 1.45; }
-
-    .vchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-    .vchip  { font-size: .63rem; padding: 2px 7px; border-radius: 20px; background: rgba(26,188,156,.1); color: #5eead4; border: 1px solid rgba(26,188,156,.2); }
-    .vchip-more { background: transparent; color: var(--mut); border-color: var(--bor); }
-    .vcard-cta  { font-size: .74rem; font-weight: 700; color: var(--ok); margin-top: 2px; }
-
-    footer { text-align: center; margin-top: 56px; font-size: .78rem; color: var(--mut); border-top: 1px solid var(--bor); padding-top: 18px; }
-
-    @media (max-width: 600px) {
-      .grid-v    { grid-template-columns: 1fr; }
-      .tools-row { flex-direction: column; }
-      .tool-chip { justify-content: center; }
-      header h1  { font-size: 1.8rem; }
-    }
+    .demo-link { display: block; width: 100%; margin: 22px 0 0; min-height: 48px; padding: 11px 14px; background: none; border: 1px dashed var(--bor);
+      border-radius: 14px; color: var(--mut); font-size: .84rem; font-family: inherit; cursor: pointer; text-align: center; line-height: 1.4; }
+    .esqueleto { height: 66px; border-radius: 16px; background: linear-gradient(90deg, var(--card), var(--card2), var(--card)); background-size: 200% 100%; animation: brillo 1.2s infinite linear; margin-bottom: 8px; }
+    @keyframes brillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+    footer { text-align: center; margin-top: 34px; font-size: .74rem; color: var(--mut); }
   </style>
 </head>
 <body>
   <script src="skf-api.js"></script>
   <script src="form-library.js"></script>
+  <script src="agenda.js"></script>
   <script src="sidebar.js"></script>
 
   <div class="wrapper">
+    <div class="saludo">
+      <div class="fecha" id="fecha"></div>
+      <h1 id="hola">Hola 👋</h1>
+    </div>
 
-    <header>
-      <h1>⛑️ SEKaform</h1>
-      <p>Tu <strong style="color:var(--txt)">Sistema de Gestión de SST</strong> digital. Cumple, demuéstralo y <strong style="color:var(--txt)">evita multas</strong> del Ministerio de Trabajo.</p>
-    </header>
+    <!-- Estado de cumplimiento (9 principios) -->
+    <a class="anillo" href="cumplimiento.html" id="anillo" aria-label="Ver el mapa de cumplimiento">
+      <svg viewBox="0 0 104 104" role="img" aria-labelledby="anT">
+        <circle cx="52" cy="52" r="44" fill="none" stroke="var(--bor)" stroke-width="10"/>
+        <circle id="anArco" cx="52" cy="52" r="44" fill="none" stroke="var(--ok)" stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="0 276.5" transform="rotate(-90 52 52)" style="transition: stroke-dasharray .6s ease"/>
+        <text x="52" y="55" text-anchor="middle" class="an-n" id="anN">–</text>
+        <text x="52" y="71" text-anchor="middle" class="an-de">de 9</text>
+      </svg>
+      <div>
+        <div class="an-t" id="anT">Principios de SST con evidencia al día</div>
+        <div class="an-s" id="anS">Lo que un inspector del trabajo viene a verificar.</div>
+        <div class="an-chips" id="anChips"></div>
+        <span class="an-ver">Ver el mapa ›</span>
+      </div>
+    </a>
 
-    <!-- ── SST: la estrella — recorrido guiado ────────────────── -->
-    <!-- ── Tu siguiente paso: una sola cosa por hacer, según tu estado real ── -->
+    <!-- Tu siguiente paso: una sola cosa por hacer, según tu estado real -->
     <a class="next-step" id="nextStep" href="plantillas.html?v=sst" hidden>
       <span class="ns-ico" id="nsIco">➜</span>
       <div class="ns-body">
@@ -247,254 +124,91 @@
       <span class="ns-arr">→</span>
     </a>
 
+    <!-- Lo que toca hoy (rutinas, encargos y turnos) -->
+    <div class="bloque-h"><h2>Para hoy</h2><a href="plan.html">Ver el plan ›</a></div>
+    <div id="hoyLista"><div class="esqueleto"></div><div class="esqueleto"></div></div>
+
+    <div class="bloque-h"><h2>Seguimiento</h2></div>
+    <div class="tiles">
+      <a class="tile" href="hallazgos.html" id="tHz"><div class="tn" id="tHzN">–</div><div class="tl" id="tHzL">hallazgos abiertos</div></a>
+      <a class="tile" href="dashboard.html" id="tReg"><div class="tn" id="tRegN">–</div><div class="tl">registros en los últimos 7 días</div></a>
+    </div>
+
     <button type="button" class="demo-link" id="demoBtn" hidden>🧪 Probar con datos de ejemplo — ver la app llena antes de capturar los tuyos</button>
 
-    <div class="sst-hd">Tu ruta de Salud Ocupacional<button class="skf-help" data-help-t="¿Cómo uso esta pantalla?" data-help="Esta es tu base de operaciones de SST (Seguridad y Salud en el Trabajo).
-
-• La tarjeta de color de arriba siempre te dice QUÉ hacer ahora — empieza por ella.
-• Los 4 pasos de abajo son el camino completo: configurar, inspeccionar, corregir y demostrar.
-• «Tu mapa de cumplimiento» te muestra si tienes evidencia de los 9 principios que la ley exige.
-• Toca cualquier palabra subrayada con puntitos para ver qué significa.">?</button></div>
-    <div class="sst-status" id="sstStatus"></div>
-    <div class="sst-journey">
-      <a href="plantillas.html?v=sst" class="sst-step">
-        <span class="ico">🗂️</span>
-        <div>
-          <div class="lbl"><span class="num">1 ·</span> Configura tu SG-SST</div>
-          <div class="sub">Matriz de peligros, política y responsable — la base que exige la ley.</div>
-        </div>
-        <span class="arr">→</span>
-      </a>
-      <a href="llenar.html" class="sst-step">
-        <span class="ico">🔎</span>
-        <div>
-          <div class="lbl"><span class="num">2 ·</span> Inspecciona</div>
-          <div class="sub">Seguridad, EPP, extintores, orden y aseo — captura desde el celular.</div>
-        </div>
-        <span class="arr">→</span>
-      </a>
-      <a href="hallazgos.html" class="sst-step">
-        <span class="ico">⚠️</span>
-        <div>
-          <div class="lbl"><span class="num">3 ·</span> Hallazgos y acciones</div>
-          <div class="sub">Corrige lo que falla y cierra el ciclo — antes de que llegue el inspector.</div>
-        </div>
-        <span class="arr">→</span>
-      </a>
-      <a href="dashboard.html" class="sst-step">
-        <span class="ico">📄</span>
-        <div>
-          <div class="lbl"><span class="num">4 ·</span> Mide y demuestra</div>
-          <div class="sub">Indicadores y carpeta de evidencia — tu defensa ante el Ministerio de Trabajo.</div>
-        </div>
-        <span class="arr">→</span>
-      </a>
-    </div>
-
-    <!-- ── Mapa de cumplimiento: los 9 principios universales ──── -->
-    <a href="cumplimiento.html" class="sst-maplink">
-      <span class="ico">🎯</span>
-      <div>
-        <div class="lbl">Tu mapa de cumplimiento</div>
-        <div class="sub">Los 9 principios universales de SST (OIT · ISO 45001) que la ley exige, y tu evidencia frente a cada uno.</div>
-      </div>
-      <span class="arr">→</span>
-    </a>
-
-    <!-- ── Tus áreas: solo las que eligió, con su kit de inicio ───── -->
-    <div id="tusAreas" hidden>
-      <div class="sst-hd" style="margin-top:26px">Tus otras áreas<button class="skf-help" data-help-t="¿Qué son las otras áreas?" data-help="La SST es el centro de la app. Si tu empresa también tiene cocina, obra, edificio, clínica o vigilancia, aquí tienes un kit de 3 formularios para empezar con cada una.
-
-• «Agregar el kit» los deja en «Mis formularios» de un toque.
-• Cuando los tengas, ábrelos desde ahí para llenarlos.
-• Esta parte es un complemento: no hace falta para cumplir con SST.">?</button></div>
-      <div id="areasList" class="areas-list"></div>
-      <button type="button" class="area-add" id="areaAdd">＋ Agregar otra área</button>
-      <div class="opts-pick" id="areaPick" hidden></div>
-    </div>
-
-    <!-- ── Todo lo demás: visible pero colapsado ──────────────── -->
-    <details class="mas">
-      <summary>
-        <span class="plus">+</span>
-        <span>Otras áreas y formularios<span class="msub">Limpieza · Compras · Calidad · NFPA · Alimentos · Crear formulario</span></span>
-        <span class="chev">⌄</span>
-      </summary>
-      <div class="mas-body">
-
-    <!-- ── Herramientas secundarias ───────────────────────────── -->
-    <div class="tools-sep">Acciones</div>
-    <div class="tools-row">
-      <a href="digitalizador.html" class="tool-chip">⚡ Crear formulario</a>
-      <a href="asignaciones.html" class="tool-chip">👥 Asignar al equipo</a>
-      <a href="dashboard.html"  class="tool-chip">📊 Panel de control</a>
-      <a href="hallazgos.html"  class="tool-chip">⚠️ Hallazgos y CAPA</a>
-    </div>
-
-    <!-- ── Formularios por sector ─────────────────────────────── -->
-    <hr class="sec-sep">
-    <div class="sec-hd">
-      <div class="sec-tag">Otras áreas — un complemento</div>
-      <h2 class="sec-title">Formularios por sector</h2>
-      <p class="sec-sub">Formularios preconfigurados según la regulación colombiana. El sistema reconoce automáticamente los campos exigidos por cada norma.</p>
-    </div>
-
-    <div class="grid-v">
-
-      <a href="plantillas.html?v=inmuebles" class="vcard live">
-        <div class="vcard-head">
-          <span class="vcard-ico">🏢</span>
-          <span class="vbadge live">15 formularios</span>
-        </div>
-        <div class="vcard-sector">Inmuebles &amp; Facilidades</div>
-        <h3>Mantenimiento y Seguridad de Edificios</h3>
-        <p class="vcard-reg">NFPA 10 · NFPA 13 · NFPA 72 · NFPA 96 · NFPA 70E</p>
-        <div class="vcard-risk">⚠️ Sin el concepto técnico de Bomberos no operas — y ante un incidente, la responsabilidad es tuya.</div>
-        <div class="vchips">
-          <span class="vchip">Extintores</span>
-          <span class="vchip">Rociadores</span>
-          <span class="vchip">Cuarto eléctrico</span>
-          <span class="vchip vchip-more">+12 más →</span>
-        </div>
-        <div class="vcard-cta">Ver índice NFPA →</div>
-      </a>
-
-      <a href="plantillas.html?v=calidad" class="vcard live">
-        <div class="vcard-head">
-          <span class="vcard-ico">🏆</span>
-          <span class="vbadge live">8 formularios</span>
-        </div>
-        <div class="vcard-sector">Calidad — SGC</div>
-        <h3>ISO 9001:2015</h3>
-        <p class="vcard-reg">ISO 9001:2015 · Auditorías internas · CAPA</p>
-        <div class="vcard-risk">⚠️ Una no conformidad sin cerrar te cuesta la certificación — y el cliente que la exige.</div>
-        <div class="vchips">
-          <span class="vchip">No conformidad</span>
-          <span class="vchip">Auditoría interna</span>
-          <span class="vchip">CAPA</span>
-          <span class="vchip vchip-more">+5 más →</span>
-        </div>
-        <div class="vcard-cta">Ver índice SGC →</div>
-      </a>
-
-      <a href="plantillas.html?v=construccion" class="vcard live">
-        <div class="vcard-head">
-          <span class="vcard-ico">🏗️</span>
-          <span class="vbadge live">8 formularios</span>
-        </div>
-        <div class="vcard-sector">Construcción</div>
-        <h3>RUC + Seguridad en Obra</h3>
-        <p class="vcard-reg">RUC 2024 · NSR-10 · Ley 400/1997</p>
-        <div class="vcard-risk">⚠️ Sin RUC al día pierdes contratos; y Trabajo sanciona la obra insegura.</div>
-        <div class="vchips">
-          <span class="vchip">Permiso de trabajo</span>
-          <span class="vchip">Inspección de obra</span>
-          <span class="vchip">ATS</span>
-          <span class="vchip vchip-more">+5 más →</span>
-        </div>
-        <div class="vcard-cta">Ver índice Construcción →</div>
-      </a>
-
-      <a href="plantillas.html?v=alimentos" class="vcard live">
-        <div class="vcard-head">
-          <span class="vcard-ico">🍔</span>
-          <span class="vbadge live">8 formularios</span>
-        </div>
-        <div class="vcard-sector">Alimentos &amp; Restaurantes</div>
-        <h3>INVIMA &amp; HACCP</h3>
-        <p class="vcard-reg">Res. 2674/2013 · Decreto 60/2002 · BPM</p>
-        <div class="vcard-risk">⚠️ Incumplir BPM: cierre del establecimiento y decomiso por INVIMA / Secretaría de Salud.</div>
-        <div class="vchips">
-          <span class="vchip">Control de temperatura</span>
-          <span class="vchip">Control de plagas</span>
-          <span class="vchip vchip-more">+6 más →</span>
-        </div>
-        <div class="vcard-cta">Ver índice Alimentos →</div>
-      </a>
-
-      <a href="plantillas.html?v=salud" class="vcard live">
-        <div class="vcard-head">
-          <span class="vcard-ico">🚑</span>
-          <span class="vbadge live">8 formularios</span>
-        </div>
-        <div class="vcard-sector">Salud</div>
-        <h3>Clínicas &amp; Laboratorios</h3>
-        <p class="vcard-reg">Decreto 1011/2006 · SOGCS</p>
-        <div class="vcard-risk">⚠️ Sin habilitación cumplida, la Supersalud sanciona y suspende el servicio.</div>
-        <div class="vchips">
-          <span class="vchip">Historia clínica</span>
-          <span class="vchip">Consentimiento informado</span>
-          <span class="vchip vchip-more">+6 más →</span>
-        </div>
-        <div class="vcard-cta">Ver índice Salud →</div>
-      </a>
-
-    </div>
-      </div><!-- /mas-body -->
-    </details>
-
-    <footer>&copy; 2026 SEKapp Platform · Todos los derechos reservados</footer>
+    <footer>SEKaform · Kanan Sentinel</footer>
   </div>
 
   <script>
-    // Estado vivo del SG-SST: al cargar, trae hallazgos, envíos y acciones del
-    // backend (skf-api) y pinta el estado real en cada paso de la ruta. Si no
-    // hay sesión o conexión, la ruta se queda con su texto guía — sin romperse.
-    document.addEventListener('DOMContentLoaded', function(){ if (typeof skfGlosar === 'function') skfGlosar(document.querySelector('.wrapper')); });
-    (async function sstEstado() {
-      if (typeof sbLoadHallazgos !== 'function') return;
-      let hz = null, env = null, acc = null, plt = null;
+    // «Hoy»: el estado de la empresa y lo que toca, con datos reales. Sin sesión o sin conexión
+    // se queda con lo que haya en el dispositivo — nunca adivina.
+    (function saludo() {
+      const ahora = new Date(), h = ahora.getHours();
+      const f = ahora.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+      document.getElementById('fecha').textContent = f.charAt(0).toUpperCase() + f.slice(1);
+      document.getElementById('hola').textContent = (h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches') + ' 👋';
+    })();
+    const _esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+    (async function hoy() {
+      let hz = null, env = null, acc = null, plt = null, ag = null;
       try {
-        [hz, env, acc, plt] = await Promise.all([
-          sbLoadHallazgos().catch(() => null),
+        [hz, env, acc, plt, ag] = await Promise.all([
+          (typeof sbLoadHallazgos === 'function' ? sbLoadHallazgos() : Promise.resolve(null)).catch(() => null),
           (typeof sbLoadEnvios === 'function' ? sbLoadEnvios() : Promise.resolve(null)).catch(() => null),
           (typeof sbLoadAccionesCorrectivas === 'function' ? sbLoadAccionesCorrectivas() : Promise.resolve(null)).catch(() => null),
           (typeof sbLoadPlantillas === 'function' ? sbLoadPlantillas() : Promise.resolve(null)).catch(() => null),
+          skfAgendaDatos().catch(() => null),
         ]);
-      } catch { return; }
-      const setStat = (href, html, cls) => {
-        const step = document.querySelector('.sst-step[href="' + href + '"]');
-        if (!step) return;
-        const body = step.querySelector('div'); if (!body) return;
-        let el = body.querySelector('.st-stat');
-        if (!el) { el = document.createElement('div'); body.appendChild(el); }
-        el.className = 'st-stat ' + (cls || '');
-        el.innerHTML = html;
-      };
-      // Paso 1 — configuración: cuántos formularios/plantillas listos.
-      if (Array.isArray(plt)) {
-        if (plt.length > 0) setStat('plantillas.html?v=sst', `✓ ${plt.length} formulario${plt.length !== 1 ? 's' : ''} listo${plt.length !== 1 ? 's' : ''}`, 'ok');
-        else setStat('plantillas.html?v=sst', '▸ Empieza aquí', 'warn');
+      } catch (e) {}
+      const lee = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } };
+      const envios = Array.isArray(env) ? env : lee('skf_envios');
+      const hallaz = Array.isArray(hz) ? hz : lee('skf_hallazgos');
+      let email = ''; try { const u = await sbGetUser(); email = (u && u.email) || ''; } catch (e) {}
+      let org = (ag && ag.org) || null; if (!org) { try { org = await sbLoadOrg(); } catch (e) {} }
+      const pc = ({ co:'co', pa:'pa', cr:'cr', sv:'sv', colombia:'co', 'panamá':'pa', panama:'pa', 'costa rica':'cr', 'el salvador':'sv' })[String((org && org.pais) || '').trim().toLowerCase()] || 'co';
+
+      // ── Anillo: principios con evidencia al día ──────────────────────────
+      const ev = skfEvidenciaPrincipios(envios, pc);
+      const estados = SST_PRINCIPIOS.map(p => ({ p, st: skfEstadoPrincipio(ev[p.id]), ev: ev[p.id] }));
+      const nOk = estados.filter(x => x.st === 'ok').length, atras = estados.filter(x => x.st === 'warn'), pend = estados.filter(x => x.st === 'pend');
+      document.getElementById('anN').textContent = nOk;
+      document.getElementById('anArco').setAttribute('stroke-dasharray', (276.5 * nOk / 9).toFixed(1) + ' 276.5');
+      document.getElementById('anArco').setAttribute('stroke', nOk === 9 ? 'var(--ok)' : nOk >= 5 ? 'var(--pri-txt)' : 'var(--warn)');
+      document.getElementById('anT').textContent = nOk === 9 ? '¡Los 9 principios al día!' : nOk + ' de 9 principios de SST con evidencia al día';
+      document.getElementById('anChips').innerHTML =
+        (atras.length ? `<span class="an-chip warn">${atras.length} atrasado${atras.length !== 1 ? 's' : ''}</span>` : '') +
+        (pend.length ? `<span class="an-chip">${pend.length} sin evidencia</span>` : '') +
+        (nOk === 9 ? '<span class="an-chip ok">Listo para una inspección</span>' : '');
+
+      // ── Para hoy ─────────────────────────────────────────────────────────
+      const hoyItems = ag ? skfAgendaHoy(skfAgenda(ag, new Date())) : [];
+      const lista = document.getElementById('hoyLista');
+      if (hoyItems.length) {
+        lista.innerHTML = hoyItems.slice(0, 5).map(i => `<a class="ag-item ${i.estado}" href="${i.href}">
+          <span class="ag-ico" aria-hidden="true">${SKF_AGENDA_TIPOS[i.tipo].ico}</span>
+          <span><span class="ag-t">${_esc(i.titulo)}</span><span class="ag-d">${_esc(i.detalle)}</span></span>
+          <span class="ag-cuando">${_esc(skfAgendaCuando(i))}</span></a>`).join('') +
+          (hoyItems.length > 5 ? `<a class="skf-sheet-mas" href="plan.html">Y ${hoyItems.length - 5} más en el plan ›</a>` : '');
+      } else {
+        const hayPlan = ag && ((ag.inspecciones || []).length || (ag.asignaciones || []).length || ((ag.turnosConfig || {}).turnos || []).length);
+        lista.innerHTML = `<div class="hoy-vacio"><span style="font-size:1.6rem">${hayPlan ? '✨' : '🗓️'}</span><span>${hayPlan
+          ? '<b>Nada vence hoy</b>Lo próximo está en tu plan.'
+          : '<b>Aún no tienes un plan</b>Define qué se revisa con regularidad y aquí verás lo que toca cada día. <a href="plan.html">Planear ›</a>'}</span></div>`;
       }
-      const n = Array.isArray(env) ? env.length : null;
-      if (n !== null) setStat('llenar.html', `📋 ${n} ${n !== 1 ? 'inspecciones capturadas' : 'inspección capturada'}`, 'neutral');
-      if (Array.isArray(hz)) {
-        const abiertos = hz.filter(h => (h.estado || 'abierto') !== 'cerrado');
-        const ids = new Set(abiertos.map(h => h.id));
-        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-        let venc = 0;
-        if (Array.isArray(acc)) venc = acc.filter(a => {
-          const fl = a.fecha_limite || a.fechaLimite;
-          return (a.estado || '') !== 'completada' && ids.has(a.hallazgo_id || a.hallazgoId) && fl && new Date(fl) < hoy;
-        }).length;
-        if (abiertos.length === 0) setStat('hallazgos.html', '✓ Al día — sin hallazgos abiertos', 'ok');
-        else setStat('hallazgos.html', `⚠ ${abiertos.length} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · ${venc} vencido${venc !== 1 ? 's' : ''}` : ''}`, venc ? 'risk' : 'warn');
-        // Paso 4 — mide y demuestra: qué tanto has cerrado (o evidencia lista).
-        const totalHz = hz.length, cerrados = totalHz - abiertos.length;
-        if (totalHz > 0) setStat('dashboard.html', `${cerrados}/${totalHz} hallazgo${totalHz !== 1 ? 's' : ''} cerrado${cerrados !== 1 ? 's' : ''}`, cerrados === totalHz ? 'ok' : 'neutral');
-        else if (n && n > 0) setStat('dashboard.html', '📄 Evidencia lista', 'ok');
-        const hs = document.getElementById('sstStatus');
-        if (hs) {
-          hs.innerHTML = `${n !== null ? n + (n !== 1 ? ' inspecciones' : ' inspección') + ' · ' : ''}${abiertos.length} hallazgo${abiertos.length !== 1 ? 's' : ''} abierto${abiertos.length !== 1 ? 's' : ''}${venc ? ` · <b>${venc} vencido${venc !== 1 ? 's' : ''}</b>` : ''}`;
-          hs.style.display = 'block';
-        }
-      }
+
+      // ── Seguimiento ──────────────────────────────────────────────────────
+      const abiertos = hallaz.filter(h => (h.estado || 'abierto') !== 'cerrado');
+      const criticos = abiertos.filter(h => h.severidad === 'critico').length;
+      document.getElementById('tHzN').textContent = abiertos.length;
+      document.getElementById('tHzL').textContent = abiertos.length ? 'hallazgo' + (abiertos.length !== 1 ? 's' : '') + ' abierto' + (abiertos.length !== 1 ? 's' : '') + (criticos ? ' · ' + criticos + ' crítico' + (criticos !== 1 ? 's' : '') : '') : 'hallazgos abiertos — al día';
+      document.getElementById('tHz').classList.add(abiertos.length ? 'alerta' : 'bien');
+      const semana = Date.now() - 7 * 864e5;
+      document.getElementById('tRegN').textContent = envios.filter(e => new Date(e.enviado_en || e.enviadoEn || e.creado_en || e.creadoEn).getTime() >= semana).length;
 
       // ── Tu siguiente paso ───────────────────────────────────────────────
       // Solo con datos cargados de verdad (null = sin conexión: no se adivina).
       if (!Array.isArray(env) || !Array.isArray(plt) || !Array.isArray(hz)) return;
-      let email = ''; try { const u = await sbGetUser(); email = (u && u.email) || ''; } catch (e) {}
-      let org = null; try { org = await sbLoadOrg(); } catch (e) {}
       const perfil = skfPerfilGet(email) || {};
       const sinDatos = plt.length === 0 && env.length === 0;
 
@@ -505,76 +219,39 @@
         return;
       }
 
-      const pc = ({ co:'co', pa:'pa', cr:'cr', sv:'sv' })[String((org && org.pais) || '').toLowerCase()] || 'co';
-
-      // ── Tus áreas (kits de inicio) ────────────────────────────────────
       const kitDe = id => AREA_KITS.find(k => k.id === id);
-      const areasSel = () => ((skfPerfilGet(email) || {}).areas || []).map(kitDe).filter(Boolean);
-      function pintarAreas() {
-        const sel = areasSel();
-        const cont = document.getElementById('tusAreas');
-        const lista = document.getElementById('areasList');
-        // Visible si eligió áreas o si quiere agregar una (siempre ofrecemos el selector).
-        cont.hidden = false;
-        lista.innerHTML = sel.map(k => {
-          const falta = skfKitFaltantes(k, pc).length;
-          const extra = k.extra ? ` · <a href="${k.extra.href}">${k.extra.label}</a>` : '';
-          return `<div class="area-card" data-id="${k.id}">
-            <span class="ico">${k.ico}</span>
-            <div><div class="t">${k.nombre}</div><div class="s">${falta ? 'Kit de inicio: ' + falta + ' formulario' + (falta !== 1 ? 's' : '') + ' por agregar' : 'Kit listo en «Mis formularios»'}${falta ? '' : extra}</div></div>
-            ${falta ? '<button class="area-btn" data-kit="' + k.id + '">Agregar kit</button>' : '<a class="area-btn ok" href="llenar.html">Abrir</a>'}
-          </div>`;
-        }).join('');
-        const libres = AREA_KITS.filter(k => !sel.some(s => s.id === k.id));
-        document.getElementById('areaAdd').hidden = !libres.length;
-        document.getElementById('areaPick').innerHTML = libres.map(k => `<button type="button" data-pick="${k.id}">${k.ico} ${k.nombre}</button>`).join('');
-        if (typeof skfGlosar === 'function') skfGlosar(cont);
-      }
-      document.getElementById('tusAreas').addEventListener('click', async e => {
-        const kb = e.target.closest('[data-kit]');
-        if (kb) { kb.disabled = true; kb.textContent = 'Agregando…'; await skfAgregarKit(kitDe(kb.dataset.kit), pc, email); pintarAreas(); return; }
-        const pk = e.target.closest('[data-pick]');
-        if (pk) { const p = skfPerfilGet(email) || {}; p.areas = (p.areas || []).concat(pk.dataset.pick); skfPerfilSet(email, p); document.getElementById('areaPick').hidden = true; pintarAreas(); return; }
-        if (e.target.closest('#areaAdd')) { const pkEl = document.getElementById('areaPick'); pkEl.hidden = !pkEl.hidden; }
-      });
-      pintarAreas();
-      const kitPendiente = areasSel().find(k => skfKitFaltantes(k, pc).length > 0);
-      const abiertos = hz.filter(h => (h.estado || 'abierto') !== 'cerrado');
-      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const kitPendiente = (perfil.areas || []).map(kitDe).filter(Boolean).find(k => skfKitFaltantes(k, pc).length > 0);
+      const hoy0 = new Date(); hoy0.setHours(0, 0, 0, 0);
       const ids = new Set(abiertos.map(h => h.id));
       const venc = Array.isArray(acc) ? acc.filter(a => {
         const fl = a.fecha_limite || a.fechaLimite;
-        return (a.estado || '') !== 'completada' && ids.has(a.hallazgo_id || a.hallazgoId) && fl && new Date(fl) < hoy;
+        return (a.estado || '') !== 'completada' && ids.has(a.hallazgo_id || a.hallazgoId) && fl && new Date(fl) < hoy0;
       }).length : 0;
-      const ev = skfEvidenciaPrincipios(env, pc);
-      const estados = SST_PRINCIPIOS.map(p => ({ p, st: skfEstadoPrincipio(ev[p.id]), ev: ev[p.id] }));
-      const atras = estados.filter(x => x.st === 'warn');
-      const pend = estados.filter(x => x.st === 'pend');
 
       let paso;
       if (sinDatos && !perfil.completo) paso = { ico:'🏢', t:'Cuéntanos de tu empresa', s:'1 minuto: te dejamos listo lo que la ley exige a una empresa como la tuya.', href:'bienvenida.html' };
-      else if (env.length === 0) paso = { ico:'🔎', t:'Haz tu primera inspección', s:'Toma 2 minutos y ya tendrás evidencia de que cumples.', href: plt.length ? 'llenar.html' : 'digitalizador.html?preset=inspeccion_sst' };
-      else if (venc > 0) paso = { ico:'⏰', t: venc + ' acción' + (venc !== 1 ? 'es' : '') + ' correctiva' + (venc !== 1 ? 's' : '') + ' vencida' + (venc !== 1 ? 's' : ''), s:'Ciérralas antes de que lo vea el inspector.', href:'hallazgos.html', cls:'warn' };
-      else if (abiertos.length > 0) paso = { ico:'⚠️', t:'Cierra ' + abiertos.length + ' hallazgo' + (abiertos.length !== 1 ? 's' : '') + ' abierto' + (abiertos.length !== 1 ? 's' : ''), s:'Asigna un responsable y una fecha límite a cada uno.', href:'hallazgos.html', cls:'warn' };
+      else if (env.length === 0) paso = { ico:'🔎', t:'Haz tu primera inspección', s:'Toma 2 minutos y ya tendrás evidencia de que cumples.', href: plt.length ? 'llenar.html?tmpl=' + encodeURIComponent(plt[0].id) : 'digitalizador.html?preset=inspeccion_sst' };
+      else if (venc > 0) paso = { ico:'⏰', t: venc + ' acción' + (venc !== 1 ? 'es' : '') + ' correctiva' + (venc !== 1 ? 's' : '') + ' vencida' + (venc !== 1 ? 's' : ''), s:'Ciérralas antes de que lo vea el inspector del trabajo.', href:'hallazgos.html', cls:'warn' };
+      else if (abiertos.length > 0) paso = { ico:'⚠️', t:'Cierra ' + abiertos.length + ' hallazgo' + (abiertos.length !== 1 ? 's' : '') + ' abierto' + (abiertos.length !== 1 ? 's' : ''), s:'Asigna un responsable y una fecha a cada uno.', href:'hallazgos.html' };
       else if (!perfil.completo && !perfil.omitido) paso = { ico:'🧭', t:'Revisa los datos de tu empresa', s:'1 minuto: te dejamos listo lo que la ley exige a tu empresa y tus formularios por actividad.', href:'bienvenida.html' };
-      else if (kitPendiente) paso = { ico: kitPendiente.ico, t:'Agrega tu kit de «' + kitPendiente.nombre + '»', s: skfKitFaltantes(kitPendiente, pc).length + ' formularios para empezar, en un toque.', href:'#tusAreas' };
+      else if (kitPendiente) paso = { ico: kitPendiente.ico, t:'Agrega tu kit de «' + kitPendiente.nombre + '»', s: skfKitFaltantes(kitPendiente, pc).length + ' formularios para empezar, en un toque.', href:'empresa.html#areas' };
       else if (atras.length > 0 || pend.length > 0) {
         // Directo al formulario que cubre el principio (uno que ya tenga, si lo hay), no al Mapa.
-        const mias = (Array.isArray(plt) ? plt : []).map(p => ({ id: p.id, nombre: p.nombre }));
-        try { JSON.parse(localStorage.getItem('skf_plantillas') || '[]').forEach(p => mias.push({ id: p.id, nombre: p.nombre })); } catch (e) {}
+        const mias = plt.map(p => ({ id: p.id, nombre: p.nombre }));
+        lee('skf_plantillas').forEach(p => mias.push({ id: p.id, nombre: p.nombre }));
         if (atras.length > 0) {
           const x = atras[0], d = skfFormularioParaPrincipio(x.p.id, pc, mias);
           paso = { ico:'🔄', t:'Renueva la evidencia de «' + x.p.nombre + '»',
-            s:'La última tiene ' + x.ev.dias + ' días. ' + (d ? 'Renuévala con «' + d.nombre + '».' : 'Ábrelo en tu mapa de cumplimiento.') + (atras.length > 1 ? ' (Y ' + (atras.length - 1) + ' más atrasado' + (atras.length > 2 ? 's' : '') + '.)' : ''),
+            s:'La última tiene ' + x.ev.dias + ' días. ' + (d ? 'Renuévala con «' + d.nombre + '».' : 'Ábrelo en tu mapa de cumplimiento.'),
             href: d ? d.href : 'cumplimiento.html', cls:'warn' };
         } else {
           const x = pend[0], d = skfFormularioParaPrincipio(x.p.id, pc, mias);
           paso = { ico:'🎯', t:'Te falta evidencia de «' + x.p.nombre + '»',
-            s:'Llevas ' + (9 - pend.length) + ' de 9 principios con evidencia. ' + (d ? 'Empieza con «' + d.nombre + '».' : 'Mira qué formulario lo cubre.'),
+            s:(d ? 'Empieza con «' + d.nombre + '».' : 'Mira qué formulario lo cubre.'),
             href: d ? d.href : 'cumplimiento.html' };
         }
       }
-      else paso = { ico:'✅', t:'Todo al día', s:'Tienes evidencia reciente de los 9 principios. Revisa tu mapa de cumplimiento.', href:'cumplimiento.html', cls:'ok' };
+      else paso = { ico:'✅', t:'Todo al día', s:'Tienes evidencia reciente de los 9 principios.', href:'cumplimiento.html', cls:'ok' };
 
       const card = document.getElementById('nextStep');
       card.href = paso.href;
