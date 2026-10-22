@@ -194,7 +194,7 @@
         const hayPlan = ag && ((ag.inspecciones || []).length || (ag.asignaciones || []).length || ((ag.turnosConfig || {}).turnos || []).length);
         lista.innerHTML = `<div class="hoy-vacio"><span style="font-size:1.6rem">${hayPlan ? '✨' : '🗓️'}</span><span>${hayPlan
           ? '<b>Nada vence hoy</b>Lo próximo está en tu plan.'
-          : '<b>Aún no tienes un plan</b>Define qué se revisa con regularidad y aquí verás lo que toca cada día. <a href="plan.html">Planear ›</a>'}</span></div>`;
+          : '<b>Aún no tienes un plan</b>Define qué se revisa con regularidad y aquí verás lo que toca cada día. <a href="plan.html?nuevo=1">Planear ›</a>'}</span></div>`;
       }
 
       // ── Seguimiento ──────────────────────────────────────────────────────

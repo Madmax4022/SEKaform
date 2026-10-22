@@ -225,7 +225,7 @@ const SKF_PAGINAS = {
 // ── Hoja inferior genérica (bottom sheet) ───────────────────────────────────
 // Se abre desde abajo, en la zona del pulgar. Se cierra tocando fuera, con Esc, con la ✕
 // o arrastrando hacia abajo. Devuelve el elemento del contenido.
-function skfSheet(titulo, cuerpoHtml, origen) {
+function skfSheet(titulo, cuerpoHtml, origen, alCerrar) {
   skfSheetCerrar();
   const w = document.createElement('div');
   w.className = 'skf-sheet-wrap'; w.id = 'skfSheet';
@@ -237,6 +237,7 @@ function skfSheet(titulo, cuerpoHtml, origen) {
     </div>`;
   document.body.appendChild(w);
   w._origen = origen || document.activeElement;
+  w._alCerrar = alCerrar || null;
   w.addEventListener('click', e => { if (e.target.closest('[data-cerrar]')) skfSheetCerrar(); });
   // Arrastrar hacia abajo desde la cabecera para cerrar, como en una app nativa.
   const hoja = w.querySelector('.skf-sheet'); let y0 = null, dy = 0;
@@ -253,8 +254,9 @@ function skfSheetCerrar() {
   const w = document.getElementById('skfSheet');
   if (!w) return;
   document.documentElement.classList.remove('skf-sheet-abierta');
-  const origen = w._origen;
+  const origen = w._origen, alCerrar = w._alCerrar;
   w.remove();
+  if (alCerrar) { try { alCerrar(); } catch (e) {} }
   if (origen && origen.focus) origen.focus({ preventScroll: true });
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') skfSheetCerrar(); });

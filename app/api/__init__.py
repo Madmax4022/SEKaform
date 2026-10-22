@@ -340,7 +340,7 @@ def bootstrap():
 
         cur.execute(
             "SELECT id, plantilla_id, plantilla_nombre, unidad_id, nombre, correo, "
-            "fecha_limite, completado_en FROM asignaciones ORDER BY creado_en DESC LIMIT 500"
+            "fecha_limite, completado_en, creado_en FROM asignaciones ORDER BY creado_en DESC LIMIT 500"
         )
         asignaciones = cur.fetchall()
 

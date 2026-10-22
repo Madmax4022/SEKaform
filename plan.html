@@ -12,6 +12,7 @@
   <script src="skf-api.js"></script>
   <script src="form-library.js"></script>
   <script src="agenda.js"></script>
+  <script src="planear.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -100,7 +101,8 @@ function pintar() {
   if (!vis.length) {
     el.innerHTML = `<div class="vacio"><div class="e">🗓️</div>
       <h2>${items.length ? 'Nada en este filtro' : 'Aún no hay nada planeado'}</h2>
-      <p>${items.length ? 'Prueba con «Todo».' : 'Planea lo que debe revisarse con regularidad y la app te avisará qué toca hoy y qué se atrasó.'}</p></div>`;
+      <p>${items.length ? 'Prueba con «Todo».' : 'Di qué se revisa, cada cuánto, dónde y quién. La app te avisará qué toca hoy y qué se atrasó.'}</p>
+      ${items.length ? '' : '<button type="button" class="btn-planear" id="btnPlanearVacio" style="margin-top:0">＋ Planear la primera</button>'}</div>`;
     return;
   }
   el.innerHTML = GRUPOS.map(([k, t]) => {
@@ -120,15 +122,13 @@ document.getElementById('filtros').addEventListener('click', e => {
   filtro = b.dataset.f; pintar();
 });
 
-document.getElementById('btnPlanear').addEventListener('click', e => {
-  skfSheet('¿Qué quieres planear?', `
-    <a class="skf-opt" href="programadas.html"><span class="so-ico">🔁</span><span class="so-txt"><b>Una rutina que se repite</b><small>Ej.: extintores cada mes en la bodega</small></span><span class="so-arr">›</span></a>
-    <a class="skf-opt" href="asignaciones.html"><span class="so-ico">👤</span><span class="so-txt"><b>Encargarle un formulario a alguien</b><small>Le llega el enlace y ves si ya lo llenó</small></span><span class="so-arr">›</span></a>
-    <a class="skf-opt" href="turnos.html"><span class="so-ico">🕒</span><span class="so-txt"><b>Lo que se revisa en cada turno</b><small>Ej.: entrega de turno y ronda nocturna</small></span><span class="so-arr">›</span></a>`, e.currentTarget);
-});
+let _datos = null;
+const abrirPlanear = origen => skfPlanear({ plantillas: _datos && _datos.plantillas, origen, alGuardar: cargar });
+document.getElementById('btnPlanear').addEventListener('click', e => abrirPlanear(e.currentTarget));
+document.getElementById('lista').addEventListener('click', e => { if (e.target.closest('#btnPlanearVacio')) abrirPlanear(e.target); });
 
-(async () => {
-  const d = await skfAgendaDatos();
+async function cargar() {
+  const d = _datos = await skfAgendaDatos();
   items = skfAgenda(d, new Date());
   const act = (d.inspecciones || []).filter(i => i.activa !== false).length;
   if (act) document.getElementById('nRut').textContent = act + ' rutina' + (act !== 1 ? 's' : '') + ' activa' + (act !== 1 ? 's' : '');
@@ -137,7 +137,8 @@ document.getElementById('btnPlanear').addEventListener('click', e => {
   const tn = ((d.turnosConfig && d.turnosConfig.turnos) || []).length;
   if (tn) document.getElementById('nTur').textContent = tn + ' turno' + (tn !== 1 ? 's' : '') + ' definido' + (tn !== 1 ? 's' : '');
   pintar();
-})();
+}
+cargar().then(() => { if (new URLSearchParams(location.search).get('nuevo') === '1') { history.replaceState(null, '', 'plan.html'); abrirPlanear(document.getElementById('btnPlanear')); } });
 </script>
 </body>
 </html>

@@ -371,7 +371,7 @@ const _SALIDA = {
   asignacion: a => ({
     id: a.id, plantilla_id: a.plantillaId || null,
     plantilla_nombre: a.plantillaNombre || '', unidad_id: a.unidadId || null,
-    nombre: a.nombre, correo: a.correo || null,
+    nombre: a.nombre, correo: a.correo || null, fecha_limite: a.fechaLimite || null,
   }),
   unidad: u => ({
     id: u.id, nombre: u.nombre, tipo: u.tipo || 'sede',
