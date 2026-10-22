@@ -184,13 +184,16 @@ function skfEquiposConocidos(envios, plantillas, prefijo) {
   (envios || []).forEach(e => {
     if (e.estado && e.estado !== 'enviado') return;
     const cs = camposDe[e.plantillaId || e.plantilla_id] || [];
-    const fecha = e.enviadoEn || e.enviado_en || e.creadoEn || e.creado_en || '';
+    // Cuándo se hizo de verdad (capturado_en: sin señal puede subir días después). La
+    // nube manda fechas como «Thu, 22 Oct 2026 …»: se comparan como tiempo, no como texto.
+    const ts = Date.parse(e.capturado_en || e.capturadoEn || e.enviadoEn || e.enviado_en || e.creadoEn || e.creado_en || '');
+    if (isNaN(ts)) return;
     cs.forEach(c => {
       const cod = skfEquipoNormalizar((e.datos || {})[c.id]);
       if (!cod) return;
       const prev = por[cod];
-      if (!prev || String(fecha) > String(prev.ultima)) {
-        por[cod] = {codigo:cod, ultima:fecha, unidadId:e.unidadId || e.unidad_id || null,
+      if (!prev || ts > prev._ts) {
+        por[cod] = {codigo:cod, ultima:new Date(ts).toISOString(), _ts:ts, unidadId:e.unidadId || e.unidad_id || null,
                     plantillaId:e.plantillaId || e.plantilla_id, datos:e.datos || {}, veces:(prev ? prev.veces : 0) + 1};
       } else prev.veces++;
     });
@@ -209,7 +212,12 @@ function _skfDiasHasta(fecha, ahora) {
   if (isNaN(d.getTime())) return null;
   return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - hoy) / 864e5);
 }
-function skfEquiposEstado(envios, plantillas, ahora) {
+// ¿Está de baja? Solo si no se volvió a inspeccionar después de la baja (volvió a servicio).
+function skfEquipoDeBaja(eq, bajas) {
+  const b = (bajas || []).find(x => skfEquipoNormalizar(x.codigo) === eq.codigo);
+  return !!b && !(Date.parse(eq.ultima) > Date.parse(b.bajaEn || b.baja_en || 0));
+}
+function skfEquiposEstado(envios, plantillas, ahora, bajas) {
   ahora = ahora || new Date();
   const pls = plantillas || [];
   const prefijos = {};
@@ -218,6 +226,7 @@ function skfEquiposEstado(envios, plantillas, ahora) {
   Object.keys(prefijos).forEach(p => {
     const tipo = skfEquipoTipo(p);
     skfEquiposConocidos(envios, pls, p).forEach(eq => {
+      if (skfEquipoDeBaja(eq, bajas)) return;
       const pl = pls.find(x => x.id === eq.plantillaId);
       const fv = pl && (pl.campos || []).find(c => c.tipo === 'fecha' && _SKF_RE_VENCE.test(c.etiqueta || '') && eq.datos[c.id]);
       const recarga = fv ? String(eq.datos[fv.id]) : null;

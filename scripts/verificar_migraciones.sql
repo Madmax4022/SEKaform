@@ -14,5 +14,6 @@ FROM (VALUES
   ('008_aviso_configurable', EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'plantillas' AND column_name = 'aviso_umbral'), 'umbral y tope de avisos por formulario'),
   ('009_equipo',             to_regprocedure('skf_equipo_invitar(citext,text,integer)') IS NOT NULL,     'invitar y administrar el equipo desde la app'),
   ('010_asesores',           to_regprocedure('skf_asesor_crear_empresa(text,text)') IS NOT NULL,         'asesores con varias empresas; datos solo de la empresa activa'),
-  ('011_portal',             to_regclass('public.portales') IS NOT NULL,                                 'portal del cliente (resumen en vivo)')
+  ('011_portal',             to_regclass('public.portales') IS NOT NULL,                                 'portal del cliente (resumen en vivo)'),
+  ('012_equipos_baja',       to_regclass('public.equipos_baja') IS NOT NULL,                             'dar de baja equipos retirados')
 ) AS m(migracion, ok, que_trae);
