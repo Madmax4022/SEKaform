@@ -27,7 +27,15 @@ ALTER TABLE avisos_puntaje NO FORCE ROW LEVEL SECURITY;
 
 -- Lo necesario para calcular el puntaje de un envío público: campos del formulario, sus
 -- respuestas y a quién avisar. Solo si el envío es público Y pertenece al formulario de ese token.
-CREATE OR REPLACE FUNCTION skf_publico_aviso_datos(p_envio UUID, p_token TEXT)
+-- Solo se crea si no existe: la migración 008 la amplía (devuelve además los ajustes por
+-- formulario) y Postgres no deja cambiar el tipo de retorno con CREATE OR REPLACE. Volver a
+-- correr esta migración después de la 008 (lo hacen migrar.sh y el CI) no debe fallar ni
+-- devolverla a esta versión.
+DO $do$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'skf_publico_aviso_datos') THEN
+    EXECUTE $f$
+CREATE FUNCTION skf_publico_aviso_datos(p_envio UUID, p_token TEXT)
 RETURNS TABLE (formulario TEXT, campos JSONB, correo TEXT, datos JSONB,
                llenado_por TEXT, ya_avisado BOOLEAN)
 LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
@@ -36,7 +44,10 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
     FROM envios e JOIN plantillas p ON p.id = e.plantilla_id
    WHERE e.id = p_envio AND e.origen = 'publico'
      AND p.share_token = p_token AND p.publica = true AND NOT p.archivada;
-$$;
+$$
+    $f$;
+  END IF;
+END $do$;
 
 -- Reserva el aviso de un envío. Devuelve true solo si hay que enviar el correo AHORA:
 -- false si ese envío ya se avisó (o se omitió) o si el formulario ya llegó al límite por hora.
