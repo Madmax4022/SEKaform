@@ -45,6 +45,20 @@
     .hz-meta { font-size: .74rem; color: var(--mut); margin-top: 8px; }
     .hz-estado-sel { background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 7px; padding: 6px 10px; font-size: .8rem; font-family: inherit; cursor: pointer; }
 
+    .hz-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .hz-foto { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; border: 1px solid var(--bor); background: var(--inp); padding: 0; cursor: pointer; font: inherit; color: var(--mut); }
+    .hz-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hz-foto b { position: absolute; left: 6px; top: 6px; padding: 2px 8px; border-radius: 99px; font-size: .7rem; background: rgba(0,0,0,.65); color: #fff; }
+    .hz-foto.vacia { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: .8rem; border-style: dashed; }
+    .hz-foto.vacia b { position: static; background: transparent; color: var(--mut); padding: 0; }
+    .hz-cerrar-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-radius: 12px; background: var(--ok); color: #04241d; font: inherit; font-weight: 800; cursor: pointer; }
+    .cz-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .cz-tomar { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 1px solid var(--pri); border-radius: 12px; background: var(--pri-dim); color: var(--txt); font-weight: 800; cursor: pointer; }
+    .cz-acc { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .cz-acc button { min-height: 48px; border-radius: 12px; font: inherit; font-weight: 800; cursor: pointer; }
+    .cz-ok { border: 0; background: var(--ok); color: #04241d; }
+    .cz-sin { border: 1px solid var(--bor); background: transparent; color: var(--mut); }
+    .cz-nota { font-size: .8rem; color: var(--mut); margin: 0 0 12px; line-height: 1.45; }
     .hz-capa { margin-top: 14px; border-top: 1px solid var(--bor); padding-top: 12px; }
     .hz-capa-existing { font-size: .85rem; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
     .hz-capa-form { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -129,8 +143,26 @@ async function syncFromCloud() {
     if (cloudH !== null) fromCloud = true;
     skfReconcile('skf_hallazgos', cloudH, normalizeHallazgoFromCloud);
     skfReconcile('skf_acciones_correctivas', cloudA, normalizeAccionFromCloud);
+    await rescatarAcciones(cloudA);
   } catch (e) { /* offline-first: keep local data as-is */ }
   return fromCloud;
+}
+
+// Hasta oct-2026 la app enviaba las acciones correctivas con un nombre que el servidor no
+// reconocía: quedaban solo en este teléfono (y en «rechazados»). Se reenvían las que sigan
+// sin subir — solo las de hallazgos de esta empresa, que son los que hay en el teléfono.
+async function rescatarAcciones(cloudA) {
+  if (!Array.isArray(cloudA)) return;
+  const enNube = new Set(cloudA.map(a => a.id));
+  const hz = new Set(getHallazgos().map(h => h.id));
+  const enCola = new Set(skfQueueGet().filter(o => o.tipo === 'accionCorrectiva').map(o => o.datos && o.datos.id));
+  const pendientes = getAcciones().filter(a => a && !enNube.has(a.id) && hz.has(a.hallazgoId) && !enCola.has(a.id));
+  for (const a of pendientes) { try { await skfSyncOrQueue('accionCorrectiva', a); } catch (e) {} }
+  try {
+    const r = JSON.parse(localStorage.getItem('skf_rechazados') || '[]');
+    const quedan = r.filter(x => !(x.tipo === 'accionCorrectiva' && /Tipo desconocido/.test(x.motivo || '')));
+    if (quedan.length !== r.length) { localStorage.setItem('skf_rechazados', JSON.stringify(quedan)); skfUpdateSyncBadge(); }
+  } catch (e) {}
 }
 
 let filtEstado = 'todos';
@@ -204,12 +236,15 @@ function render() {
       ${h.campoEtiqueta ? `<div class="hz-campo">Campo: ${esc(h.campoEtiqueta)}</div>` : '<div class="hz-campo">Reportado manualmente</div>'}
       ${h.descripcion ? `<div class="hz-desc">${esc(h.descripcion)}</div>` : ''}
       <div class="hz-meta">${fecha}${h.reportadoPor ? ' · ' + esc(h.reportadoPor) : ''}</div>
+      ${fotosHtml(h, ac)}
+      ${(h.estado||'abierto') !== 'cerrado' ? `<button type="button" class="hz-cerrar-btn" onclick="abrirCierre('${esc(h.id)}', this)">✓ Cerrar con foto de después</button>` : ''}
       <div class="hz-capa">${capaHtml}</div>
     </div>`;
   }).join('');
 }
 
 function setHallazgoEstado(id, estado) {
+  if (estado === 'cerrado') { abrirCierre(id); return; }   // cerrar siempre pasa por la foto de después
   const list = getHallazgos();
   const h = list.find(x=>x.id===id);
   if (!h) return;
@@ -246,6 +281,7 @@ function setAccionEstado(id, estado) {
   const acciones = getAcciones();
   const ac = acciones.find(x=>x.id===id);
   if (!ac) return;
+  if (estado === 'completada') { abrirCierre(ac.hallazgoId); return; }
   ac.estado = estado;
   if (estado === 'completada') ac.cerradoEn = new Date().toISOString();
   setAcciones(acciones);
@@ -260,6 +296,88 @@ function setAccionEstado(id, estado) {
     toast('Acción correctiva actualizada ✓','ok');
   }
   render();
+}
+
+// ── Antes y después ───────────────────────────────────────────────────
+// «Antes»: la foto del problema (al reportarlo o después). «Después»: la que se toma al
+// cerrarlo; se guarda como evidencia de la acción correctiva. Juntas son la prueba,
+// ante un inspector, de que el hallazgo se corrigió de verdad.
+function fotosHtml(h, ac) {
+  const antes = skfFotoSegura(h.foto), despues = skfFotoSegura(ac && ac.evidenciaCierre);
+  const abierto = (h.estado||'abierto') !== 'cerrado';
+  if (!antes && !despues && !abierto) return '';
+  const caja = (url, etq, vacio) => url
+    ? `<button type="button" class="hz-foto" onclick="verFoto(this)" data-etq="${etq}"><img src="${url}" alt="Foto de ${etq.toLowerCase()}" loading="lazy"><b>${etq}</b></button>`
+    : vacio;
+  return `<div class="hz-fotos">
+    ${caja(antes, 'Antes', abierto
+      ? `<label class="hz-foto vacia"><input type="file" accept="image/*" capture="environment" hidden onchange="fotoAntes('${esc(h.id)}', this)">📷<b>Agregar foto del problema</b></label>`
+      : `<div class="hz-foto vacia"><b>Sin foto de antes</b></div>`)}
+    ${caja(despues, 'Después', `<div class="hz-foto vacia"><b>${abierto ? 'Se toma al cerrar' : 'Cerrado sin foto'}</b></div>`)}
+  </div>`;
+}
+function verFoto(btn) {
+  const img = btn.querySelector('img');
+  skfSheet(btn.dataset.etq, `<img src="${img.src}" alt="${esc(img.alt)}" style="width:100%;border-radius:12px;display:block">`, btn);
+}
+async function fotoAntes(id, input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  try {
+    const list = getHallazgos(), h = list.find(x => x.id === id); if (!h) return;
+    h.foto = await skfComprimirFoto(f);
+    setHallazgos(list); skfSyncOrQueue('hallazgo', h);
+    toast('Foto del problema guardada ✓', 'ok'); render();
+  } catch (e) { toast('No se pudo usar esa foto', 'er'); }
+}
+
+let _cierre = null;   // { id, foto }
+function abrirCierre(id, origen) {
+  const h = getHallazgos().find(x => x.id === id); if (!h) return;
+  _cierre = { id, foto: null };
+  const antes = skfFotoSegura(h.foto);
+  skfSheet('Cerrar hallazgo', `
+    <p class="cz-nota">${esc(h.descripcion || h.campoEtiqueta || h.plantillaNombre || 'Hallazgo')}</p>
+    <div class="cz-fotos">
+      ${antes ? `<div class="hz-foto"><img src="${antes}" alt="Foto de antes"><b>Antes</b></div>` : `<div class="hz-foto vacia"><b>Sin foto de antes</b></div>`}
+      <div class="hz-foto vacia" id="czDespues"><b>Después</b></div>
+    </div>
+    <label class="cz-tomar"><input type="file" accept="image/*" capture="environment" hidden onchange="fotoDespues(this)">📷 <span id="czTxt">Tomar foto de cómo quedó</span></label>
+    <p class="cz-nota" style="margin-top:10px">La foto de después, junto a la de antes, es tu prueba ante un inspector de que se corrigió.</p>
+    <div class="cz-acc">
+      <button type="button" class="cz-ok" id="czOk" onclick="confirmarCierre(true)" disabled>✓ Cerrar con la foto</button>
+      <button type="button" class="cz-sin" onclick="confirmarCierre(false)">Cerrar sin foto</button>
+    </div>`, origen, () => { _cierre = null; render(); });
+}
+async function fotoDespues(input) {
+  const f = input.files && input.files[0]; if (!f || !_cierre) return;
+  try {
+    _cierre.foto = await skfComprimirFoto(f);
+    const box = document.getElementById('czDespues');
+    box.className = 'hz-foto'; box.innerHTML = `<img src="${_cierre.foto}" alt="Foto de después"><b>Después</b>`;
+    document.getElementById('czTxt').textContent = 'Cambiar foto';
+    document.getElementById('czOk').disabled = false;
+  } catch (e) { toast('No se pudo usar esa foto', 'er'); }
+}
+async function confirmarCierre(conFoto) {
+  if (!_cierre) return;
+  const { id, foto } = _cierre;
+  const ahora = new Date().toISOString();
+  const acciones = getAcciones();
+  let ac = acciones.find(a => a.hallazgoId === id);
+  if (!ac) {   // cerrar sin acción asignada: se registra una ya completada, para que la evidencia tenga dónde vivir
+    let yo = null; try { yo = await skfYo(); } catch (e) {}
+    ac = { id: skfUUID(), hallazgoId: id, responsable: (yo && (yo.nombre || yo.email)) || 'Sin asignar', correo: null,
+           fechaLimite: null, creadoEn: ahora };
+    acciones.push(ac);
+  }
+  ac.estado = 'completada'; ac.cerradoEn = ahora;
+  if (conFoto && foto) ac.evidenciaCierre = foto;
+  setAcciones(acciones); skfSyncOrQueue('accionCorrectiva', ac);
+  const list = getHallazgos(), h = list.find(x => x.id === id);
+  if (h) { h.estado = 'cerrado'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
+  _cierre = null;
+  skfSheetCerrar();
+  toast(conFoto && foto ? 'Hallazgo cerrado con evidencia ✓' : 'Hallazgo cerrado ✓', 'ok');
 }
 
 let _tt;

@@ -158,8 +158,14 @@ def _preparar_aviso(cur, payload: dict):
     return limpio, None
 
 
+# Nombres con que la app manda algunos tipos. «accionCorrectiva» no se reconocía y cada
+# acción correctiva creada en la app quedaba rechazada en el teléfono, sin llegar a la nube.
+_ALIAS_TIPO = {"accionCorrectiva": "accion_correctiva"}
+
+
 def _upsert(cur, tipo: str, payload: dict) -> dict:
     """Inserta, actualiza o borra un registro del cliente. Idempotente por id."""
+    tipo = _ALIAS_TIPO.get(tipo, tipo)
     if tipo in BORRABLES:
         registro_id = _uuid_valido(payload.get("id"))
         if not registro_id:
@@ -239,6 +245,13 @@ def _upsert(cur, tipo: str, payload: dict) -> dict:
         valores,
     )
     fila = cur.fetchone()
+    # Un hallazgo cerrado desde la app llega solo con su estado: la fecha y quién lo cerró
+    # los pone el servidor (sin ellos, el portal y la carpeta de evidencia no lo ven cerrado).
+    if tipo == "hallazgo" and fila:
+        cur.execute(
+            "UPDATE hallazgos SET cerrado_en = CASE WHEN estado = 'cerrado' THEN COALESCE(cerrado_en, NOW()) END, "
+            "cerrado_por = CASE WHEN estado = 'cerrado' THEN COALESCE(cerrado_por, %s) END WHERE id = %s",
+            (getattr(current_user, "nombre", None) or current_user.email, fila["id"]))
     r = {"ok": True, "id": fila["id"] if fila else registro_id, "tipo": tipo}
     # xmax = 0 solo en una fila INSERTADA ahora: un reintento de la cola (UPDATE) no cuenta como nuevo.
     if tipo == "envio" and fila and fila.get("nuevo"):

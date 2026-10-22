@@ -1358,8 +1358,24 @@ function _auditRows(ds) {
     const lim = ac && fAcFechaLimite(ac) ? new Date(fAcFechaLimite(ac)+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '—';
     return { id: h.id, form: fHzPlantillaNom(h), campo: fHzCampo(h), sev: h.severidad||'menor',
              estado: h.estado||'abierto', resp: ac ? fAcResponsable(ac) : '—', limite: lim, cerrado,
-             cerradoPor: fHzCerradoPor(h), cerradoEn: fHzCerradoEn(h) };
+             cerradoPor: fHzCerradoPor(h), cerradoEn: fHzCerradoEn(h),
+             antes: skfFotoSegura(h.foto_url || h.foto), despues: skfFotoSegura(ac && (ac.evidencia_url || ac.evidencia_cierre || ac.evidenciaCierre)),
+             desc: h.descripcion || '' };
   });
+}
+// Antes y después de cada hallazgo con foto: la prueba de cierre que pide un inspector.
+function _evidenciaAntesDespues(rows) {
+  const con = rows.filter(r => r.antes || r.despues).slice(0, 24);
+  if (!con.length) return '';
+  const img = (u, t) => u ? `<div style="flex:1"><div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:3px">${t}</div><img src="${u}" alt="${t}" style="width:100%;height:150px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb"></div>`
+                         : `<div style="flex:1"><div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:3px">${t}</div><div style="height:150px;border:1px dashed #d1d5db;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px">Sin foto</div></div>`;
+  return `<h2>Evidencia de cierre — antes y después</h2>` + con.map(r => `
+    <div style="break-inside:avoid;page-break-inside:avoid;margin:0 0 14px;padding:10px;border:1px solid #e5e7eb;border-radius:8px">
+      <div style="font-size:12px;font-weight:700">${escD(r.form)} — ${escD(r.campo || 'manual')}</div>
+      ${r.desc ? `<div style="font-size:11px;color:#374151;margin:2px 0 6px">${escD(r.desc)}</div>` : ''}
+      <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${escD(r.sev)} · ${r.cerrado ? 'Cerrado' + (r.cerradoEn ? ' el ' + new Date(r.cerradoEn).toLocaleDateString('es-CO') : '') : 'Pendiente'} · Responsable: ${escD(r.resp)}</div>
+      <div style="display:flex;gap:10px">${img(r.antes, 'ANTES')}${img(r.despues, 'DESPUÉS')}</div>
+    </div>`).join('') + (rows.filter(r => r.antes || r.despues).length > 24 ? '<p style="color:#9ca3af;font-size:11px">Se muestran los primeros 24 hallazgos con foto.</p>' : '');
 }
 function renderAuditoria(ds) {
   const rows = _auditRows(ds);
@@ -1445,7 +1461,7 @@ function reporteConsolidado() {
     ? `<table><thead><tr><th style="text-align:left">Hallazgo</th><th style="text-align:left">Severidad</th><th style="text-align:left">Estado</th><th style="text-align:left">Responsable</th><th style="text-align:left">Límite</th><th style="text-align:left">Cierre</th></tr></thead><tbody>${auRows.map(r=>`<tr><td style="text-align:left">${escD(r.form)} — ${escD(r.campo||'manual')}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${ESTADO_LBL[r.estado]||r.estado}</td><td style="text-align:left">${escD(r.resp)}</td><td style="text-align:left">${escD(r.limite)}</td><td style="text-align:left">${r.cerrado?'Cerrado':'Pendiente'}</td></tr>`).join('')}</tbody></table>`
     : `<p style="color:#9ca3af">Sin hallazgos en este periodo.</p>`;
 
-  printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}${_tablaPuntajeForms(ds)}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Hallazgos y su cierre</h2>${tablaHz}<h2>Registros del periodo</h2>${tablaDet}`);
+  printReport('Carpeta de evidencia', `<h2>Resumen — ${escD(_etiquetaFiltro())}</h2>${resumen}${_tablaPuntajeForms(ds)}<h2>Comparativo por ${U_TIPO_LBL[tipo]||'unidad'}</h2>${cmp}<h2>Hallazgos y su cierre</h2>${tablaHz}${_evidenciaAntesDespues(auRows)}<h2>Registros del periodo</h2>${tablaDet}`);
 }
 
 // Exporta el PANEL COMPLETO a PDF: los KPIs, las gráficas (capturadas como

@@ -118,6 +118,30 @@ async function skfEquipoRevocar(id) { return skfFetch('/api/equipo/invitacion/' 
 async function skfEquipoRol(userId, rol) { return skfFetch('/api/equipo/' + encodeURIComponent(userId) + '/rol', { method: 'POST', body: JSON.stringify({ rol }) }); }
 async function skfEquipoQuitar(userId) { return skfFetch('/api/equipo/' + encodeURIComponent(userId), { method: 'DELETE' }); }
 
+// ── Fotos de evidencia (antes / después de un hallazgo) ─────────────────────
+// Se reducen en el teléfono (lado mayor 1280 px, JPEG): una foto de 4 MB queda en
+// unos 150 KB, sube con mala señal y no infla la base.
+function skfComprimirFoto(file, max = 1280, calidad = 0.72) {
+  return new Promise((ok, mal) => {
+    if (!file || !/^image\//.test(file.type || '')) { mal(new Error('No es una imagen')); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      ok(cv.toDataURL('image/jpeg', calidad));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('No se pudo leer la foto')); };
+    img.src = url;
+  });
+}
+// Solo se pinta lo que es de verdad una imagen (lo guardado viaja por la nube).
+function skfFotoSegura(u) {
+  return typeof u === 'string' && (/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(u) || /^https:\/\/storage\.googleapis\.com\//.test(u)) ? u : '';
+}
+
 // ── Traducción de nombres de campo ───────────────────────────────────────
 // Las páginas heredaron los nombres de Supabase (logo, foto, evidencia_cierre);
 // el esquema nuevo usa logo_url / foto_url / evidencia_url, que describen mejor
