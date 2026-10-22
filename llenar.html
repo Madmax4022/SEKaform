@@ -130,6 +130,67 @@
     .fg.fc-smart { border-left-color: var(--warn); }
     .fg.has-error { border-left-color: var(--err) !important; }
     .fg.hidden { display: none; }
+    /* La pregunta es lo principal: grande y clara */
+    .fg > label { font-size: .98rem !important; color: var(--txt) !important; font-weight: 800 !important; line-height: 1.35; letter-spacing: 0 !important; }
+    .opt-lbl { min-height: 52px; }
+    .opts-wrap.si-no { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .opts-wrap.escala { display: grid; grid-template-columns: repeat(auto-fit, minmax(54px, 1fr)); gap: 8px; }
+    .si-no .opt-lbl, .escala .opt-lbl { justify-content: center; text-align: center; min-height: 58px; font-size: 1.02rem; font-weight: 800; padding: 8px 6px; position: relative; }
+    .si-no .opt-lbl input, .escala .opt-lbl input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+    .si-no .opt-lbl:has(input:focus-visible), .escala .opt-lbl:has(input:focus-visible) { outline: 3px solid var(--pri-txt); outline-offset: 2px; }
+    .sn-ico { font-size: 1.15rem; line-height: 1; }
+    .si-no .opt-lbl[data-v="Sí"]:has(input:checked) { background: rgba(26,188,156,.18); border-color: var(--ok); color: #5eead4; }
+    .si-no .opt-lbl[data-v="No"]:has(input:checked) { background: rgba(248,113,113,.16); border-color: var(--err); color: #fca5a5; }
+    .si-no .opt-lbl[data-v="N/A"]:has(input:checked) { background: rgba(148,163,184,.16); border-color: var(--mut); color: var(--txt); }
+    .opt-lbl:active { transform: scale(.98); }
+
+    /* Selector de modo */
+    .modo-sw { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-top: 14px; background: var(--bg); border: 1px solid var(--bor); border-radius: 12px; }
+    .modo-sw button { min-height: 44px; border: none; border-radius: 9px; background: none; color: var(--mut); font: inherit; font-size: .86rem; font-weight: 800; cursor: pointer; }
+    .modo-sw button[aria-pressed="true"] { background: var(--card); color: var(--txt); box-shadow: 0 4px 12px -6px rgba(0,0,0,.6); }
+
+    /* Modo «una a la vez» */
+    .paso-head { display: none; }
+    .modo-paso .paso-head { display: block; position: sticky; top: 52px; z-index: 50; background: var(--bg); padding: 10px 2px 12px; }
+    .ph-top { display: flex; justify-content: space-between; gap: 10px; font-size: .8rem; font-weight: 800; color: var(--mut); margin-bottom: 8px; }
+    .ph-top #phSec { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ph-bar { height: 6px; border-radius: 3px; background: var(--bor); overflow: hidden; }
+    .ph-bar span { display: block; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 3px; transition: width .25s; }
+    #fFields.paso > .fg:not(.actual), #fFields.paso > .form-sep { display: none; }
+    #fFields.paso > .fg.actual { min-height: 46vh; padding: 20px 18px; border-radius: 20px; display: flex; flex-direction: column; }
+    /* La pregunta arriba; las respuestas abajo, donde llega el pulgar */
+    #fFields.paso > .fg.actual > label { margin-bottom: auto !important; padding-bottom: 18px; }
+    .modo-paso .form-header-card { padding: 14px 16px !important; }
+    .modo-paso .form-title-h { font-size: 1.1rem !important; }
+    #fFields.paso > .fg.actual > label { font-size: 1.28rem !important; margin-bottom: 18px; }
+    #fFields.paso > .fg.actual > label .fg-ico { width: 30px; height: 30px; font-size: .95rem; }
+    .modo-paso .form-desc-p, .modo-paso #fNorma { display: none !important; }
+    .modo-paso:not(.paso-inicio) #fg_unidad, .modo-paso:not(.paso-inicio) #fg_fillerName { display: none; }
+    .modo-paso.en-revision #fg_unidad { display: none; }
+    .modo-paso.en-revision #fg_fillerName:not(.hidden) { display: block; }   /* si falta el nombre, que se pueda escribir aquí */
+    .entra-der { animation: pasoDer .22s ease; }
+    .entra-izq { animation: pasoIzq .22s ease; }
+    @keyframes pasoDer { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+    @keyframes pasoIzq { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+    .paso-rev { padding: 4px 0 10px; }
+    .rev-h { font-size: 1.3rem; font-weight: 900; margin-bottom: 4px; }
+    .rev-s { color: var(--mut); font-size: .88rem; margin-bottom: 14px; line-height: 1.45; }
+    .rev-fila { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; min-height: 58px; padding: 10px 14px; margin-bottom: 8px; text-align: left;
+      border-radius: 14px; border: 1px solid var(--bor); background: var(--card); color: var(--txt); font: inherit; cursor: pointer; }
+    .rev-q { font-size: .82rem; color: var(--mut); font-weight: 700; }
+    .rev-r { font-size: .98rem; font-weight: 800; }
+    .rev-fila.falta { border-color: var(--warn); }
+    .rev-fila.falta .rev-r { color: var(--warn); }
+    .rev-fila.malo .rev-r { color: var(--err-txt); }
+    /* Barra inferior: en modo paso, Anterior/Siguiente; en la revisión, las acciones de envío */
+    .paso-nav { display: none; }
+    .modo-paso:not(.en-revision) .form-footer > .btn { display: none; }
+    .modo-paso:not(.en-revision) .paso-nav { display: grid; grid-template-columns: 64px 1fr; gap: 10px; width: 100%; }
+    .paso-nav .btn { min-height: 56px; justify-content: center; font-size: 1.05rem; font-weight: 800; }
+    .paso-nav #pAnt { font-size: 1.6rem; }
+    .paso-nav #pAnt:disabled { opacity: .35; }
+    .form-footer .paso-nav .btn { order: 0 !important; flex: none !important; padding: 0 12px !important; font-size: 1.05rem !important; white-space: nowrap !important; }
+    .form-footer .paso-nav #pAnt { font-size: 1.6rem !important; }
     .fg > label {
       display: flex; align-items: center; gap: 8px;
       font-size: 0.78rem; font-weight: 700; color: var(--mut);
@@ -375,6 +436,14 @@
       <h1 class="form-title-h" id="fTitle"></h1>
       <p class="form-desc-p" id="fDesc"></p>
       <p id="fNorma" style="display:none;color:var(--pri-txt);font-size:.76rem;font-weight:600;margin-top:6px"></p>
+      <div class="modo-sw" role="group" aria-label="Cómo ver el formulario">
+        <button type="button" data-modo="paso" onclick="cambiarModo(true)">☝️ Una a la vez</button>
+        <button type="button" data-modo="todo" onclick="cambiarModo(false)">📄 Todo junto</button>
+      </div>
+    </div>
+    <div class="paso-head" id="pasoHead" aria-live="polite">
+      <div class="ph-top"><span id="phNum"></span><span id="phSec"></span></div>
+      <div class="ph-bar"><span id="phFill"></span></div>
     </div>
     <div class="fg hidden" id="fg_fillerName">
       <label><span class="fg-ico">👤</span>¿Quién llena este formulario?<span class="req">*</span></label>
@@ -386,8 +455,13 @@
       <select id="fillUnidad" style="width:100%;background:var(--inp);border:1px solid var(--bor);color:var(--txt);border-radius:8px;padding:11px 12px;font-size:.9rem;font-family:inherit;outline:none"></select>
     </div>
     <div id="fFields"></div>
+    <div class="paso-rev" id="pasoRevision" hidden></div>
   </div>
   <div class="form-footer">
+    <div class="paso-nav">
+      <button type="button" class="btn btn-sec" id="pAnt" onclick="pasoAnterior()" aria-label="Pregunta anterior">‹</button>
+      <button type="button" class="btn btn-pri" id="pSig" onclick="pasoSiguiente()">Siguiente ›</button>
+    </div>
     <button class="btn btn-sec" onclick="openManualHallazgo()">⚠️ Reportar hallazgo</button>
     <button class="btn btn-sec" onclick="saveDraft()">Guardar borrador</button>
     <button class="btn btn-pri" onclick="submitForm()">Enviar ✓</button>
@@ -1007,6 +1081,7 @@ function renderFields(campos) {
   campos.filter(c=>c.tipo==='firma').forEach(c => initCanvas(c.id));
 
   aplicarCondiciones();
+  pasoIdx = 0; modoPaso = preferirPaso(campos); aplicarModo();
   // Auto-fill
   setTimeout(() => autoFill(campos), 100);
 }
@@ -1048,6 +1123,7 @@ function buildFieldEl(c) {
     case 'numero':
       inner = document.createElement('input');
       inner.type = 'number';
+      inner.inputMode = 'decimal';
       inner.placeholder = c.placeholder||'0';
       inner.value = submission[c.id]||'';
       inner.addEventListener('input', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); onCampoRespondido(c); });
@@ -1102,22 +1178,29 @@ function buildFieldEl(c) {
         if (submission[c.id]===o) opt.selected=true;
         inner.appendChild(opt);
       });
-      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); onCampoRespondido(c); });
+      inner.addEventListener('change', () => { submission[c.id]=inner.value; clearErr(c.id); updateProgress(); onCampoRespondido(c); pasoRespondido(c); });
       break;
     }
 
     case 'radio': case 'si_no': case 'escala_1_5': {
       const opts = c.tipo==='si_no' ? ['Sí','No','N/A'] : (c.opciones||[]);
       inner = document.createElement('div');
-      inner.className = 'opts-wrap' + (opts.length<=4?' inline':'');
+      // Sí/No/N/A y escala: botones grandes del mismo ancho, para el pulgar.
+      const forma = c.tipo==='si_no' ? ' si-no' : (c.tipo==='escala_1_5' && opts.length<=5 ? ' escala' : '');
+      inner.className = 'opts-wrap' + (opts.length<=4?' inline':'') + forma;
+      inner.setAttribute('role', 'radiogroup');
+      inner.setAttribute('aria-label', c.etiqueta);
+      const ICO_SN = { 'Sí':'✓', 'No':'✗', 'N/A':'–' };
       opts.forEach(o => {
         const lbl2 = document.createElement('label');
         lbl2.className='opt-lbl';
+        lbl2.dataset.v = o;
         const inp = document.createElement('input');
         inp.type='radio'; inp.name=`r_${c.id}`; inp.value=o;
         if (submission[c.id]===o) inp.checked=true;
-        inp.addEventListener('change', () => { submission[c.id]=o; clearErr(c.id); updateProgress(); onCampoRespondido(c); });
+        inp.addEventListener('change', () => { submission[c.id]=o; clearErr(c.id); updateProgress(); onCampoRespondido(c); pasoRespondido(c); });
         lbl2.appendChild(inp);
+        if (c.tipo==='si_no') { const i=document.createElement('span'); i.className='sn-ico'; i.setAttribute('aria-hidden','true'); i.textContent=ICO_SN[o]; lbl2.appendChild(i); }
         lbl2.appendChild(document.createTextNode(o));
         inner.appendChild(lbl2);
       });
@@ -1639,6 +1722,124 @@ async function cierreSiguiente(envio) {
     box.innerHTML = html;
     box.classList.remove('hidden');
   } catch (e) { box.classList.add('hidden'); }
+}
+
+// ── «Una a la vez»: llenar con una mano ─────────────────────────────────────
+// Una pregunta por pantalla, botones en la zona del pulgar, avanza sola al elegir una
+// respuesta (salvo si esa respuesta abre un hallazgo: ahí espera para que lo describas),
+// se desliza con el dedo, y al final se revisa todo antes de enviar. Los campos ocultos
+// por una condición se saltan. La preferencia se recuerda en este dispositivo.
+const MODO_KEY = 'skf_modo_llenado';
+let modoPaso = false, pasoIdx = 0, enRevision = false, _avanceT = null;
+function preferirPaso(campos) {
+  let v = null; try { v = localStorage.getItem(MODO_KEY); } catch (e) {}
+  if (v) return v === 'paso';
+  return matchMedia('(max-width: 860px)').matches && (campos || []).filter(c => c.tipo !== 'separador').length >= 5;
+}
+function cambiarModo(paso) {
+  try { localStorage.setItem(MODO_KEY, paso ? 'paso' : 'todo'); } catch (e) {}
+  modoPaso = paso; aplicarModo();
+}
+const _pasos = () => [...document.querySelectorAll('#fFields > .fg')].filter(el => !el.classList.contains('cond-oculto') && !el.classList.contains('hidden'));
+function _seccionDe(el) { let p = el.previousElementSibling; while (p) { if (p.classList.contains('form-sep')) return p.textContent.trim(); p = p.previousElementSibling; } return ''; }
+function aplicarModo() {
+  const v = document.getElementById('vForm');
+  document.getElementById('fFields').classList.toggle('paso', modoPaso);
+  v.classList.toggle('modo-paso', modoPaso);
+  document.querySelectorAll('.modo-sw [data-modo]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.modo === 'paso') === modoPaso)));
+  if (modoPaso) irAPaso(Math.min(pasoIdx, Math.max(0, _pasos().length - 1)));
+  else {
+    enRevision = false; v.classList.remove('en-revision', 'paso-inicio');
+    document.getElementById('pasoRevision').hidden = true;
+    document.querySelectorAll('#fFields > .fg.actual').forEach(el => el.classList.remove('actual'));
+  }
+}
+function irAPaso(i, dir) {
+  const l = _pasos(), v = document.getElementById('vForm');
+  if (!l.length) return;
+  if (i >= l.length) { mostrarRevision(); return; }
+  clearTimeout(_avanceT);
+  enRevision = false; v.classList.remove('en-revision'); document.getElementById('pasoRevision').hidden = true;
+  pasoIdx = Math.max(0, Math.min(i, l.length - 1));
+  l.forEach((el, k) => { el.classList.toggle('actual', k === pasoIdx); el.classList.remove('entra-der', 'entra-izq'); });
+  const el = l[pasoIdx];
+  if (dir) { void el.offsetWidth; el.classList.add(dir > 0 ? 'entra-der' : 'entra-izq'); }
+  v.classList.toggle('paso-inicio', pasoIdx === 0);       // quién llena / lugar: solo en la primera
+  document.getElementById('phNum').textContent = 'Pregunta ' + (pasoIdx + 1) + ' de ' + l.length;
+  document.getElementById('phSec').textContent = _seccionDe(el);
+  document.getElementById('phFill').style.width = Math.round((pasoIdx + 1) / l.length * 100) + '%';
+  document.getElementById('pAnt').disabled = pasoIdx === 0;
+  document.getElementById('pSig').textContent = pasoIdx === l.length - 1 ? 'Revisar ›' : 'Siguiente ›';
+  const cid = el.id.replace(/^fg_/, '');
+  if (document.getElementById('sig_' + cid)) ajustarFirma(cid);
+  window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+}
+function pasoSiguiente() { if (enRevision) return; irAPaso(pasoIdx + 1, 1); }
+function pasoAnterior() { if (enRevision) { irAPaso(_pasos().length - 1, -1); return; } if (pasoIdx > 0) irAPaso(pasoIdx - 1, -1); }
+function pasoRespondido(c) {
+  try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+  if (!modoPaso || enRevision) return;
+  const el = document.getElementById('fg_' + c.id);
+  if (!el || !el.classList.contains('actual')) return;
+  const hz = document.getElementById('hz_' + c.id);
+  if (hz && !hz.classList.contains('hidden')) return;     // salió un hallazgo: que lo describa antes de seguir
+  clearTimeout(_avanceT);
+  _avanceT = setTimeout(() => { if (el.classList.contains('actual')) pasoSiguiente(); }, 380);
+}
+function _resumenRespuesta(c) {
+  const v = submission[c.id];
+  if (c.tipo === 'firma') return v ? '✍ Firmada' : '';
+  if (c.tipo === 'foto') return v ? '📷 Foto tomada' : '';
+  if (c.tipo === 'ubicacion' || c.tipo === 'fecha_auto' || c.tipo === 'hora_auto') { const a = document.getElementById('auto_' + c.id); return (a && a.value) || (v ? String(v) : ''); }
+  if (Array.isArray(v)) return v.join(', ');
+  if (v === true) return 'Sí';
+  return v == null ? '' : String(v);
+}
+function mostrarRevision() {
+  enRevision = true;
+  const v = document.getElementById('vForm'), box = document.getElementById('pasoRevision');
+  v.classList.add('en-revision'); v.classList.remove('paso-inicio');
+  document.querySelectorAll('#fFields > .fg.actual').forEach(el => el.classList.remove('actual'));
+  const l = _pasos(); let faltan = 0;
+  const filas = l.map((el, k) => {
+    const c = activeTmpl.campos.find(x => 'fg_' + x.id === el.id); if (!c) return '';
+    const r = _resumenRespuesta(c), falta = c.requerido && !r;
+    if (falta) faltan++;
+    const malo = r && typeof answerIsFinding === 'function' && answerIsFinding(c.tipo, submission[c.id], c);
+    return `<button type="button" class="rev-fila${falta ? ' falta' : ''}${malo ? ' malo' : ''}" data-k="${k}"><span class="rev-q">${_escU(c.etiqueta)}</span><span class="rev-r">${falta ? 'Falta responder' : _escU(r || '—')}</span></button>`;
+  }).join('');
+  const sinNombre = isPublicFill && !document.getElementById('fillerName').value.trim();
+  if (sinNombre) faltan++;
+  box.innerHTML = `<h2 class="rev-h">Revisa antes de enviar</h2><p class="rev-s">${faltan ? '⚠️ ' + (sinNombre ? 'Escribe tu nombre arriba. ' : '') + ((faltan - (sinNombre ? 1 : 0)) ? (faltan - (sinNombre ? 1 : 0)) + ' pregunta' + ((faltan - (sinNombre ? 1 : 0)) !== 1 ? 's' : '') + ' obligatoria' + ((faltan - (sinNombre ? 1 : 0)) !== 1 ? 's' : '') + ' sin responder. Toca para ir a ella.' : '') : '✓ Todo respondido. Toca cualquier respuesta para cambiarla.'}</p>${filas}`;
+  box.hidden = false;
+  document.getElementById('phNum').textContent = 'Revisión';
+  document.getElementById('phSec').textContent = l.length + ' preguntas';
+  document.getElementById('phFill').style.width = '100%';
+  window.scrollTo({ top: 0 });
+}
+document.addEventListener('click', e => { const f = e.target.closest('#pasoRevision .rev-fila'); if (f) irAPaso(+f.dataset.k, -1); });
+// Deslizar con el pulgar: izquierda = siguiente, derecha = anterior (no al firmar ni escribir).
+(function () {
+  let x0 = null, y0 = 0;
+  document.addEventListener('touchstart', e => {
+    if (!modoPaso || enRevision || !e.target.closest('#fFields') || e.target.closest('canvas, input, textarea, select')) { x0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 60) { dx < 0 ? pasoSiguiente() : pasoAnterior(); }
+  }, { passive: true });
+})();
+// La firma se dibuja en un lienzo: si estaba oculto al cargar, quedó con ancho 0. Se ajusta al
+// mostrarse, conservando lo que ya se haya firmado.
+function ajustarFirma(cid) {
+  const cv = document.getElementById('sig_' + cid); if (!cv) return;
+  const w = cv.offsetWidth; if (!w || cv.width === w) return;
+  const previo = submission[cid];
+  cv.width = w;
+  const s = signatures[cid]; if (s) { s.ctx.strokeStyle = '#f1f5f9'; s.ctx.lineWidth = 2; s.ctx.lineCap = 'round'; s.ctx.lineJoin = 'round'; }
+  if (previo && s) { const im = new Image(); im.onload = () => s.ctx.drawImage(im, 0, 0); im.src = previo; }
 }
 
 function fillAgain() {
