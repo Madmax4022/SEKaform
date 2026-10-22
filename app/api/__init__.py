@@ -29,7 +29,9 @@ import psycopg2.extras
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from .. import alertas, db
+# «correo_avisos» y no «alertas»: más abajo hay una ruta que se llama alertas() y, con el
+# mismo nombre, tapaba al módulo — cada envío nuevo fallaba al intentar avisar.
+from .. import alertas as correo_avisos, db
 from ..security import (auditar, requiere_organizacion, requiere_escritura,
                         sesion_usuario)
 
@@ -282,7 +284,7 @@ def sync():
             with sesion_usuario() as cur:
                 r = _upsert(cur, tipo, datos)
                 if r.pop("_nuevo", False):
-                    aviso = alertas.evaluar(cur, datos)
+                    aviso = correo_avisos.evaluar(cur, datos)
             # Solo si la transacción se confirmó: un envío revertido no debe avisar.
             if aviso:
                 avisos.append(aviso)
@@ -303,7 +305,7 @@ def sync():
     if aplicadas:
         auditar("sync", detalle={"operaciones": len(operaciones), "aplicadas": aplicadas})
     if avisos:
-        salieron = alertas.enviar(avisos)
+        salieron = correo_avisos.enviar(avisos)
         auditar("aviso_puntaje_bajo", detalle={"inspecciones": len(avisos), "correos": salieron})
 
     return jsonify({"resultados": resultados, "aplicadas": aplicadas})
@@ -522,7 +524,7 @@ def publico_envio():
     if r["resultado"] != "ok":
         return jsonify({"error": "Ese formulario ya no acepta respuestas."}), 403
     # Con el envío ya guardado: un puntaje bajo avisa por correo (una vez, con límite por hora).
-    alertas.avisar_publico(r["envio_id"], token)
+    correo_avisos.avisar_publico(r["envio_id"], token)
     return jsonify({"ok": True, "id": r["envio_id"], "numero": r["numero"]}), 201
 
 
@@ -761,6 +763,112 @@ def reabrir_hallazgo(hallazgo_id: str):
     # no estaba resuelto, y esa decisión también tiene dueño y fecha.
     auditar("hallazgo_reabierto", entidad="hallazgos", entidad_id=hz)
     return jsonify({"ok": True})
+
+
+# ── Equipo: la propia empresa invita y administra a su gente (migración 009) ───
+# Las reglas (solo dueño/admin, nadie nombra dueño, nadie se toca a sí mismo, todo
+# dentro de la organización activa) viven en las funciones de la base: esta capa solo
+# traduce sus respuestas a mensajes claros.
+_EQUIPO_MSG = {
+    "sin_permiso": ("Solo el dueño o un administrador puede hacer esto.", 403),
+    "rol_invalido": ("Ese permiso no existe.", 400),
+    "correo_invalido": ("Revisa el correo: no parece válido.", 400),
+    "no_disponible": ("No se puede invitar ese correo. Si ya usa SEKaform en otra empresa, escríbenos.", 409),
+    "a_ti_mismo": ("No puedes cambiar tu propio permiso ni quitarte del equipo.", 400),
+    "es_dueno": ("Al dueño de la cuenta no se le puede cambiar el permiso ni quitar.", 403),
+    "solo_dueno": ("Solo el dueño de la cuenta puede nombrar o cambiar administradores.", 403),
+    "no_encontrado": ("Esa persona no está en tu equipo.", 404),
+    "no_encontrada": ("Esa invitación ya no existe.", 404),
+}
+
+
+def _equipo_resp(resultado: str, **extra):
+    if resultado in ("ok", "renovada"):
+        return jsonify({"ok": True, "resultado": resultado, **extra})
+    msg, codigo = _EQUIPO_MSG.get(resultado, ("No se pudo completar.", 400))
+    return jsonify({"error": msg, "resultado": resultado}), codigo
+
+
+def _sin_migracion_009(e) -> bool:
+    return isinstance(e, (psycopg2.errors.UndefinedFunction,))
+
+
+@bp.route("/equipo")
+@requiere_organizacion
+def equipo():
+    try:
+        with sesion_usuario(solo_lectura=True) as cur:
+            cur.execute("SELECT * FROM skf_equipo_listar() ORDER BY tipo DESC, nombre NULLS LAST, email")
+            filas = cur.fetchall()
+    except Exception as e:
+        if _sin_migracion_009(e):
+            return jsonify({"disponible": False, "miembros": [], "invitaciones": [], "miRol": current_user.rol})
+        raise
+    miembros = [{"id": f["id"], "email": f["email"], "nombre": f["nombre"] or "", "rol": f["rol"],
+                 "desde": f["desde"], "ultimoIngreso": f["ultimo_ingreso"], "soyYo": str(f["id"]) == str(current_user.id)}
+                for f in filas if f["tipo"] == "miembro"]
+    invit = [{"id": f["id"], "email": f["email"], "rol": f["rol"], "desde": f["desde"], "expira": f["expira_en"]}
+             for f in filas if f["tipo"] == "invitacion"]
+    return jsonify({"disponible": True, "miembros": miembros, "invitaciones": invit, "miRol": current_user.rol})
+
+
+@bp.route("/equipo/invitar", methods=["POST"])
+@requiere_organizacion
+def equipo_invitar():
+    d = request.get_json(silent=True) or {}
+    email = (d.get("email") or "").strip().lower()
+    rol = (d.get("rol") or "editor").strip()
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT * FROM skf_equipo_invitar(%s, %s, 14)", (email, rol))
+            r = cur.fetchone()
+    except Exception as e:
+        if _sin_migracion_009(e):
+            return jsonify({"error": "Falta preparar la base (migración 009) para invitar desde la app."}), 503
+        raise
+    if r["resultado"] not in ("ok", "renovada"):
+        return _equipo_resp(r["resultado"])
+    from ..config import Config
+    enlace = f"{Config.URL_PUBLICA or request.host_url.rstrip('/')}/registro?email={email}"
+    enviado = correo_avisos.enviar_invitacion(email, current_user.org_nombre or "tu empresa",
+                                        current_user.nombre or current_user.email, rol, enlace)
+    auditar("equipo_invitar", entidad="authorized_email", entidad_id=str(r["invitacion_id"]),
+            detalle={"email": email, "rol": rol, "correoEnviado": enviado})
+    return _equipo_resp(r["resultado"], id=r["invitacion_id"], enlace=enlace, correoEnviado=enviado)
+
+
+@bp.route("/equipo/invitacion/<uuid:inv_id>", methods=["DELETE"])
+@requiere_organizacion
+def equipo_revocar(inv_id):
+    with sesion_usuario() as cur:
+        cur.execute("SELECT skf_equipo_revocar(%s) AS r", (str(inv_id),))
+        r = cur.fetchone()["r"]
+    if r == "ok":
+        auditar("equipo_revocar", entidad="authorized_email", entidad_id=str(inv_id))
+    return _equipo_resp(r)
+
+
+@bp.route("/equipo/<uuid:user_id>/rol", methods=["POST"])
+@requiere_organizacion
+def equipo_rol(user_id):
+    rol = ((request.get_json(silent=True) or {}).get("rol") or "").strip()
+    with sesion_usuario() as cur:
+        cur.execute("SELECT skf_equipo_cambiar_rol(%s, %s) AS r", (str(user_id), rol))
+        r = cur.fetchone()["r"]
+    if r == "ok":
+        auditar("equipo_rol", entidad="user", entidad_id=str(user_id), detalle={"rol": rol})
+    return _equipo_resp(r)
+
+
+@bp.route("/equipo/<uuid:user_id>", methods=["DELETE"])
+@requiere_organizacion
+def equipo_quitar(user_id):
+    with sesion_usuario() as cur:
+        cur.execute("SELECT skf_equipo_quitar(%s) AS r", (str(user_id),))
+        r = cur.fetchone()["r"]
+    if r == "ok":
+        auditar("equipo_quitar", entidad="user", entidad_id=str(user_id))
+    return _equipo_resp(r)
 
 
 def registrar_api(app, csrf) -> None:

@@ -77,6 +77,7 @@ jobs:
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/006_turnos.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/007_aviso_publico.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/008_aviso_configurable.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/009_equipo.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -q -c "
             GRANT USAGE ON SCHEMA public TO skf_app;
             GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO skf_app;
@@ -107,6 +108,18 @@ jobs:
         env: { PGPASSWORD: a }
         run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/aviso_publico_test.sql
 
+      - name: Equipo (invitar y permisos dentro de la propia organización)
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/equipo_test.sql
+
+      # La unión de todo: Flask + Postgres + RLS por las rutas reales. Detecta lo que las
+      # pruebas de cada pieza no ven (p. ej. un nombre que tapa a otro y rompe los envíos).
+      - name: API de punta a punta (Flask + Postgres)
+        env:
+          SKF_TEST_DB_APP: postgresql://skf_app:a@localhost/skf
+          SKF_TEST_DB_OWNER: postgresql://skf_owner:o@localhost/skf
+        run: python3 tests/api_test.py
+
       - name: Idempotencia de migraciones
         env: { PGPASSWORD: o }
         run: |
@@ -118,6 +131,7 @@ jobs:
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/006_turnos.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/007_aviso_publico.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/008_aviso_configurable.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/009_equipo.sql
 
   desplegar:
     needs: pruebas
