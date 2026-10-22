@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # Corre las migraciones contra Cloud SQL a través del Auth Proxy.
 #
-#   ./scripts/migrar.sh <connection_name> <db_name>
+#   ./scripts/migrar.sh <connection_name> <db_name>              ← actualizar (lo normal)
+#   CON_ROLES=1 ./scripts/migrar.sh <connection_name> <db_name>  ← instalación NUEVA
 #
 # Las migraciones se ejecutan como skf_owner (dueño del esquema) y NUNCA como
 # skf_app: la aplicación no debe poder alterar la forma de la base.
+#
+# 000_roles.sql (roles, contraseñas, extensiones) va SOLO en la instalación
+# nueva: cambia atributos y contraseñas de otros roles, y skf_owner no tiene ni
+# debe tener ese poder, así que al actualizar fallaba ahí y no aplicaba nada más.
+# Todas las demás son idempotentes: se pueden correr cuantas veces haga falta.
 set -euo pipefail
 
 CONN="${1:?Falta el connection_name (proyecto:region:instancia)}"
@@ -39,7 +45,11 @@ correr() {
     -v ON_ERROR_STOP=1 -q "${@:2}" -f "$1"
 }
 
-correr migrations/000_roles.sql -v owner_pw="${OWNER_PW}" -v app_pw="${APP_PW}"
+if [ "${CON_ROLES:-0}" = "1" ]; then
+  correr migrations/000_roles.sql -v owner_pw="${OWNER_PW}" -v app_pw="${APP_PW}"
+else
+  echo "→ 000_roles.sql: se omite (solo para instalación nueva; usa CON_ROLES=1)"
+fi
 correr migrations/001_core.sql
 correr migrations/002_auth_functions.sql
 correr migrations/003_super_admin_invitacion.sql
@@ -51,3 +61,5 @@ correr migrations/008_aviso_configurable.sql
 correr migrations/009_equipo.sql
 
 echo "✓ Migraciones aplicadas."
+echo "→ Estado:"
+PGPASSWORD="${OWNER_PW}" psql "host=127.0.0.1 port=${PUERTO} dbname=${DB} user=skf_owner sslmode=disable" -q -f scripts/verificar_migraciones.sql
