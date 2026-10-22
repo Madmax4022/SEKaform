@@ -157,3 +157,35 @@ def avisar_publico(envio_id: str, token: str) -> int:
         log.exception("No se pudo avisar del puntaje bajo de un envío público "
                       "(¿se corrió la migración 007?)")
         return 0
+
+
+def enviar_invitacion(email: str, org_nombre: str, quien: str, rol: str, enlace: str) -> bool:
+    """Correo de invitación al equipo. Nunca lanza: si no sale, la invitación igual existe y la
+    persona que invita tiene el enlace para mandarlo por WhatsApp."""
+    if not Config.RESEND_API_KEY:
+        log.warning("RESEND_API_KEY sin configurar; no se envió la invitación.")
+        return False
+    roles = {"admin": "administrar la cuenta e invitar a otros", "editor": "registrar inspecciones y hallazgos",
+             "lector": "ver la información (solo lectura)"}
+    try:
+        import requests
+        r = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "Content-Type": "application/json"},
+            json={"from": Config.CORREO_REMITENTE, "to": [email],
+                  "subject": f"{quien} te invitó a {org_nombre} en SEKaform",
+                  "html": ('<div style="font-family:Barlow,Segoe UI,sans-serif;background:#070d14;color:#cdd9e3;'
+                           'padding:32px;border-radius:12px;max-width:520px">'
+                           f'<h2 style="color:#3fd9d2;margin:0 0 12px">Te invitaron a {escape(org_nombre)}</h2>'
+                           f'<p>{escape(quien)} te invitó a la app de seguridad y salud en el trabajo de '
+                           f'{escape(org_nombre)}, para {escape(roles.get(rol, "colaborar"))}.</p>'
+                           f'<p style="margin:24px 0"><a href="{escape(enlace)}" style="background:#3fd9d2;color:#070d14;'
+                           'padding:12px 26px;border-radius:8px;text-decoration:none;font-weight:700">Crear mi cuenta</a></p>'
+                           '<p style="font-size:13px;color:#8497a8">La invitación vence en 14 días. Si no conoces a quien te '
+                           'invita, ignora este mensaje.</p></div>')},
+            timeout=8,
+        )
+        return r.status_code < 300
+    except Exception:
+        log.exception("Fallo al enviar la invitación")
+        return False
