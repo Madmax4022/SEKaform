@@ -79,6 +79,16 @@ def resumen():
              LIMIT 500
         """)
         usuarios = cur.fetchall()
+        # Marca de asesor (migración 010). Sin la migración, nadie es asesor.
+        cur.execute("SAVEPOINT sp_asesor")
+        try:
+            cur.execute("SELECT id FROM users WHERE es_asesor")
+            asesores = {str(r["id"]) for r in cur.fetchall()}
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT sp_asesor")
+            asesores = set()
+        for u in usuarios:
+            u["es_asesor"] = str(u["id"]) in asesores
 
         cur.execute("""
             SELECT a.id, a.email, a.rol_inicial, a.is_active, a.autorizado_en,
@@ -220,6 +230,24 @@ def alternar_usuario(user_id: uuid.UUID):
     auditar("usuario_estado", entidad="user", entidad_id=str(user_id),
             detalle={"email": u["email"], "activo": u["is_active"]})
     return jsonify({"ok": True, "activo": u["is_active"]})
+
+
+@bp.route("/api/usuarios/<uuid:user_id>/asesor", methods=["POST"])
+@requiere_super_admin
+def alternar_asesor(user_id: uuid.UUID):
+    """Marca o desmarca a alguien como asesor de SST: podrá crear empresas clientes."""
+    try:
+        with _super() as cur:
+            cur.execute("UPDATE users SET es_asesor = NOT es_asesor WHERE id = %s RETURNING es_asesor, email",
+                        (str(user_id),))
+            r = cur.fetchone()
+    except Exception:
+        log.exception("No se pudo cambiar la marca de asesor")
+        return _json_error("Falta preparar la base (migración 010).", 503)
+    if not r:
+        return _json_error("No encontrado.", 404)
+    auditar("marca_asesor", entidad="user", entidad_id=str(user_id), detalle={"email": r["email"], "esAsesor": r["es_asesor"]})
+    return jsonify({"ok": True, "esAsesor": r["es_asesor"]})
 
 
 @bp.route("/api/usuarios/<uuid:user_id>/super", methods=["POST"])

@@ -33,7 +33,7 @@ from flask_login import current_user
 # mismo nombre, tapaba al módulo — cada envío nuevo fallaba al intentar avisar.
 from .. import alertas as correo_avisos, db
 from ..security import (auditar, requiere_organizacion, requiere_escritura,
-                        sesion_usuario)
+                        requiere_sesion, sesion_usuario)
 
 log = logging.getLogger(__name__)
 bp = Blueprint("api", __name__, url_prefix="/api")
@@ -868,6 +868,120 @@ def equipo_quitar(user_id):
         r = cur.fetchone()["r"]
     if r == "ok":
         auditar("equipo_quitar", entidad="user", entidad_id=str(user_id))
+    return _equipo_resp(r)
+
+
+# ── Varias empresas y asesores (migración 010) ───────────────────────────────
+# Un asesor de SST atiende a varias empresas. La empresa activa vive en la sesión y
+# la base la valida en cada petición (skf_auth_perfil_en): elegir una empresa de la
+# que no se es miembro no da acceso a nada.
+_ASESOR_MSG = {"sin_permiso": ("Solo una cuenta de asesor puede crear empresas clientes.", 403),
+               "nombre_invalido": ("Escribe el nombre de la empresa (2 a 120 caracteres).", 400),
+               "limite": ("Llegaste al límite de empresas nuevas por hoy.", 429)}
+
+
+def _sin_010(e) -> bool:
+    return isinstance(e, psycopg2.errors.UndefinedFunction)
+
+
+@bp.route("/empresas")
+@requiere_sesion
+def empresas():
+    try:
+        with sesion_usuario(solo_lectura=True) as cur:
+            cur.execute("SELECT * FROM skf_mis_empresas()")
+            filas = cur.fetchall()
+    except Exception as e:
+        if not _sin_010(e):
+            raise
+        filas = [{"org_id": current_user.org_id, "nombre": current_user.org_nombre, "pais": None, "rol": current_user.rol}] if current_user.org_id else []
+    return jsonify({"activa": current_user.org_id, "esAsesor": current_user.es_asesor,
+                    "empresas": [{"id": str(f["org_id"]), "nombre": f["nombre"], "pais": f.get("pais"), "rol": f["rol"]} for f in filas]})
+
+
+@bp.route("/empresas/activa", methods=["POST"])
+@requiere_sesion
+def empresa_activa():
+    from flask import session
+    org = _uuid_valido((request.get_json(silent=True) or {}).get("orgId"))
+    if not org:
+        return jsonify({"error": "Falta la empresa."}), 400
+    try:
+        with sesion_usuario(solo_lectura=True) as cur:
+            cur.execute("SELECT 1 FROM skf_mis_empresas() WHERE org_id = %s", (org,))
+            ok = cur.fetchone()
+    except Exception as e:
+        if _sin_010(e):
+            return jsonify({"error": "Falta preparar la base (migración 010) para cambiar de empresa."}), 503
+        raise
+    if not ok:
+        return jsonify({"error": "No perteneces a esa empresa."}), 403
+    session["org_activa"] = org
+    auditar("cambio_empresa", entidad="organization", entidad_id=org, org_id=org)
+    return jsonify({"ok": True, "activa": org})
+
+
+@bp.route("/asesor/empresas", methods=["POST"])
+@requiere_sesion
+def asesor_crear_empresa():
+    d = request.get_json(silent=True) or {}
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT * FROM skf_asesor_crear_empresa(%s, %s)", ((d.get("nombre") or "").strip(), (d.get("pais") or "").strip()))
+            r = cur.fetchone()
+    except Exception as e:
+        if _sin_010(e):
+            return jsonify({"error": "Falta preparar la base (migración 010)."}), 503
+        raise
+    if r["resultado"] != "ok":
+        msg, codigo = _ASESOR_MSG.get(r["resultado"], ("No se pudo crear la empresa.", 400))
+        return jsonify({"error": msg, "resultado": r["resultado"]}), codigo
+    auditar("asesor_crea_empresa", entidad="organization", entidad_id=str(r["org_id"]), org_id=str(r["org_id"]),
+            detalle={"nombre": d.get("nombre")})
+    if not current_user.org_id:          # su primera empresa: queda activa de una vez
+        from flask import session
+        session["org_activa"] = str(r["org_id"])
+    return jsonify({"ok": True, "id": str(r["org_id"])}), 201
+
+
+@bp.route("/asesor/resumen")
+@requiere_sesion
+def asesor_resumen():
+    try:
+        with sesion_usuario(solo_lectura=True) as cur:
+            cur.execute("SELECT * FROM skf_asesor_resumen()")
+            filas = cur.fetchall()
+    except Exception as e:
+        if _sin_010(e):
+            return jsonify({"disponible": False, "empresas": []})
+        raise
+    return jsonify({"disponible": True, "activa": current_user.org_id, "empresas": [{
+        "id": str(f["org_id"]), "nombre": f["nombre"], "pais": f["pais"], "rol": f["rol"],
+        "envios30d": f["envios_30d"], "ultimoEnvio": f["ultimo_envio"], "hallazgosAbiertos": f["hallazgos_abiertos"],
+        "criticosAbiertos": f["criticos_abiertos"], "accionesVencidas": f["acciones_vencidas"],
+        "formularios": f["formularios"], "tieneDueno": f["tiene_dueno"], "evidencia": f["evidencia"] or []} for f in filas]})
+
+
+@bp.route("/equipo/agregar", methods=["POST"])
+@requiere_organizacion
+def equipo_agregar():
+    d = request.get_json(silent=True) or {}
+    email, rol = (d.get("email") or "").strip().lower(), (d.get("rol") or "editor").strip()
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT skf_equipo_agregar_existente(%s, %s) AS r", (email, rol))
+            r = cur.fetchone()["r"]
+    except Exception as e:
+        if _sin_010(e):
+            return jsonify({"error": "Falta preparar la base (migración 010)."}), 503
+        raise
+    if r == "ok":
+        auditar("equipo_agregar", entidad="user", detalle={"email": email, "rol": rol})
+        return jsonify({"ok": True})
+    if r == "ya_miembro":
+        return jsonify({"error": "Esa persona ya está en tu equipo.", "resultado": r}), 409
+    if r == "no_disponible":
+        return jsonify({"error": "Ese correo no tiene cuenta en SEKaform: invítalo para que cree una.", "resultado": r}), 404
     return _equipo_resp(r)
 
 

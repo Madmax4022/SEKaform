@@ -148,7 +148,57 @@ async function skfYo({ forzar = false } = {}) {
     const r = await skfFetch('/api/yo');
     _skfYo = r.autenticado ? r.usuario : null;
   } catch { _skfYo = null; }
+  if (_skfYo && _skfYo.orgId) _skfVigilarEmpresa(_skfYo.orgId);
   return _skfYo;
+}
+
+// ── Varias empresas (asesores) ─────────────────────────────────────────────
+// Lo que guarda este teléfono (formularios, registros, lugares…) es de UNA empresa.
+// Si la empresa activa cambió (cambio de empresa o de cuenta), se borra esa copia:
+// la página la vuelve a traer de la nube, ya de la empresa correcta. La cola de
+// pendientes NO se borra: cada registro lleva su empresa y solo se envía estando en
+// ella (skfProcessQueue), así nunca cae en la empresa equivocada.
+const SKF_ORG_LOCAL = 'skf_org_actual';
+const SKF_DATOS_EMPRESA = ['skf_plantillas', 'skf_envios', 'skf_hallazgos', 'skf_acciones_correctivas', 'skf_asignaciones',
+  'skf_unidades', 'skf_inspecciones', 'skf_turnos_cfg', 'skf_org'];
+function skfOrgLocal() { try { return localStorage.getItem(SKF_ORG_LOCAL) || null; } catch (e) { return null; } }
+function _skfLimpiarDatosEmpresa() {
+  try {
+    SKF_DATOS_EMPRESA.forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith('skf_marcas_')).forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+}
+function _skfVigilarEmpresa(orgId) {
+  try {
+    const antes = localStorage.getItem(SKF_ORG_LOCAL);
+    if (antes && antes !== orgId) _skfLimpiarDatosEmpresa();
+    if (antes !== orgId) localStorage.setItem(SKF_ORG_LOCAL, orgId);
+  } catch (e) {}
+}
+async function skfEmpresas() { return skfFetch('/api/empresas'); }
+async function skfAsesorResumen() { return skfFetch('/api/asesor/resumen'); }
+async function skfAsesorCrearEmpresa(nombre, pais) { return skfFetch('/api/asesor/empresas', { method: 'POST', body: JSON.stringify({ nombre, pais }) }); }
+async function skfEquipoAgregar(email, rol) { return skfFetch('/api/equipo/agregar', { method: 'POST', body: JSON.stringify({ email, rol }) }); }
+// Pendientes de la empresa activa (los de otra empresa esperan a que vuelvas a ella).
+function skfPendientesEmpresa() {
+  const org = skfOrgLocal();
+  return skfQueueGet().filter(o => !_PUBLICOS[o.tipo] && (!o.org || o.org === org)).length;
+}
+// Cambiar de empresa: primero se envía lo pendiente de la actual; si algo queda sin
+// enviar (sin señal), no se cambia — se perdería el rastro de a qué empresa pertenece.
+async function skfCambiarEmpresa(orgId) {
+  if (orgId === skfOrgLocal()) return true;
+  if (typeof skfDemoActivo === 'function' && skfDemoActivo()) throw new Error('Sal del modo ejemplo para cambiar de empresa.');
+  // Si ya hay un envío en curso (p. ej. el que arranca solo al volver la señal), se espera a que termine.
+  for (let i = 0; i < 40 && _sincronizando; i++) await new Promise(r => setTimeout(r, 250));
+  await skfProcessQueue();
+  const n = skfPendientesEmpresa();
+  if (n) throw new Error('Tienes ' + n + ' registro' + (n !== 1 ? 's' : '') + ' de esta empresa sin enviar. Conéctate para enviarlos y vuelve a intentarlo.');
+  await skfFetch('/api/empresas/activa', { method: 'POST', body: JSON.stringify({ orgId }) });
+  _skfLimpiarDatosEmpresa();
+  try { localStorage.setItem(SKF_ORG_LOCAL, orgId); } catch (e) {}
+  _skfYo = null; _bootstrapCache = null;
+  return true;
 }
 
 // Compatibilidad con la interfaz de Supabase: las páginas y sidebar.js esperan
@@ -435,7 +485,7 @@ function skfQueueAdd(tipo, payload) {
   // Si el mismo registro ya estaba en cola (el inspector corrigió un campo
   // antes de recuperar señal), se reemplaza en vez de encolar dos versiones.
   const i = q.findIndex(o => o.tipo === tipo && o.datos?.id === payload.id);
-  const op = { opId: skfUUID(), tipo, datos: payload, creadoEn: new Date().toISOString(), intentos: 0 };
+  const op = { opId: skfUUID(), tipo, datos: payload, creadoEn: new Date().toISOString(), intentos: 0, org: skfOrgLocal() };
   if (i >= 0) q[i] = op; else q.push(op);
   skfQueueSet(q);
 }
@@ -497,9 +547,14 @@ async function skfProcessQueue() {
   try {
     // Los públicos y la organización no caben en el lote de /api/sync: van uno
     // a uno por su propia ruta.
+    // Lo pendiente de OTRA empresa (un asesor que cambió de cliente) espera a que vuelva a ella:
+    // enviarlo ahora lo guardaría en la empresa activa, que no es la suya.
+    const yo = await skfYo();
+    const orgActual = (yo && yo.orgId) || null;
+    const deOtra = o => !_PUBLICOS[o.tipo] && o.org && o.org !== orgActual;
     const sueltos = cola.filter(o => _PUBLICOS[o.tipo]);
-    const lote = cola.filter(o => !_PUBLICOS[o.tipo] && _SALIDA[o.tipo]);
-    const restantes = [];
+    const lote = cola.filter(o => !_PUBLICOS[o.tipo] && _SALIDA[o.tipo] && !deOtra(o));
+    const restantes = cola.filter(deOtra);
 
     for (const op of sueltos) {
       try { await _enviarUna(op.tipo, op.datos); }
@@ -718,7 +773,7 @@ const SKF_DEMO_BACKUP = 'skf_demo_backup';
 function skfDemoActivo() { try { return localStorage.getItem(SKF_DEMO_FLAG) === '1'; } catch (e) { return false; } }
 
 function _skfDemoClaves() {
-  const keep = ['skf_sidebar_collapsed', SKF_DEMO_FLAG, SKF_DEMO_BACKUP, 'skf_org'];
+  const keep = ['skf_sidebar_collapsed', SKF_DEMO_FLAG, SKF_DEMO_BACKUP, 'skf_org', 'skf_org_actual'];
   const out = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);

@@ -72,7 +72,7 @@ const ROL = {
 };
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const inicial = p => ((p.nombre || p.correo || '?').trim()[0] || '?').toUpperCase();
-let datos = null, equipo = null, personas = [], miRol = null;
+let datos = null, equipo = null, personas = [], miRol = null, yo = null;
 const esAdmin = () => miRol === 'dueno' || miRol === 'admin';
 
 function fila(p, i) {
@@ -105,6 +105,7 @@ function pintar() {
 }
 
 async function cargar() {
+  try { yo = await skfYo(); } catch (e) {}
   datos = await skfAgendaDatos();
   try { equipo = await skfEquipo(); miRol = equipo.miRol; } catch (e) { equipo = null; try { miRol = await skfRol(); } catch (e2) {} }
   pintar();
@@ -147,8 +148,12 @@ function elegirRol(p) {
 // ── Invitar ───────────────────────────────────────────────────────────────
 function formInvitar(correo, rol) {
   let elegido = rol || 'editor';
-  const pintarRoles = () => ['editor', 'lector', 'admin'].filter(r => r !== 'admin' || miRol === 'dueno').map(r =>
-    `<button type="button" class="rol-op${elegido === r ? ' on' : ''}" data-r="${r}" aria-pressed="${elegido === r}"><span><b>${ROL[r].t}</b><small>${ROL[r].d}</small></span><span class="ck">${elegido === r ? '✓' : ''}</span></button>`).join('');
+  // Un asesor (admin en la empresa de su cliente) invita al cliente como Dueño, una sola vez.
+  const puedeDueno = yo && yo.esAsesor && miRol === 'admin' && equipo && !(equipo.miembros || []).some(m => m.rol === 'dueno')
+    && !(equipo.invitaciones || []).some(i => i.rol === 'dueno' && i.email !== correo);
+  const pintarRoles = () => (puedeDueno ? ['dueno'] : []).concat(['editor', 'lector', 'admin'].filter(r => r !== 'admin' || miRol === 'dueno')).map(r =>
+    `<button type="button" class="rol-op${elegido === r ? ' on' : ''}" data-r="${r}" aria-pressed="${elegido === r}"><span><b>${ROL[r].t}</b><small>${r === 'dueno' ? 'Tu cliente: la cuenta y sus datos son suyos' : ROL[r].d}</small></span><span class="ck">${elegido === r ? '✓' : ''}</span></button>`).join('');
+  if (puedeDueno && !correo && rol === 'editor') elegido = 'dueno';
   skfSheet('Invitar a alguien', `
     <label class="pw-sub" for="invMail" style="margin-top:4px">Su correo</label>
     <input class="pw-inp" id="invMail" type="email" inputmode="email" autocomplete="off" placeholder="nombre@empresa.com" value="${esc(correo || '')}">
@@ -177,6 +182,14 @@ async function invitar(correo, rol) {
   } catch (e) {
     if (err) { err.textContent = e.message || 'No se pudo invitar.'; err.hidden = false; } else toast(e.message || 'No se pudo invitar.', 'er');
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar invitación'; }
+    // ¿Ya tiene cuenta (p. ej. su asesor, o alguien que usa SEKaform en otra empresa)? Se agrega directo.
+    if (e.status === 409 && err && rol !== 'dueno' && !document.getElementById('invAgregar')) {
+      err.insertAdjacentHTML('afterend', '<button type="button" class="skf-opt pw-btnopt" id="invAgregar"><span class="so-ico">👤</span><span class="so-txt"><b>¿Ya usa SEKaform? Agregarlo directamente</b><small>Entra con su cuenta de siempre</small></span><span class="so-arr">›</span></button>');
+      document.getElementById('invAgregar').onclick = async () => {
+        try { await skfEquipoAgregar(correo, rol); skfSheetCerrar(); toast('Agregado al equipo'); cargar(); }
+        catch (e2) { err.textContent = e2.message; }
+      };
+    }
   }
 }
 

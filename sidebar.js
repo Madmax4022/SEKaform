@@ -217,7 +217,7 @@ const SKF_PAGINAS = {
   'plan.html': ['plan'], 'programadas.html': ['plan', 'Rutinas'], 'asignaciones.html': ['plan', 'Encargos'], 'turnos.html': ['plan', 'Turnos'],
   'hallazgos.html': ['hallazgos'],
   'cumplimiento.html': ['cumplimiento'], 'dashboard.html': ['cumplimiento', 'Panel y reportes'],
-  'empresa.html': ['empresa'], 'organizacion.html': ['empresa', 'Datos de la empresa'], 'unidades.html': ['empresa', 'Lugares'], 'personas.html': ['empresa', 'Personas'],
+  'empresa.html': ['empresa'], 'organizacion.html': ['empresa', 'Datos de la empresa'], 'unidades.html': ['empresa', 'Lugares'], 'personas.html': ['empresa', 'Personas'], 'clientes.html': ['empresa', 'Mis clientes'],
   'plantillas.html': ['empresa', 'Catálogo'], 'llenar.html': ['empresa', 'Formularios'], 'digitalizador.html': ['empresa', 'Crear formulario'],
   'bienvenida.html': ['empresa', 'Configurar'],
 };

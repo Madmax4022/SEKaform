@@ -224,6 +224,7 @@ function pintarUsuarios() {
       <td>${fechaHora(u.last_login_at)}</td>
       <td>
         ${u.is_super_admin ? '<span class="k-badge k-badge-bronze">Super</span> ' : ''}
+        ${u.es_asesor ? '<span class="k-badge k-badge-teal">Asesor</span> ' : ''}
         <span class="k-badge ${u.is_active ? 'k-badge-ok' : 'k-badge-err'}">
           ${u.is_active ? 'Activo' : 'Inactivo'}</span>
         ${u.locked_until && new Date(u.locked_until) > new Date()
@@ -234,6 +235,9 @@ function pintarUsuarios() {
           ${u.is_active ? 'Desactivar' : 'Activar'}</button>
         <button class="k-btn k-btn-ghost k-btn-sm" onclick="alternarSuper('${u.id}')">
           ${u.is_super_admin ? 'Quitar super' : 'Hacer super'}</button>
+        <button class="k-btn k-btn-ghost k-btn-sm" onclick="alternarAsesor('${u.id}')"
+          title="Un asesor de SST puede crear las cuentas de sus empresas clientes">
+          ${u.es_asesor ? 'Quitar asesor' : 'Hacer asesor'}</button>
       </td>
     </tr>`).join('');
 }
@@ -336,6 +340,11 @@ async function alternarOrg(id) {
 
 async function alternarUsuario(id) {
   try { await skfPost(`/admin/api/usuarios/${id}/estado`); await recargar('Usuario actualizado.'); }
+  catch (e) { aviso(e.message, 'error'); }
+}
+
+async function alternarAsesor(id) {
+  try { await skfPost(`/admin/api/usuarios/${id}/asesor`); await recargar('Marca de asesor actualizada.'); }
   catch (e) { aviso(e.message, 'error'); }
 }
 
