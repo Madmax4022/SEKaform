@@ -84,7 +84,7 @@ function anillo(n) {
 
 function pintar() {
   const lista = $('lista');
-  if (!datos || datos.disponible === false) {
+  if (!datos || datos.disponible === false || !Array.isArray(datos.empresas)) {
     lista.innerHTML = '<div class="aviso">Para ver tus clientes falta preparar la base (migración 010). Pídeselo a tu administrador técnico.</div>';
     return;
   }
