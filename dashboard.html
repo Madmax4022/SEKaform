@@ -199,6 +199,17 @@
     .section-title{font-size:1rem;font-weight:800;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
     .stat-card.c-err .stat-num{color:var(--err-txt);}
     .rank-list{display:flex;flex-direction:column;gap:12px;}
+    .eq-res{font-size:.86rem;color:var(--mut);margin-bottom:10px}
+    .eq-mal{color:var(--err-txt,#fca5a5)} .eq-bien{color:var(--ok)}
+    .eq-tabla{display:flex;flex-direction:column;gap:8px}
+    .eq-fila{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px;align-items:center;min-height:56px;padding:10px 12px;border:1px solid var(--bor);border-radius:12px;color:var(--txt);text-decoration:none;font-size:.86rem}
+    .eq-fila:active{transform:scale(.99)}
+    .eq-fila small{display:block;color:var(--mut);font-size:.72rem;margin-bottom:2px}
+    .eq-cod small{margin:2px 0 0}
+    .eq-chip{display:inline-block;margin-top:3px;padding:1px 8px;border-radius:99px;font-size:.7rem;font-weight:800}
+    .eq-chip.v{background:rgba(248,113,113,.16);color:#fca5a5}
+    .eq-chip.p{background:rgba(251,191,36,.16);color:#fcd34d}
+    @media (max-width:520px){.eq-fila{grid-template-columns:1fr 1fr}.eq-cod{grid-column:1/-1}}
     .rank-row{display:flex;align-items:center;gap:10px;}
     .rank-name{flex:0 0 38%;min-width:0;font-size:.82rem;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .rank-bar-track{flex:1;height:7px;background:var(--card2);border-radius:4px;overflow:hidden;}
@@ -349,6 +360,15 @@ La flecha compara los últimos 30 días con los 30 anteriores (con el mismo form
         <div class="stat-num" id="sPuntaje">—</div>
         <div class="stat-desc" id="sPuntajeDesc">sin inspecciones con puntaje</div>
       </div>
+    </div>
+
+    <!-- equipos (EXT-001…): inspección mensual y recarga -->
+    <div id="equiposSec" hidden>
+      <h2 class="section-title">🧯 Equipos<button class="skf-help" data-help-t="¿De dónde sale esta lista?" data-help="Cada extintor, gabinete o botiquín que se inspecciona con su código (EXT-001, GAB-001…) aparece aquí con su última inspección.
+• Inspección: toca cada mes; se marca atrasada si pasaron más de 30 días.
+• Recarga: la fecha de recarga o vencimiento que se anotó en su última inspección.
+Toca un equipo para inspeccionarlo ya con su ficha.">?</button></h2>
+      <div class="chart-card" style="margin-bottom:24px"><div id="equiposLista"></div></div>
     </div>
 
     <!-- Bloque avanzado: se oculta en «Vista simple» (gráficas, cumplimiento,
@@ -738,6 +758,26 @@ function renderPuntaje(ds) {
       <div class="rank-bar-track"><div class="rank-bar-fill ${r.pct>=90?'':r.pct>=70?'warn':'err'}" style="width:${r.pct}%"></div></div>
       <span class="rank-count pf-n">${r.pct} % ${_txtTendencia(r.tend)}<span class="sr-only"> · nivel ${_nivelPct(r.pct)} · ${r.n} ${r.n!==1?'inspecciones':'inspección'}</span></span>
     </div>`).join('')}</div>`;
+}
+
+// ── Equipos (skfEquiposEstado, field-types.js) ───────────────────
+function renderEquipos() {
+  const sec = document.getElementById('equiposSec');
+  const est = skfEquiposEstado(_bi.envios || [], _bi.plantillas || [], new Date());
+  sec.hidden = !est.length;
+  if (!est.length) return;
+  const uNom = id => { const u = (_bi.unidades || []).find(x => x.id === id); return u ? u.nombre : ''; };
+  const fec = f => f ? new Date(String(f).length === 10 ? f + 'T00:00:00' : f).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : '—';
+  const chip = (d, txtV, txtP) => d === null ? '' : d < 0 ? `<span class="eq-chip v">${txtV}</span>` : d <= 7 ? `<span class="eq-chip p">${txtP}</span>` : '';
+  const vencidos = est.filter(q => (q.diasInspeccion !== null && q.diasInspeccion < 0) || (q.diasRecarga !== null && q.diasRecarga < 0)).length;
+  document.getElementById('equiposLista').innerHTML =
+    `<div class="eq-res">${est.length} equipo${est.length !== 1 ? 's' : ''} · ${vencidos ? `<b class="eq-mal">${vencidos} con algo vencido</b>` : '<b class="eq-bien">todos al día</b>'}</div>
+    <div class="eq-tabla" role="table" aria-label="Equipos">${est.map(q => `
+      <a class="eq-fila" role="row" href="llenar.html?tmpl=${encodeURIComponent(q.plantillaId)}&equipo=${encodeURIComponent(q.codigo)}">
+        <span class="eq-cod" role="cell">${q.tipo.ico} <b>${escD(q.codigo)}</b><small>${escD([q.tipo.nombre, uNom(q.unidadId)].filter(Boolean).join(' · '))}</small></span>
+        <span role="cell"><small>Última inspección</small>${fec(q.ultima)} ${chip(q.diasInspeccion, 'Atrasada', 'Toca pronto')}</span>
+        <span role="cell"><small>Recarga / vence</small>${fec(q.recarga)} ${chip(q.diasRecarga, 'Vencida', 'Vence pronto')}${q.diasRecarga !== null && q.diasRecarga > 7 && q.diasRecarga <= 30 ? '<span class="eq-chip p">Este mes</span>' : ''}</span>
+      </a>`).join('')}</div>`;
 }
 
 // ── Stats ────────────────────────────────────────────────────────
@@ -2022,6 +2062,7 @@ function pintar() {
   document.getElementById('sWeek').textContent  = stats.week;
 
   renderPuntaje(ds);
+  try { renderEquipos(); } catch (e) { console.warn('equipos', e); }
   asegurarGraficas();   // carga Chart.js (si hace falta) y dibuja; en vista simple no hace nada
 
   _biEnvios = ds.envios; _biHallazgos = ds.hallazgos; _biUnidades = ds.unidades;

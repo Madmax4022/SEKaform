@@ -17,6 +17,7 @@ var SKF_AGENDA_TIPOS = {
   rutina:  { ico: '🔁', nombre: 'Rutina' },
   encargo: { ico: '👤', nombre: 'Encargo' },
   turno:   { ico: '🕒', nombre: 'Turno' },
+  equipo:  { ico: '🧯', nombre: 'Equipo' },
 };
 var SKF_FRECUENCIAS = { diaria: 'cada día', semanal: 'cada semana', quincenal: 'cada 15 días', mensual: 'cada mes',
   bimestral: 'cada 2 meses', trimestral: 'cada 3 meses', semestral: 'cada 6 meses', anual: 'cada año' };
@@ -81,6 +82,42 @@ function skfAgenda(d, ahora) {
           detalle: 'Turno ' + t.turno.nombre + (t.estado === 'en_curso' ? ' · hasta las ' + _agHora(t.fin) : ' · terminó sin registrarse'),
           estado: t.estado === 'en_curso' ? 'hoy' : 'vencido', cuando: t.fin.toISOString(), dias: 0, href: llenar(pid) });
       });
+    });
+  }
+
+  // Equipos (EXT-001…): inspección mensual que toca en ≤7 días y recarga que vence en ≤30.
+  // Requiere field-types.js; sin él, se omiten. Tres o más del mismo tipo y motivo se
+  // juntan en un solo ítem, para que 20 extintores no tapen el resto del día.
+  if (typeof skfEquiposEstado === 'function') {
+    var grupos = {};
+    skfEquiposEstado(envios, plantillas, ahora).forEach(function (q) {
+      var base = llenar(q.plantillaId);
+      var href = base + (base !== 'llenar.html' ? '&equipo=' + encodeURIComponent(q.codigo) : '');
+      var add = function (motivo, dias, cuando, titulo, detalle) {
+        var k = q.tipo.prefijo + ':' + motivo + ':' + (dias < 0 ? 'v' : 'p');
+        (grupos[k] = grupos[k] || []).push({ id: 'q' + motivo.charAt(0) + ':' + q.codigo, tipo: 'equipo', ico: q.tipo.ico, codigo: q.codigo,
+          motivo: motivo, titulo: titulo, detalle: detalle, estado: _agEstado(dias), cuando: cuando, dias: dias, href: href });
+      };
+      var lugar = nombreLugar(q.unidadId);
+      if (q.diasInspeccion !== null && q.diasInspeccion <= 7) {
+        var hace = q.ultima ? -_agDias(q.ultima, ahora) : null;
+        add('inspeccion', q.diasInspeccion, q.proxima, q.codigo + ' · inspección mensual',
+          [q.tipo.nombre, lugar, hace !== null ? 'última hace ' + hace + ' día' + (hace !== 1 ? 's' : '') : ''].filter(Boolean).join(' · '));
+      }
+      if (q.diasRecarga !== null && q.diasRecarga <= 30) {
+        add('recarga', q.diasRecarga, q.recarga, q.codigo + (q.diasRecarga < 0 ? ' · recarga vencida' : ' · recarga por vencer'),
+          [q.tipo.nombre, lugar].filter(Boolean).join(' · '));
+      }
+    });
+    Object.keys(grupos).forEach(function (k) {
+      var g = grupos[k];
+      if (g.length < 3) { items.push.apply(items, g); return; }
+      g.sort(function (a, b) { return a.dias - b.dias; });
+      var t = skfEquipoTipo(k.split(':')[0]), venc = g[0].dias < 0, cods = g.map(function (x) { return x.codigo; });
+      items.push({ id: 'qg:' + k, tipo: 'equipo', ico: t.ico, titulo: g.length + ' ' + t.plural + ' · ' +
+          (g[0].motivo === 'recarga' ? (venc ? 'recarga vencida' : 'recarga por vencer') : (venc ? 'sin inspección al día' : 'toca inspeccionar')),
+        detalle: cods.slice(0, 4).join(', ') + (cods.length > 4 ? ' y ' + (cods.length - 4) + ' más' : ''),
+        estado: g[0].estado, cuando: g[0].cuando, dias: g[0].dias, href: g[0].href });
     });
   }
 

@@ -1070,6 +1070,13 @@ function openTemplate(id) {
   if (_u && _sel && [..._sel.options].some(o => o.value === _u)) _sel.value = _u;
 
   renderFields(t.campos);
+  // Desde un aviso («EXT-004 lleva 35 días sin inspección») el equipo llega ya elegido, con su ficha.
+  const _eqP = new URLSearchParams(location.search).get('equipo');
+  const _eqC = _eqP && t.campos.find(c => c.tipo === 'equipo');
+  if (_eqC) {
+    const _l = _equiposDe(_eqC);
+    setTimeout(() => _equipoElegir(_eqC, _eqP, _l, skfEquipoSiguiente(_l.map(x => x.codigo), skfEquipoTipo(_eqC.prefijo).prefijo), false), 0);
+  }
   show('vForm');
   updateProgress();
   history.replaceState(null,'',`llenar.html?tmpl=${id}`);
