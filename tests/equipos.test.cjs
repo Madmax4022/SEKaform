@@ -86,6 +86,31 @@ t('inspeccionado después de la baja: vuelve', !!eb.find(x => x.codigo === 'EXT-
 t('agenda sin el dado de baja', !ag.agenda({ plantillas: plE, envios: env3, equiposBaja: bajas }, ahora).some(i => /EXT-001/.test(i.titulo)));
 t('sin bajas: igual que antes', ag.est(env3, plE, ahora).length === 2);
 
+// ── Contratistas ─────────────────────────────────────────────────────
+const k = {}; vm.createContext(k);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'field-types.js'), 'utf8') + '\n' +
+  fs.readFileSync(path.join(__dirname, '..', 'agenda.js'), 'utf8') + '\nthis.est=skfContratistasEstado; this.agenda=skfAgenda; this.hoyF=skfAgendaHoy;', k);
+const hoyK = new Date('2026-10-23T12:00:00');
+const plC = [{ id: 'pc', nombre: 'Evaluación SST de Contratista', campos: [{ id: 'k', tipo: 'contratista' }, { id: 'a', tipo: 'si_no' }, { id: 'b', tipo: 'si_no' }] },
+             { id: 'otra', nombre: 'Ronda', campos: [{ id: 'a', tipo: 'si_no' }] }];
+const unis = [{ id: 'u1', nombre: 'Aseo Brillante', tipo: 'contratista' }, { id: 'u2', nombre: 'Montajes Ruiz', tipo: 'contratista' },
+              { id: 'u3', nombre: 'Vigilancia Sur', tipo: 'contratista' }, { id: 's', nombre: 'Bodega', tipo: 'sede' }];
+const ev = (u, f, a, b, pl) => ({ plantillaId: pl || 'pc', unidadId: u, estado: 'enviado', capturadoEn: f, datos: { k: 'x', a, b } });
+const envK = [ev('u1', '2026-09-01T10:00:00Z', 'Sí', 'No'), ev('u1', '2026-03-01T10:00:00Z', 'No', 'No'),
+              ev('u2', '2026-03-01T10:00:00Z', 'Sí', 'Sí'), ev('u3', '2026-10-01T10:00:00Z', 'Sí', 'Sí', 'otra')];
+const ek = k.est(envK, plC, unis, hoyK);
+const kq = id => ek.find(x => x.id === id);
+t('solo los Lugares de tipo contratista', ek.length === 3 && !kq('s'));
+t('última evaluación y su puntaje', kq('u1').evaluaciones === 2 && kq('u1').pct === 50 && kq('u1').promedio === 25);
+t('al día', kq('u1').estado === 'ok' && kq('u1').venceEn === 128);
+t('más de 6 meses: vencida', kq('u2').estado === 'vencida');
+t('un registro de otro formulario no es evaluación', kq('u3').estado === 'sin' && kq('u3').evaluaciones === 0);
+t('primero lo vencido', ek[0].id === 'u2');
+const ak = k.agenda({ plantillas: plC, envios: envK, unidades: unis }, hoyK).filter(i => i.tipo === 'contratista');
+t('agenda: vencida y sin evaluar', ak.length === 2 && ak.some(i => i.titulo === 'Evaluar a Montajes Ruiz' && i.estado === 'vencido') && ak.some(i => i.titulo === 'Evaluar a Vigilancia Sur' && i.estado === 'pendiente'));
+t('agenda: abre el formulario con el contratista', ak.find(i => /Montajes/.test(i.titulo)).href === 'llenar.html?tmpl=pc&contratista=u2');
+t('sin formulario de evaluación: no avisa', k.agenda({ plantillas: [plC[1]], envios: envK, unidades: unis }, hoyK).filter(i => i.tipo === 'contratista').length === 0);
+
 // ── QR: qué formulario abre un código ────────────────────────────────
 t('QR: formulario de su última inspección', ctx.form('ext 2', envs, pls) === 'p1');
 t('QR: código nuevo de un tipo conocido', ctx.form('GAB-099', envs, pls) === 'p3');

@@ -86,7 +86,7 @@
 </div>
 
 <script>
-const TIPOS = { todo: 'Todo', rutina: 'Rutinas', encargo: 'Encargos', turno: 'Turnos', equipo: 'Equipos' };
+const TIPOS = { todo: 'Todo', rutina: 'Rutinas', encargo: 'Encargos', turno: 'Turnos', equipo: 'Equipos', contratista: 'Contratistas' };
 const GRUPOS = [
   ['vencido', 'Atrasado'], ['hoy', 'Hoy'], ['pronto', 'Próximos 7 días'], ['pendiente', 'Encargos sin fecha'], ['despues', 'Más adelante'],
 ];
@@ -95,7 +95,7 @@ const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 
 function pintar() {
   const cuenta = k => k === 'todo' ? items.length : items.filter(i => i.tipo === k).length;
-  document.getElementById('filtros').innerHTML = Object.keys(TIPOS).filter(k => k !== 'equipo' || cuenta(k)).map(k =>
+  document.getElementById('filtros').innerHTML = Object.keys(TIPOS).filter(k => (k !== 'equipo' && k !== 'contratista') || cuenta(k)).map(k =>
     `<button type="button" data-f="${k}" aria-pressed="${filtro === k}">${TIPOS[k]}<span class="n">${cuenta(k)}</span></button>`).join('');
   const vis = items.filter(i => filtro === 'todo' || i.tipo === filtro);
   const el = document.getElementById('lista');

@@ -219,6 +219,7 @@
     .eq-cod small{margin:2px 0 0}
     .eq-chip{display:inline-block;margin-top:3px;padding:1px 8px;border-radius:99px;font-size:.7rem;font-weight:800}
     .eq-chip.v{background:rgba(248,113,113,.16);color:#fca5a5}
+    .eq-chip.ok{background:var(--ok-dim);color:var(--ok)} .pf-alto{color:var(--ok)} .pf-medio{color:#fcd34d} .pf-bajo{color:#fca5a5}
     .eq-chip.p{background:rgba(251,191,36,.16);color:#fcd34d}
     @media (max-width:520px){.eq-fila{grid-template-columns:1fr 1fr}.eq-cod{grid-column:1/-1}}
     .rank-row{display:flex;align-items:center;gap:10px;}
@@ -381,6 +382,14 @@ La flecha compara los últimos 30 días con los 30 anteriores (con el mismo form
 Toca un equipo para inspeccionarlo ya con su ficha.">?</button></h2>
       <div class="chart-card" style="margin-bottom:24px"><div id="equiposLista"></div>
         <button type="button" class="eq-print" id="btnEtiquetas" onclick="abrirEtiquetas(this)">🖨 Imprimir etiquetas con QR</button></div>
+    </div>
+
+    <!-- contratistas: evaluación SST, puntaje e informe (Decreto 1072, art. 2.2.4.6.28) -->
+    <div id="contratistasSec" hidden>
+      <h2 class="section-title" id="contratistas">🤝 Contratistas<button class="skf-help" data-help-t="¿Qué muestra esta sección?" data-help="Cada contratista (un Lugar de tipo «contratista») con su última evaluación de seguridad y salud en el trabajo, el puntaje y sus hallazgos abiertos.
+• Se reevalúa cada 6 meses: «Vence pronto» faltando 15 días, «Vencida» después.
+• Toca un contratista para evaluarlo o descargar su informe en PDF para entregárselo.">?</button></h2>
+      <div class="chart-card" style="margin-bottom:24px"><div id="contratistasLista"></div></div>
     </div>
 
     <!-- Bloque avanzado: se oculta en «Vista simple» (gráficas, cumplimiento,
@@ -837,6 +846,81 @@ async function equipoReactivar(cod, btn) {
   btn.disabled = true;
   try { await skfEquipoReactivar(cod); _bi.bajas = (_bi.bajas || []).filter(x => x.codigo !== cod); renderEquipos(); }
   catch (e) { btn.disabled = false; alert(navigator.onLine ? (e.message || 'No se pudo reactivar.') : 'Necesitas conexión para reactivar un equipo.'); }
+}
+
+// ── Contratistas (skfContratistasEstado, field-types.js) ─────────
+function _hzContratista(id) { return (_bi.hallazgos || []).filter(h => (h.unidad_id || h.unidadId) === id); }
+function _plantillaEvalContratista() { return (_bi.plantillas || []).find(pl => (pl.campos || []).some(c => c.tipo === 'contratista')); }
+function renderContratistas() {
+  const sec = document.getElementById('contratistasSec');
+  const est = skfContratistasEstado(_bi.envios || [], _bi.plantillas || [], _bi.unidades || [], new Date());
+  const pEval = _plantillaEvalContratista();
+  sec.hidden = !est.length && !pEval;
+  if (sec.hidden) return;
+  const el = document.getElementById('contratistasLista');
+  const ctaForm = pEval ? '' : `<a class="eq-print" style="text-decoration:none" href="digitalizador.html?preset=evaluacion_contratista">＋ Agregar el formulario de evaluación de contratistas</a>`;
+  if (!est.length) {
+    el.innerHTML = `<p class="eq-res">Aún no hay contratistas. Agrégalos al evaluarlos (en el formulario: «＋ Agregar contratista») o en Mi empresa › Lugares, con el tipo «Contratista».</p>
+      ${pEval ? `<a class="eq-print" style="text-decoration:none" href="llenar.html?tmpl=${encodeURIComponent(pEval.id)}">Evaluar al primero</a>` : ctaForm}`;
+    return;
+  }
+  const CHIP = { vencida: '<span class="eq-chip v">Vencida</span>', sin: '<span class="eq-chip v">Sin evaluar</span>', vence: '<span class="eq-chip p">Vence pronto</span>', ok: '<span class="eq-chip ok">Al día</span>' };
+  const malos = est.filter(k => k.estado === 'vencida' || k.estado === 'sin').length;
+  el.innerHTML = `<div class="eq-res">${est.length} contratista${est.length !== 1 ? 's' : ''} · ${malos ? `<b class="eq-mal">${malos} sin evaluación al día</b>` : '<b class="eq-bien">todos evaluados</b>'}</div>
+    <div class="eq-tabla">${est.map(k => {
+      const ab = _hzContratista(k.id).filter(h => (h.estado || 'abierto') !== 'cerrado').length;
+      const nv = k.pct === null ? '' : k.pct >= 90 ? 'alto' : k.pct >= 70 ? 'medio' : 'bajo';
+      return `<a class="eq-fila" href="#" onclick="return contratistaAcciones(event, '${escJ(k.id)}', this)">
+        <span class="eq-cod">🤝 <b>${escD(k.nombre)}</b><small>${k.evaluaciones} evaluaci${k.evaluaciones !== 1 ? 'ones' : 'ón'}</small></span>
+        <span><small>Última evaluación</small>${k.ultima ? new Date(k.ultima).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : '—'}${k.pct !== null ? ` · <b class="pf-${nv}">${k.pct} %</b>` : ''} ${CHIP[k.estado]}</span>
+        <span><small>Hallazgos abiertos</small>${ab ? `<b class="eq-mal">${ab}</b>` : '0'}</span>
+      </a>`; }).join('')}</div>${ctaForm}`;
+}
+function contratistaAcciones(ev, id, origen) {
+  ev.preventDefault();
+  if (document.body.classList.contains('panel-readonly')) return false;
+  const k = skfContratistasEstado(_bi.envios || [], _bi.plantillas || [], _bi.unidades || [], new Date()).find(x => x.id === id);
+  const pEval = _plantillaEvalContratista();
+  if (!k) return false;
+  skfSheet(escD(k.nombre), `
+    ${pEval ? `<a class="skf-opt" href="llenar.html?tmpl=${encodeURIComponent(pEval.id)}&contratista=${encodeURIComponent(id)}"><span class="so-ico">📝</span><span class="so-txt"><b>Evaluar ahora</b><small>Formulario de evaluación SST, con el contratista ya elegido</small></span><span class="so-arr">›</span></a>`
+            : `<a class="skf-opt" href="digitalizador.html?preset=evaluacion_contratista"><span class="so-ico">＋</span><span class="so-txt"><b>Agregar el formulario de evaluación</b><small>Basado en el Decreto 1072/2015</small></span><span class="so-arr">›</span></a>`}
+    <button type="button" class="skf-opt" style="width:100%" onclick="informeContratista('${escJ(id)}')" ${k.evaluaciones ? '' : 'disabled'}><span class="so-ico">📄</span><span class="so-txt"><b>Informe para el contratista (PDF)</b><small>${k.evaluaciones ? 'Su puntaje, qué cumple, qué no y sus hallazgos con antes y después' : 'Disponible después de la primera evaluación'}</small></span><span class="so-arr">›</span></button>`, origen);
+  return false;
+}
+function informeContratista(id) {
+  const k = skfContratistasEstado(_bi.envios || [], _bi.plantillas || [], _bi.unidades || [], new Date()).find(x => x.id === id);
+  if (!k || !k.ultimoEnvio) return;
+  const e = k.ultimoEnvio, pl = (_bi.plantillas || []).find(p => p.id === (e.plantilla_id || e.plantillaId));
+  const datos = e.datos || {};
+  const OMITIR = new Set(['firma', 'foto', 'separador', 'ubicacion', 'contratista']);
+  const filas = (pl ? pl.campos : []).filter(c => !OMITIR.has(c.tipo) && datos[c.id] !== undefined && datos[c.id] !== '').map(c => {
+    const v = Array.isArray(datos[c.id]) ? datos[c.id].join(', ') : String(datos[c.id]);
+    // «Cumple / No cumple» solo en los puntos de control (con criticidad); lo informativo, tal cual.
+    const control = c.tipo === 'si_no' && !!c.severidad;
+    const mal = control && v === 'No', bien = control && v === 'Sí';
+    return `<tr><td style="text-align:left">${escD(c.etiqueta)}</td><td style="text-align:left;font-weight:700;color:${mal ? '#b91c1c' : bien ? '#047857' : '#111'}">${escD(mal ? 'No cumple' : bien ? 'Cumple' : v)}</td></tr>`;
+  }).join('');
+  const hist = (_bi.envios || [])
+    .filter(x => (x.unidad_id || x.unidadId) === id && (_bi.plantillas || []).some(p => p.id === (x.plantilla_id || x.plantillaId) && (p.campos || []).some(c => c.tipo === 'contratista')))
+    .map(x => { const p = (_bi.plantillas || []).find(q => q.id === (x.plantilla_id || x.plantillaId)); const r = skfPuntaje(p.campos, x.datos || {}); return { f: x.capturado_en || x.capturadoEn || x.enviado_en || x.enviadoEn || x.creadoEn, pct: r ? r.pct : null }; })
+    .sort((a, b) => Date.parse(b.f) - Date.parse(a.f));
+  const rows = _auditRows({ hallazgos: _hzContratista(id) });
+  const fecha = f => f ? new Date(f).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : '—';
+  const prox = k.ultima ? new Date(Date.parse(k.ultima) + SKF_CONTRATISTA_DIAS * 864e5) : null;
+  const cuerpo = `<h2>Contratista evaluado</h2><div class="kv">
+      <div class="k">Contratista</div><div class="v">${escD(k.nombre)}</div>
+      <div class="k">Última evaluación</div><div class="v">${fecha(k.ultima)}${k.pct !== null ? ' · ' + k.pct + ' %' : ''}</div>
+      <div class="k">Promedio histórico</div><div class="v">${k.promedio !== null ? k.promedio + ' % en ' + k.evaluaciones + ' evaluaci' + (k.evaluaciones !== 1 ? 'ones' : 'ón') : '—'}</div>
+      <div class="k">Próxima evaluación</div><div class="v">${prox ? fecha(prox) : '—'}</div>
+      ${pl && pl.norma ? `<div class="k">Referencia</div><div class="v">${escD(pl.norma)}</div>` : ''}
+    </div>
+    <h2>Resultado de la última evaluación</h2><table>${filas || '<tr><td>Sin respuestas registradas</td></tr>'}</table>
+    ${hist.length > 1 ? `<h2>Historial</h2><table><thead><tr><th style="text-align:left">Fecha</th><th style="text-align:left">Puntaje</th></tr></thead><tbody>${hist.map(h => `<tr><td style="text-align:left">${fecha(h.f)}</td><td style="text-align:left">${h.pct === null ? '—' : h.pct + ' %'}</td></tr>`).join('')}</tbody></table>` : ''}
+    <h2>Hallazgos y compromisos</h2>${rows.length ? `<table><thead><tr><th style="text-align:left">Hallazgo</th><th style="text-align:left">Severidad</th><th style="text-align:left">Responsable</th><th style="text-align:left">Límite</th><th style="text-align:left">Estado</th></tr></thead><tbody>${rows.map(r => `<tr><td style="text-align:left">${escD(r.desc || r.campo || r.form)}</td><td style="text-align:left">${escD(r.sev)}</td><td style="text-align:left">${escD(r.resp)}</td><td style="text-align:left">${escD(r.limite)}</td><td style="text-align:left">${r.cerrado ? 'Cerrado' : 'Pendiente'}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#6b7280">Sin hallazgos. 👍</p>'}
+    ${_evidenciaAntesDespues(rows)}`;
+  printReport('Evaluación SST de contratista — ' + k.nombre, cuerpo, { logoFallback: pl && pl.logo });
+  skfSheetCerrar();
 }
 
 // Etiquetas con QR: todas, o las de un lugar.
@@ -2158,6 +2242,7 @@ function pintar() {
 
   renderPuntaje(ds);
   try { renderEquipos(); } catch (e) { console.warn('equipos', e); }
+  try { renderContratistas(); } catch (e) { console.warn('contratistas', e); }
   asegurarGraficas();   // carga Chart.js (si hace falta) y dibuja; en vista simple no hace nada
 
   _biEnvios = ds.envios; _biHallazgos = ds.hallazgos; _biUnidades = ds.unidades;

@@ -23,6 +23,7 @@ const FIELD_TYPES = [
   {k:'checkbox',       grupo:'Selección',   ico:'☑',  lbl:'Casilla de verificación',  desc:'Marcar/Sin marcar',  chip:'chip-smart', fieldClass:'fc-smart'},
   {k:'checkbox_multi', grupo:'Selección',   ico:'📋', lbl:'Opción múltiple',          desc:'Varias casillas',    chip:'chip-smart', fieldClass:'fc-smart', needsOptions:true},
   {k:'equipo',         grupo:'Selección',   ico:'🏷', lbl:'Equipo (código)',          desc:'EXT-001, GAB-002…',  chip:'chip-smart', fieldClass:'fc-smart'},
+  {k:'contratista',    grupo:'Selección',   ico:'🤝', lbl:'Contratista evaluado',     desc:'Empresa contratista', chip:'chip-smart', fieldClass:'fc-smart'},
 
   {k:'firma',          grupo:'Multimedia',  ico:'✍',  lbl:'Firma digital',            desc:'Canvas táctil',      chip:'chip-sig',   fieldClass:'fc-sig'},
   {k:'foto',           grupo:'Multimedia',  ico:'📷', lbl:'Fotografía',               desc:'Cámara/galería',     chip:'chip-photo', fieldClass:'fc-media'},
@@ -255,4 +256,31 @@ function skfEquipoFormulario(codigo, envios, plantillas) {
   }
   const alguna = pref && pls.find(pl => (pl.campos || []).some(c => c.tipo === 'equipo' && String(c.prefijo || 'EXT').toUpperCase() === pref));
   return alguna ? alguna.id : null;
+}
+
+// ── Contratistas ────────────────────────────────────────────────────────
+// Un contratista es un Lugar de tipo «contratista». Su evaluación es cualquier
+// registro de un formulario con un campo «contratista», hecho sobre ese Lugar.
+// Se reevalúa cada SKF_CONTRATISTA_DIAS (semestral, lo habitual en un SG-SST).
+const SKF_CONTRATISTA_DIAS = 180;
+function skfContratistasEstado(envios, plantillas, unidades, ahora, dias) {
+  ahora = ahora || new Date(); dias = dias || SKF_CONTRATISTA_DIAS;
+  const evalPl = {};
+  (plantillas || []).forEach(pl => { if ((pl.campos || []).some(c => c.tipo === 'contratista')) evalPl[pl.id] = pl; });
+  return (unidades || []).filter(u => (u.tipo || 'sede') === 'contratista').map(u => {
+    const evs = (envios || []).filter(e => (e.estado || 'enviado') === 'enviado' && evalPl[e.plantillaId || e.plantilla_id] &&
+                                           (e.unidadId || e.unidad_id) === u.id)
+      .map(e => ({ e, ts: Date.parse(e.capturado_en || e.capturadoEn || e.enviadoEn || e.enviado_en || e.creadoEn || e.creado_en || '') }))
+      .filter(x => !isNaN(x.ts)).sort((a, b) => b.ts - a.ts);
+    const pcts = evs.map(x => { const r = skfPuntaje(evalPl[x.e.plantillaId || x.e.plantilla_id].campos, x.e.datos || {}); return r ? r.pct : null; });
+    const validos = pcts.filter(p => p !== null);
+    const ultima = evs.length ? new Date(evs[0].ts) : null;
+    const desde = ultima ? Math.floor((ahora - ultima) / 864e5) : null;
+    return { id: u.id, nombre: u.nombre, evaluaciones: evs.length, ultima: ultima ? ultima.toISOString() : null,
+      ultimoEnvio: evs.length ? evs[0].e : null, pct: pcts.length ? pcts[0] : null,
+      promedio: validos.length ? Math.round(validos.reduce((a, b) => a + b, 0) / validos.length) : null,
+      diasDesde: desde, venceEn: desde === null ? null : dias - desde,
+      estado: desde === null ? 'sin' : desde >= dias ? 'vencida' : dias - desde <= 15 ? 'vence' : 'ok' };
+  }).sort((a, b) => ({ vencida: 0, sin: 1, vence: 2, ok: 3 }[a.estado] - { vencida: 0, sin: 1, vence: 2, ok: 3 }[b.estado]) ||
+                    ((a.pct === null ? 101 : a.pct) - (b.pct === null ? 101 : b.pct)) || String(a.nombre).localeCompare(String(b.nombre), 'es'));
 }

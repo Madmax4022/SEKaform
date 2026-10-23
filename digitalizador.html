@@ -2178,6 +2178,7 @@ async function loadPreset(presetId, editMode, archiveOnly) {
     opciones: needsOptions(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
     prefijo: f.prefijo,
     equipoDato: f.equipoDato || undefined,
+    severidad: f.severidad || undefined,
     _quality: 'ok'
   }));
   // Las condiciones del catálogo se escriben por el nombre del campo; aquí se pasan a su id.
