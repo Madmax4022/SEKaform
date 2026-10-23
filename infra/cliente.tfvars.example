@@ -44,6 +44,13 @@ url_publica = "https://tz-dev-sekaform-app.us-central1.run.app"
 # Con false la app funciona igual; solo no envía correos de recuperación.
 habilitar_correo = false
 
+# ── Avisos push al celular ───────────────────────────────────────────────
+# Genera las llaves con: python3 scripts/generar_vapid.py (imprime la pública
+# para aquí y el comando para subir la privada a Secret Manager). Pon true
+# SOLO después de subir la privada.
+habilitar_push = false
+vapid_publica  = ""
+
 # ── Coste ────────────────────────────────────────────────────────────────
 # Aunque el entorno se llame "dev", la aplicación se despliega endurecida
 # (cookies Secure, SECRET_KEY obligatoria): se sirve por HTTPS a personas

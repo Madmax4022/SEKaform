@@ -51,6 +51,7 @@ jobs:
           python3 -m pip install -q -r requirements.txt
           python3 tests/compresion_test.py
           python3 tests/puntaje_test.py
+          python3 tests/push_test.py
 
       # El aislamiento entre clientes es la garantía central del producto:
       # si estas pruebas fallan, no se despliega nada.
@@ -83,6 +84,7 @@ jobs:
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/011_portal.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/012_equipos_baja.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/013_portal_fotos.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/014_push.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -q -c "
             GRANT USAGE ON SCHEMA public TO skf_app;
             GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO skf_app;
@@ -133,6 +135,10 @@ jobs:
         env: { PGPASSWORD: a }
         run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/portal_fotos_test.sql
 
+      - name: Avisos push (cada quien sus celulares, a quién se avisa)
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/push_test.sql
+
       # La unión de todo: Flask + Postgres + RLS por las rutas reales. Detecta lo que las
       # pruebas de cada pieza no ven (p. ej. un nombre que tapa a otro y rompe los envíos).
       - name: API de punta a punta (Flask + Postgres)
@@ -157,6 +163,7 @@ jobs:
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/011_portal.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/012_equipos_baja.sql
           psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/013_portal_fotos.sql
+          psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/014_push.sql
 
   desplegar:
     needs: pruebas

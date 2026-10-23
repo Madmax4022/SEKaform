@@ -16,5 +16,6 @@ FROM (VALUES
   ('010_asesores',           to_regprocedure('skf_asesor_crear_empresa(text,text)') IS NOT NULL,         'asesores con varias empresas; datos solo de la empresa activa'),
   ('011_portal',             to_regclass('public.portales') IS NOT NULL,                                 'portal del cliente (resumen en vivo)'),
   ('012_equipos_baja',       to_regclass('public.equipos_baja') IS NOT NULL,                             'dar de baja equipos retirados'),
-  ('013_portal_fotos',       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'portales' AND column_name = 'mostrar_fotos'), 'antes y después en el portal del cliente')
+  ('013_portal_fotos',       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'portales' AND column_name = 'mostrar_fotos'), 'antes y después en el portal del cliente'),
+  ('014_push',               to_regclass('public.push_suscripciones') IS NOT NULL,                       'avisos push al celular')
 ) AS m(migracion, ok, que_trae);

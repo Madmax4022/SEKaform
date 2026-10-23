@@ -773,6 +773,64 @@ function skfUpdateBellIcon() {
     : 'Activar notificaciones del navegador para hallazgos críticos';
 }
 
+// ── Avisos push al celular (migración 014, app/push.py) ─────────────────────
+// Llegan aunque la app esté cerrada. En iPhone solo funcionan con la app
+// agregada a la pantalla de inicio (iOS 16.4 o más).
+function _skfB64aBytes(b64) {
+  const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(s, c => c.charCodeAt(0));
+}
+function skfPushIosSinInstalar() {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const instalada = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  return ios && !instalada;
+}
+async function _skfRegistroSW() {
+  if (!('serviceWorker' in navigator)) return null;
+  try { return await navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready); } catch (e) { return null; }
+}
+// { soportado, iosSinInstalar, permiso, servidor, activo }
+async function skfPushEstado() {
+  const soportado = 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
+  const e = { soportado, iosSinInstalar: skfPushIosSinInstalar(), permiso: typeof Notification !== 'undefined' ? Notification.permission : 'denied', servidor: false, activo: false };
+  if (!soportado) return e;
+  try { const r = await skfFetch('/api/push/clave'); e.servidor = !!r.disponible; e.clave = r.clave; } catch (x) {}
+  try { const reg = await _skfRegistroSW(); const sub = reg && await reg.pushManager.getSubscription(); e.activo = !!sub && e.permiso === 'granted'; e.endpoint = sub && sub.endpoint; } catch (x) {}
+  return e;
+}
+async function skfPushActivar() {
+  const e = await skfPushEstado();
+  if (!e.soportado) throw new Error('Este navegador no permite avisos.');
+  if (e.iosSinInstalar) throw new Error('En iPhone, primero agrega la app a la pantalla de inicio (Compartir › Agregar a inicio) y ábrela desde ahí.');
+  if (!e.servidor) throw new Error('Los avisos al celular todavía no están activados en el servidor.');
+  if (await Notification.requestPermission() !== 'granted') throw new Error('No diste permiso para avisos. Puedes darlo en la configuración del navegador.');
+  const reg = await _skfRegistroSW();
+  let sub = await reg.pushManager.getSubscription();
+  // Una suscripción hecha con otra llave (cambió el servidor) no sirve: se rehace.
+  if (sub && sub.options && sub.options.applicationServerKey) {
+    const actual = new Uint8Array(sub.options.applicationServerKey), nueva = _skfB64aBytes(e.clave);
+    if (actual.length !== nueva.length || actual.some((b, i) => b !== nueva[i])) { await sub.unsubscribe(); sub = null; }
+  }
+  if (!sub) {
+    try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _skfB64aBytes(e.clave) }); }
+    catch (x) { throw new Error('No se pudo conectar con el servicio de avisos del navegador. Revisa la conexión e inténtalo de nuevo.'); }
+  }
+  await skfFetch('/api/push/suscribir', { method: 'POST', body: JSON.stringify(sub.toJSON()) });
+  return true;
+}
+async function skfPushDesactivar() {
+  const reg = await _skfRegistroSW();
+  const sub = reg && await reg.pushManager.getSubscription();
+  if (!sub) return;
+  try { await skfFetch('/api/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint: sub.endpoint }) }); } catch (e) {}
+  await sub.unsubscribe();
+}
+async function skfPushProbar() {
+  const reg = await _skfRegistroSW();
+  const sub = reg && await reg.pushManager.getSubscription();
+  return skfFetch('/api/push/probar', { method: 'POST', body: JSON.stringify(sub ? { endpoint: sub.endpoint } : {}) });
+}
+
 let _alertasDesde = new Date().toISOString();
 let _alertasTimer = null;
 

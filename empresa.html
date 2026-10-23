@@ -83,7 +83,7 @@
 
   <div class="sec">Avisos</div>
   <a class="skf-opt" href="llenar.html"><span class="so-ico">🔔</span><span class="so-txt"><b>Avisos de cumplimiento bajo</b><small>Correo cuando una inspección sale mal — se ajusta en cada formulario</small></span><span class="so-arr">›</span></a>
-  <button type="button" class="skf-opt" id="btnNotif"><span class="so-ico" id="notifIco">🔕</span><span class="so-txt"><b>Alertas de hallazgos críticos</b><small id="notifS">Notificación en este teléfono cuando se reporta algo crítico</small></span><span class="so-arr">›</span></button>
+  <button type="button" class="skf-opt" id="btnNotif"><span class="so-ico" id="notifIco">🔕</span><span class="so-txt"><b>Avisos en este celular</b><small id="notifS">Hallazgos críticos y encargos nuevos, aunque la app esté cerrada</small></span><span class="so-arr">›</span></button>
 
   <div class="sec">Tu cuenta</div>
   <div class="skf-opt" style="cursor:default"><span class="so-ico">👤</span><span class="so-txt"><b id="ctaMail">Sin sesión</b><small id="ctaRol"></small></span><span></span></div>
@@ -182,14 +182,43 @@ const lee = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } c
   if (location.hash === '#areas') setTimeout(() => $('areas').scrollIntoView({ block: 'start' }), 50);
 
   // ── Notificaciones y sin conexión ───────────────────────────────────────
-  const pintarNotif = () => {
-    const on = typeof skfNotificationsEnabled === 'function' && skfNotificationsEnabled();
-    $('notifIco').textContent = on ? '🔔' : '🔕';
-    $('notifS').textContent = typeof Notification === 'undefined' ? 'Este navegador no permite notificaciones'
-      : on ? 'Activadas en este teléfono' : 'Desactivadas · toca para activarlas en este teléfono';
+  // Avisos push: llegan aunque la app esté cerrada (skfPush*, skf-api.js).
+  const pintarNotif = async () => {
+    const e = await skfPushEstado();
+    $('notifIco').textContent = e.activo ? '🔔' : '🔕';
+    $('notifS').textContent = !e.soportado ? 'Este navegador no permite avisos'
+      : e.activo ? 'Activados en este celular' : e.iosSinInstalar ? 'En iPhone: primero agrega la app a la pantalla de inicio'
+      : !e.servidor ? 'Aún no disponibles en tu cuenta' : 'Desactivados · toca para activarlos';
+    return e;
   };
   pintarNotif();
-  $('btnNotif').addEventListener('click', async () => { if (typeof skfToggleNotifications === 'function') { await skfToggleNotifications(); } pintarNotif(); });
+  $('btnNotif').addEventListener('click', async ev => {
+    const origen = ev.currentTarget, e = await pintarNotif();
+    const que = `<p class="skf-sheet-nota">Te avisamos al instante, aunque la app esté cerrada:</p>
+      <ul class="skf-sheet-nota" style="margin:0 0 12px;padding-left:18px;line-height:1.6"><li><b>Hallazgos críticos</b> de tus empresas (si eres dueño o administrador).</li><li><b>Formularios que te encarguen</b>.</li></ul>`;
+    let html;
+    if (!e.soportado) html = '<p class="skf-sheet-nota">Este navegador no permite avisos. Usa Chrome en Android, o Safari en iPhone con la app agregada a la pantalla de inicio.</p>';
+    else if (e.iosSinInstalar) html = que + '<p class="skf-sheet-nota">En iPhone los avisos solo funcionan con la app instalada: toca <b>Compartir</b> › <b>Agregar a pantalla de inicio</b>, abre SEKaform desde ese ícono y vuelve aquí.</p>';
+    else if (!e.servidor) html = que + '<p class="skf-sheet-nota">Los avisos al celular aún no están activados en el servidor. Pídeselo a tu administrador técnico (son dos llaves y un ajuste).</p>';
+    else if (e.activo) html = que + `<p class="skf-sheet-nota" style="color:var(--ok)">✓ Activados en este celular.</p>
+      <button type="button" class="skf-opt" style="width:100%" id="pushProbar"><span class="so-ico">📨</span><span class="so-txt"><b>Enviar un aviso de prueba</b><small id="pushProbarS">Para ver cómo te llegan</small></span><span class="so-arr">›</span></button>
+      <button type="button" class="skf-opt" style="width:100%" id="pushOff"><span class="so-ico">🔕</span><span class="so-txt"><b>Desactivar en este celular</b><small>Puedes volver a activarlos cuando quieras</small></span><span class="so-arr">›</span></button>`;
+    else html = que + `<button type="button" class="pw-sig pw-fin" id="pushOn">🔔 Activar avisos en este celular</button>
+      ${e.permiso === 'denied' ? '<p class="skf-sheet-nota" style="margin-top:10px">Bloqueaste los avisos para este sitio: actívalos en la configuración del navegador (ícono del candado › Notificaciones).</p>' : ''}`;
+    skfSheet('Avisos en este celular', html, origen, pintarNotif);
+    const on = document.getElementById('pushOn'), off = document.getElementById('pushOff'), probar = document.getElementById('pushProbar');
+    if (on) on.onclick = async () => {
+      on.disabled = true; on.textContent = 'Activando…';
+      try { await skfPushActivar(); skfSheetCerrar(); pintarNotif(); try { await skfPushProbar(); } catch (x) {} }
+      catch (x) { on.disabled = false; on.textContent = '🔔 Activar avisos en este celular'; alert(x.message); }
+    };
+    if (off) off.onclick = async () => { await skfPushDesactivar(); skfSheetCerrar(); };
+    if (probar) probar.onclick = async () => {
+      $('pushProbarS').textContent = 'Enviando…';
+      try { const r = await skfPushProbar(); $('pushProbarS').textContent = r.ok ? '✓ Enviado: debería llegarte en segundos' : 'No se pudo enviar'; }
+      catch (x) { $('pushProbarS').textContent = x.message; }
+    };
+  });
   $('btnOffline').addEventListener('click', () => {
     $('offS').textContent = '⏳ Preparando…';
     if (!('serviceWorker' in navigator)) { $('offS').textContent = 'Este navegador no lo permite'; return; }

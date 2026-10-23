@@ -11,6 +11,7 @@ Sin esas variables se omite (en el CI siempre se corre).
 
 Ejecutar:  python3 tests/api_test.py
 """
+import json
 import logging
 import os
 import sys
@@ -320,6 +321,74 @@ class Bajas(unittest.TestCase):
             self.assertEqual(c.delete("/api/equipos/baja/EXT-004").status_code, 200)
             self.assertEqual(c.delete("/api/equipos/baja/EXT-004").status_code, 404)
             self.assertEqual(c.get("/api/equipos/bajas").get_json()["bajas"], [])
+
+
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class Push(unittest.TestCase):
+    """Avisos al celular: suscribirse, quién recibe qué, y que el mensaje viaje cifrado."""
+    def test_avisos(self):
+        from unittest import mock
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from app import push
+        sys.path.insert(0, os.path.dirname(__file__))
+        from push_test import descifrar
+        pub, priv = push.generar_claves()
+        celulares = {}
+        for quien in ("dueno", "editor"):
+            k = ec.generate_private_key(ec.SECP256R1())
+            kp = k.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+            celulares[quien] = (k, kp, os.urandom(16), f"https://push.test/{quien}/" + uuid.uuid4().hex)
+        enviados, respuesta = [], [201]
+
+        def falso_post(url, data=None, headers=None, timeout=None):
+            enviados.append((url, data, headers))
+            return mock.Mock(status_code=respuesta[0])
+
+        def leer(i):
+            url, data, _ = enviados[i]
+            k, kp, auth, _ep = next(v for v in celulares.values() if v[3] == url)
+            return json.loads(descifrar(data, k, kp, auth))
+
+        with mock.patch.dict(os.environ, {"VAPID_PUBLIC_KEY": pub, "VAPID_PRIVATE_KEY": priv}), \
+             mock.patch.object(push.requests, "post", falso_post), APP.test_client() as c:
+            for quien, mail in (("dueno", MAIL_D), ("editor", MAIL_E)):
+                c.post("/logout"); c.post("/login", data={"email": mail, "password": CLAVE})
+                self.assertEqual(c.get("/api/push/clave").get_json(), {"disponible": True, "clave": pub})
+                k, kp, auth, ep = celulares[quien]
+                self.assertEqual(c.post("/api/push/suscribir", json={"endpoint": "http://x", "keys": {}}).status_code, 400)
+                r = c.post("/api/push/suscribir", json={"endpoint": ep, "keys": {"p256dh": push.b64u(kp), "auth": push.b64u(auth)}})
+                self.assertEqual(r.status_code, 201, r.get_json())
+            # el editor reporta un hallazgo crítico → le llega al dueño, no a él
+            op_hz = {"opId": "h", "tipo": "hallazgo", "datos": {
+                "id": str(uuid.uuid4()), "severidad": "critico", "descripcion": "Salida de emergencia bloqueada"}}
+            c.post("/api/sync", json={"operaciones": [op_hz]})
+            self.assertEqual(len(enviados), 1)
+            self.assertTrue(enviados[0][0].startswith("https://push.test/dueno/"))
+            self.assertTrue(enviados[0][2]["Authorization"].startswith("vapid t="))
+            self.assertNotIn(b"bloqueada", enviados[0][1], "viaja cifrado")
+            aviso = leer(0)
+            self.assertIn("Hallazgo crítico", aviso["titulo"])
+            self.assertIn("Salida de emergencia bloqueada", aviso["cuerpo"])
+            c.post("/api/sync", json={"operaciones": [op_hz]})
+            self.assertEqual(len(enviados), 1, "un reintento de la cola (el mismo hallazgo) no vuelve a avisar")
+            # el dueño le encarga un formulario al editor → le llega al editor
+            c.post("/logout"); c.post("/login", data={"email": MAIL_D, "password": CLAVE})
+            pid = str(uuid.uuid4())
+            c.post("/api/sync", json={"operaciones": [{"opId": "p", "tipo": "plantilla", "datos": {"id": pid, "nombre": "Ronda de bodega", "campos": []}},
+                                                      {"opId": "a", "tipo": "asignacion", "datos": {"id": str(uuid.uuid4()), "plantilla_id": pid,
+                                                       "plantilla_nombre": "Ronda de bodega", "nombre": "Edgar", "correo": MAIL_E}}]})
+            self.assertEqual(len(enviados), 2)
+            self.assertTrue(enviados[1][0].startswith("https://push.test/editor/"))
+            self.assertEqual(leer(1)["url"], f"/llenar.html?tmpl={pid}")
+            # prueba, y el navegador dice que la suscripción ya no existe → se borra
+            respuesta[0] = 410
+            self.assertEqual(c.post("/api/push/probar", json={}).get_json()["enviados"], 0)
+            self.assertEqual(c.post("/api/push/probar", json={}).status_code, 404, "dada de baja, ya no está")
+        # sin llaves: apagado y sin errores
+        with APP.test_client() as c:
+            c.post("/login", data={"email": MAIL_E, "password": CLAVE})
+            self.assertEqual(c.get("/api/push/clave").get_json()["disponible"], False)
 
 
 @unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
