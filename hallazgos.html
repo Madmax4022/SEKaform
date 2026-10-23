@@ -51,6 +51,9 @@
     .hz-foto b { position: absolute; left: 6px; top: 6px; padding: 2px 8px; border-radius: 99px; font-size: .7rem; background: rgba(0,0,0,.65); color: #fff; }
     .hz-foto.vacia { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: .8rem; border-style: dashed; }
     .hz-foto.vacia b { position: static; background: transparent; color: var(--mut); padding: 0; }
+    .hz-portal { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; font-size: .84rem; cursor: pointer; min-height: 44px; }
+    .hz-portal input { width: 22px; height: 22px; flex: none; margin-top: 1px; }
+    .hz-portal small { display: block; color: var(--mut); font-size: .76rem; margin-top: 2px; }
     .hz-cerrar-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-radius: 12px; background: var(--ok); color: #04241d; font: inherit; font-weight: 800; cursor: pointer; }
     .cz-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .cz-tomar { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 1px solid var(--pri); border-radius: 12px; background: var(--pri-dim); color: var(--txt); font-weight: 800; cursor: pointer; }
@@ -121,7 +124,7 @@ function normalizeHallazgoFromCloud(h) {
     plantillaNombre: h.plantilla_nombre||h.plantillaNombre, campoId: h.campo_id||h.campoId,
     campoEtiqueta: h.campo_etiqueta||h.campoEtiqueta, origen: h.origen, severidad: h.severidad,
     descripcion: h.descripcion, foto: h.foto, estado: h.estado||'abierto',
-    unidadId: h.unidad_id||h.unidadId||null,
+    unidadId: h.unidad_id||h.unidadId||null, fotoOcultaPortal: !!(h.foto_oculta_portal||h.fotoOcultaPortal),
     reportadoPor: h.reportado_por||h.reportadoPor, creadoEn: h.creado_en||h.creadoEn
   };
 }
@@ -309,12 +312,27 @@ function fotosHtml(h, ac) {
   const caja = (url, etq, vacio) => url
     ? `<button type="button" class="hz-foto" onclick="verFoto(this)" data-etq="${etq}"><img src="${url}" alt="Foto de ${etq.toLowerCase()}" loading="lazy"><b>${etq}</b></button>`
     : vacio;
+  const portal = (antes || despues) ? `<label class="hz-portal"><input type="checkbox" ${h.fotoOcultaPortal ? '' : 'checked'} onchange="fotoEnPortal('${esc(h.id)}', this)">
+      <span>Mostrar estas fotos en el portal del cliente<small>Solo se ven cuando el hallazgo está cerrado. Quítalo si se ve la cara de alguien.</small></span></label>` : '';
   return `<div class="hz-fotos">
     ${caja(antes, 'Antes', abierto
       ? `<label class="hz-foto vacia"><input type="file" accept="image/*" capture="environment" hidden onchange="fotoAntes('${esc(h.id)}', this)">📷<b>Agregar foto del problema</b></label>`
       : `<div class="hz-foto vacia"><b>Sin foto de antes</b></div>`)}
     ${caja(despues, 'Después', `<div class="hz-foto vacia"><b>${abierto ? 'Se toma al cerrar' : 'Cerrado sin foto'}</b></div>`)}
-  </div>`;
+  </div>${portal}`;
+}
+async function fotoEnPortal(id, chk) {
+  chk.disabled = true;
+  try {
+    await skfFetch('/api/hallazgos/' + encodeURIComponent(id) + '/foto-portal', { method: 'POST', body: JSON.stringify({ oculta: !chk.checked }) });
+    const list = getHallazgos(), h = list.find(x => x.id === id);
+    if (h) { h.fotoOcultaPortal = !chk.checked; setHallazgos(list); }
+    toast(chk.checked ? 'Las fotos se verán en el portal' : 'Fotos ocultas en el portal', 'ok');
+  } catch (e) {
+    chk.checked = !chk.checked;
+    toast(navigator.onLine ? (e.message || 'No se pudo cambiar') : 'Necesitas conexión para cambiarlo', 'er');
+  }
+  chk.disabled = false;
 }
 function verFoto(btn) {
   const img = btn.querySelector('img');

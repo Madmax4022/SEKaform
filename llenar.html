@@ -1770,7 +1770,8 @@ function submitForm() {
       campoEtiqueta: h.campoEtiqueta,
       origen: h.origen,
       severidad: h.severidad,
-      descripcion: [eqCod, h.descripcion || (h.valorDetectado ? `Respuesta registrada: ${h.valorDetectado}` : '')].filter(Boolean).join(' · '),
+      // Que el hallazgo se entienda solo (en Hallazgos, el portal y el PDF): qué se preguntó y qué se respondió.
+      descripcion: [eqCod, h.descripcion || (h.valorDetectado ? `${h.campoEtiqueta ? h.campoEtiqueta + ' — ' : ''}respuesta: ${h.valorDetectado}` : '')].filter(Boolean).join(' · '),
       foto: h.foto || null,
       estado: 'abierto',
       reportadoPor: envio.llenadoPor || ''
