@@ -188,8 +188,10 @@ document.addEventListener('keydown', e => {
 // sigue siendo la autoridad.
 async function skfApplyRoleGating() {
   if (typeof skfRol !== 'function') return;
-  let rol = null;
-  try { rol = await skfRol(); } catch {}
+  let rol = null, yo = null;
+  try { rol = await skfRol(); yo = typeof skfYo === 'function' ? await skfYo() : null; } catch {}
+  // Prueba por QR terminada: la misma solo lectura (su propia barra ya lo explica).
+  if (yo && yo.pruebaVencida) { document.documentElement.classList.add('skf-lector'); return; }
   if (rol !== 'lector') return;
   document.documentElement.classList.add('skf-lector');
   if (document.getElementById('skfReadonlyBar')) return;
@@ -267,7 +269,10 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') skfSheetCerr
 // catálogo con ?preset=…, que abre el formulario propio si ya existe (no crea copias).
 function skfRegistrar() {
   if (document.documentElement.classList.contains('skf-lector')) {
-    skfSheet('Solo lectura', '<p class="skf-sheet-nota">Tu rol es de solo lectura: puedes ver todo, pero no registrar. Pídele a un administrador que cambie tu permiso.</p>');
+    const fin = document.querySelector('.skf-prueba-bar.fin');
+    skfSheet(fin ? 'Tu prueba terminó' : 'Solo lectura', fin
+      ? '<p class="skf-sheet-nota">Puedes ver todo lo que registraste, pero ya no registrar. Escríbenos para seguir usando SEKaform.</p>' + (fin.querySelector('a') ? fin.querySelector('a').outerHTML.replace('<a ', '<a class="skf-opt" style="justify-content:center" ') : '')
+      : '<p class="skf-sheet-nota">Tu rol es de solo lectura: puedes ver todo, pero no registrar. Pídele a un administrador que cambie tu permiso.</p>');
     return;
   }
   try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
@@ -363,6 +368,21 @@ function skfRenderSidebar() {
       '<div class="skf-demo-bar" role="status"><span>🧪 <b>Datos de ejemplo</b> — nada de esto es real y no se guarda.</span>' +
       '<button type="button" onclick="skfDemoSalir()">Salir del ejemplo</button></div>');
   }
+
+  // Cuenta de prueba por QR (migración 016): cuántos días quedan; al terminar, solo lectura.
+  if (typeof skfYo === 'function') skfYo().then(function (yo) {
+    if (!yo || !yo.pruebaHasta) return;
+    var dias = Math.max(0, Math.ceil((Date.parse(yo.pruebaHasta) - Date.now()) / 864e5));
+    var wa = yo.contactoWhatsapp ? 'https://wa.me/' + yo.contactoWhatsapp + '?text=' +
+      encodeURIComponent('Hola, estoy probando SEKaform y quiero seguir usándolo.') : '';
+    var b = document.createElement('div');
+    b.className = 'skf-prueba-bar' + (yo.pruebaVencida ? ' fin' : ''); b.setAttribute('role', 'status');
+    b.innerHTML = (yo.pruebaVencida
+      ? '<span>⏳ <b>Tu prueba terminó.</b> Puedes ver todo, pero ya no registrar.</span>'
+      : '<span>🎁 <b>Prueba gratis</b> · ' + (dias <= 1 ? 'último día' : 'quedan ' + dias + ' días') + '</span>') +
+      (wa ? '<a href="' + wa + '" target="_blank" rel="noopener">' + (yo.pruebaVencida ? 'Seguir con SEKaform' : 'Hablar con nosotros') + '</a>' : '');
+    document.body.insertAdjacentElement('afterbegin', b);
+  }).catch(function () {});
 
   // Barra de «siguiente paso»: hasta que la cuenta tenga su primer envío (el momento en que la app
   // ya le sirvió), una franja fija en TODAS las páginas lleva directo a ese paso. Así quien entra

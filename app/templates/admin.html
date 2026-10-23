@@ -66,6 +66,7 @@
     <button class="adm-tab" data-p="usuarios">Usuarios</button>
     <button class="adm-tab" data-p="invitaciones">Invitaciones</button>
     <button class="adm-tab" data-p="formularios">Acceso a formularios</button>
+    <button class="adm-tab" data-p="pruebas">Pruebas por QR</button>
     <button class="adm-tab" data-p="uso">Uso</button>
     <button class="adm-tab" data-p="auditoria">Auditoría</button>
   </div>
@@ -146,6 +147,30 @@
   </div>
 
   <!-- ── Auditoría ── -->
+  <!-- ── Pruebas gratis por QR (migración 016) ── -->
+  <div class="adm-panel" id="p-pruebas">
+    <div class="k-alert k-alert-warn">
+      Quien escanea el QR crea su cuenta de prueba sin autorización previa: entra como asesor, con una empresa de
+      demostración ya llena y lo avanzado oculto. Al terminar los días queda en solo lectura. Pausa la campaña si el QR circula de más.
+    </div>
+    <h2 class="adm-sec-t">Nueva campaña</h2>
+    <div class="adm-form-row">
+      <div class="k-field"><label>Nombre (lo ve quien escanea)</label><input id="cpNombre" placeholder="Congreso SST Bogotá 2026"></div>
+      <div class="k-field"><label>Días de prueba</label><input id="cpDias" type="number" value="30" min="1" max="365"></div>
+      <div class="k-field"><label>Máximo de cuentas</label><input id="cpMax" type="number" value="50" min="1" max="10000"></div>
+      <button class="k-btn k-btn-primary" onclick="crearCampana()">Crear</button>
+    </div>
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Campaña</th><th>Enlace</th><th>Cuentas</th><th>Días</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="tCampanas"></tbody>
+    </table></div>
+    <h2 class="adm-sec-t" style="margin-top:26px">Quién se registró</h2>
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Persona</th><th>Contacto</th><th>Se dedica a</th><th>Campaña</th><th>Registro</th><th>Prueba hasta</th><th>Último acceso</th></tr></thead>
+      <tbody id="tRegistros"></tbody>
+    </table></div>
+  </div>
+
   <!-- ── Uso: qué se abre de verdad (recorte del 50 %, paso 1) ── -->
   <div class="adm-panel" id="p-uso">
     <div class="k-alert k-alert-warn">
@@ -173,6 +198,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/qrcode.js"></script>
+<script src="/etiquetas.js"></script>
 <script>
 let DATOS = { organizaciones: [], usuarios: [], invitacionesPendientes: [] };
 
@@ -194,6 +221,7 @@ document.querySelectorAll('.adm-tab').forEach(b => b.onclick = () => {
   document.getElementById('p-' + b.dataset.p).classList.add('on');
   if (b.dataset.p === 'auditoria') cargarAuditoria();
   if (b.dataset.p === 'uso') cargarUso();
+  if (b.dataset.p === 'pruebas') cargarPruebas();
   if (b.dataset.p === 'formularios') cargarFormularios();
 });
 
@@ -315,6 +343,69 @@ function pintarFormularios(formularios) {
             : '<span style="color:var(--text-dim);font-size:13px">Sin acceso concedido</span>'}</td>
       <td><button class="k-btn k-btn-primary k-btn-sm" onclick="concederSeleccion('${f.id}')">Conceder</button></td>
     </tr>`).join('');
+}
+
+// ── Pruebas por QR ──
+let CAMPANAS = [];
+async function cargarPruebas() {
+  const r = await (await fetch('/admin/api/pruebas', { credentials: 'same-origin' })).json();
+  const tc = document.getElementById('tCampanas'), tr = document.getElementById('tRegistros');
+  if (!r.disponible) { tc.innerHTML = '<tr><td colspan="6" class="adm-empty">Falta la migración 016 para las pruebas por QR.</td></tr>'; tr.innerHTML = ''; return; }
+  CAMPANAS = r.campanas;
+  tc.innerHTML = r.campanas.length ? r.campanas.map((c, i) => `
+    <tr>
+      <td><b>${esc(c.nombre)}</b><br><span style="font-size:12px;color:var(--text-dim)">Creada ${fecha(c.creado_en)}</span></td>
+      <td><code style="font-size:12px">${esc(c.url)}</code></td>
+      <td>${c.usos} / ${c.max_usos}</td><td>${c.dias}</td>
+      <td>${c.activa ? '<span class="k-badge k-badge-teal">Activa</span>' : '<span class="k-badge">Pausada</span>'}</td>
+      <td style="white-space:nowrap"><button class="k-btn k-btn-primary k-btn-sm" onclick="tarjetaQR(${i})">QR para imprimir</button>
+        <button class="k-btn k-btn-sm" onclick="navigator.clipboard.writeText('${esc(c.url)}').then(()=>aviso('Enlace copiado'))">Copiar enlace</button>
+        <button class="k-btn k-btn-sm" onclick="estadoCampana('${c.id}', ${!c.activa})">${c.activa ? 'Pausar' : 'Activar'}</button></td>
+    </tr>`).join('') : '<tr><td colspan="6" class="adm-empty">Aún no hay campañas: crea la primera arriba.</td></tr>';
+  tr.innerHTML = r.registros.length ? r.registros.map(g => `
+    <tr>
+      <td><b>${esc(g.nombre)}</b><br><span style="font-size:12px">${esc(g.email)}</span></td>
+      <td>${g.celular ? `<a href="https://wa.me/${esc(String(g.celular).replace(/\D/g, ''))}" target="_blank" rel="noopener">${esc(g.celular)}</a>` : '—'}</td>
+      <td>${esc(g.profesion) || '—'}</td><td>${esc(g.campana) || '—'}</td>
+      <td>${fecha(g.registrado)}</td>
+      <td>${new Date(g.prueba_hasta) < new Date() ? '<span class="k-badge">Terminó</span> ' : ''}${fecha(g.prueba_hasta)}</td>
+      <td>${fechaHora(g.ultimo_acceso)}</td>
+    </tr>`).join('') : '<tr><td colspan="7" class="adm-empty">Nadie se ha registrado todavía.</td></tr>';
+}
+async function crearCampana() {
+  try {
+    await skfPost('/admin/api/pruebas', { nombre: document.getElementById('cpNombre').value, dias: document.getElementById('cpDias').value, max_usos: document.getElementById('cpMax').value });
+    document.getElementById('cpNombre').value = ''; await cargarPruebas(); aviso('Campaña creada: ya puedes imprimir su QR.');
+  } catch (e) { aviso(e.message, 'error'); }
+}
+async function estadoCampana(id, activa) {
+  try { await skfPost('/admin/api/pruebas/' + id + '/estado', { activa }); await cargarPruebas(); }
+  catch (e) { aviso(e.message, 'error'); }
+}
+// Tarjeta para imprimir o mandar por WhatsApp: el QR se dibuja aquí (qrcode.js), nada sale a terceros.
+function tarjetaQR(i) {
+  const c = CAMPANAS[i];
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR · ${esc(c.nombre)}</title><style>
+body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#0f172a}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#111827;color:#fff}
+.bar button{min-height:44px;padding:0 18px;border:0;border-radius:10px;background:#2563eb;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.t{max-width:120mm;margin:10mm auto;background:#fff;border-radius:6mm;padding:10mm;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.k{font-size:11pt;font-weight:800;color:#2563eb;letter-spacing:.5px;text-transform:uppercase}
+h1{font-size:22pt;margin:3mm 0 2mm;line-height:1.15}.s{font-size:11pt;color:#334155;margin:0 0 6mm;line-height:1.4}
+.qr{width:70mm;height:70mm;margin:0 auto}.qr svg{width:100%;height:100%}
+.u{font-size:10pt;color:#475569;margin-top:4mm;word-break:break-all}.e{font-size:9pt;color:#64748b;margin-top:2mm}
+@media print{.bar{display:none}body{background:#fff}.t{box-shadow:none;margin:0 auto}}</style></head><body>
+<div class="bar"><span>Tarjeta para imprimir o compartir</span><button onclick="print()">🖨 Imprimir</button></div>
+<div class="t"><div class="k">SEKaform · Kanan Sentinel</div>
+<h1>Prueba gratis ${c.dias} días</h1>
+<p class="s">Para profesionales de seguridad y salud en el trabajo: la evidencia de cumplimiento de tus empresas, desde el celular.</p>
+<div class="qr">${skfQrSvg(c.url)}</div>
+<div class="u">📷 Escanea con la cámara o entra a<br><b>${esc(c.url)}</b></div>
+<div class="e">${esc(c.nombre)}</div></div></body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { aviso('El navegador bloqueó la ventana: permite ventanas emergentes para este sitio.', 'error'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 // Lo que se ocultó en el paso 1 del recorte: se marca para leer la tabla de un vistazo.

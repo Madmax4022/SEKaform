@@ -18,5 +18,6 @@ FROM (VALUES
   ('012_equipos_baja',       to_regclass('public.equipos_baja') IS NOT NULL,                             'dar de baja equipos retirados'),
   ('013_portal_fotos',       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'portales' AND column_name = 'mostrar_fotos'), 'antes y después en el portal del cliente'),
   ('014_push',               to_regclass('public.push_suscripciones') IS NOT NULL,                       'avisos push al celular'),
-  ('015_uso',                to_regclass('public.uso_diario') IS NOT NULL,                               'medir qué se usa de la app')
+  ('015_uso',                to_regclass('public.uso_diario') IS NOT NULL,                               'medir qué se usa de la app'),
+  ('016_pruebas',            to_regclass('public.campanas_prueba') IS NOT NULL,                          'pruebas gratis por QR')
 ) AS m(migracion, ok, que_trae);

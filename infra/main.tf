@@ -368,6 +368,10 @@ resource "google_cloud_run_v2_service" "app" {
         value = var.url_publica
       }
       env {
+        name  = "SKF_CONTACTO_WHATSAPP"
+        value = var.contacto_whatsapp
+      }
+      env {
         name  = "VAPID_PUBLIC_KEY"
         value = var.habilitar_push ? var.vapid_publica : ""
       }

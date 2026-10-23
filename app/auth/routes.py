@@ -246,7 +246,10 @@ def yo():
     """Identidad y permisos del usuario actual — lo consume la PWA al arrancar."""
     if not current_user.is_authenticated:
         return jsonify({"autenticado": False}), 200
-    return jsonify({"autenticado": True, "usuario": current_user.to_dict()})
+    u = current_user.to_dict()
+    if u.get("pruebaHasta") and Config.CONTACTO_WHATSAPP:
+        u["contactoWhatsapp"] = Config.CONTACTO_WHATSAPP
+    return jsonify({"autenticado": True, "usuario": u})
 
 
 def _enviar_correo_recuperacion(email: str, enlace: str) -> None:

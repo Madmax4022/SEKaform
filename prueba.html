@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>Prueba SEKaform gratis</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { padding: 0 !important; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 26px 16px 44px; }
+    .marca { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--mut); font-size: .86rem; }
+    .marca img { width: 34px; height: 34px; border-radius: 10px; }
+    h1 { font-size: 1.6rem; font-weight: 900; letter-spacing: -.4px; line-height: 1.2; margin: 18px 0 8px; }
+    .sub { color: var(--mut); font-size: .95rem; line-height: 1.5; margin: 0 0 18px; }
+    .puntos { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; }
+    .puntos li { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--bor); border-radius: 14px; padding: 12px 14px; font-size: .9rem; line-height: 1.4; }
+    .puntos li span { font-size: 1.4rem; line-height: 1; }
+    .demo { font-size: .86rem; color: var(--mut); margin: 0 0 20px; line-height: 1.5; }
+    form { background: var(--card); border: 1px solid var(--bor); border-radius: 18px; padding: 18px 16px; display: grid; gap: 12px; }
+    label { font-size: .82rem; font-weight: 700; color: var(--mut); display: grid; gap: 6px; }
+    input, select { width: 100%; box-sizing: border-box; min-width: 0; min-height: 48px; border-radius: 12px; border: 1px solid var(--bor); background: var(--inp); color: var(--txt); font: inherit; font-size: 1rem; padding: 0 12px; }
+    .acepto { display: flex; gap: 10px; align-items: flex-start; font-weight: 500; font-size: .8rem; line-height: 1.45; }
+    .acepto input { min-height: 0; width: 22px; height: 22px; flex: none; margin-top: 2px; }
+    button[type=submit] { min-height: 52px; border: 0; border-radius: 14px; background: var(--pri); color: #fff; font: inherit; font-weight: 800; font-size: 1rem; cursor: pointer; }
+    button[disabled] { opacity: .6; }
+    .err { color: var(--err-txt); font-size: .86rem; margin: 0; }
+    .pie { text-align: center; color: var(--mut); font-size: .84rem; margin-top: 18px; }
+    .pie a { color: var(--pri-txt); }
+    .cerrada { text-align: center; padding: 50px 10px; }
+  </style>
+</head>
+<body>
+<main class="wrap" id="app" aria-live="polite"><p class="sub">Cargando la invitación…</p></main>
+<script>
+// Prueba gratis por QR (migración 016): el código de la campaña reemplaza la autorización
+// del super administrador. Al crear la cuenta se entra directo y se arma la demostración.
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const codigo = new URLSearchParams(location.search).get('c') || '';
+const app = document.getElementById('app');
+const cerrada = (t, d) => { app.innerHTML = `<div class="cerrada"><div style="font-size:2.4rem">🔒</div><h1>${esc(t)}</h1><p class="sub">${esc(d)}</p><p class="pie"><a href="/login">Iniciar sesión</a></p></div>`; };
+
+async function cargar() {
+  let info;
+  try {
+    const r = await fetch('/api/publico/prueba/' + encodeURIComponent(codigo), { credentials: 'same-origin' });
+    info = await r.json().catch(() => ({}));
+    if (!r.ok) return cerrada('Invitación no válida', info.error || 'Pide un nuevo código a quien te lo compartió.');
+  } catch (e) { return cerrada('Sin conexión', 'Vuelve a abrir el enlace cuando tengas señal.'); }
+  if (!info.disponible) return cerrada('Esta invitación ya se usó o venció', 'Pide una nueva a quien te la compartió.');
+  app.innerHTML = `
+    <div class="marca"><img src="icons/icon-192.png" alt="">SEKaform · Kanan Sentinel</div>
+    <h1>Prueba SEKaform gratis por ${info.dias} días</h1>
+    <p class="sub">Para profesionales de seguridad y salud en el trabajo: la evidencia de cumplimiento de tus empresas, desde el celular.</p>
+    <ul class="puntos">
+      <li><span>📋</span><div><b>Inspecciones con el pulgar</b><br>Formularios listos según la norma de tu país, aun sin señal.</div></li>
+      <li><span>📸</span><div><b>Hallazgos con antes y después</b><br>Cada incumplimiento con responsable, fecha y la foto de cómo quedó.</div></li>
+      <li><span>🔗</span><div><b>Un portal para tu cliente</b><br>Ve su cumplimiento siempre al día, sin cuenta. Tu trabajo, a la vista.</div></li>
+    </ul>
+    <p class="demo">Al entrar tendrás una empresa de demostración ya llena para probarlo todo, y podrás crear las empresas de tus clientes.</p>
+    <form id="f" novalidate>
+      <label>Nombre y apellido<input id="nombre" autocomplete="name" required></label>
+      <label>Correo<input id="email" type="email" autocomplete="email" inputmode="email" required></label>
+      <label>Celular (opcional)<input id="celular" type="tel" autocomplete="tel" inputmode="tel"></label>
+      <label>¿A qué te dedicas?
+        <select id="profesion">
+          <option>Profesional SST independiente</option><option>Asesor o consultor SST</option>
+          <option>Responsable SST en una empresa</option><option>Gerente o dueño de empresa</option><option>Otro</option>
+        </select></label>
+      <label>Contraseña<input id="password" type="password" autocomplete="new-password" minlength="10" required>
+        <small style="font-weight:500">Al menos 10 caracteres, con letras, números y algún símbolo.</small></label>
+      <label class="acepto"><input type="checkbox" id="acepto">
+        <span>Autorizo a Kanan Sentinel a tratar mis datos para darme acceso a la prueba y contactarme sobre SEKaform (Ley 1581 de 2012). Puedo pedir que los borren cuando quiera.</span></label>
+      <p class="err" id="err" hidden></p>
+      <button type="submit" id="ok">Crear mi cuenta de prueba</button>
+    </form>
+    <p class="pie">¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></p>`;
+  document.getElementById('f').addEventListener('submit', registrar);
+}
+
+async function registrar(ev) {
+  ev.preventDefault();
+  const $ = id => document.getElementById(id), err = $('err'), ok = $('ok');
+  const datos = { codigo, nombre: $('nombre').value.trim(), email: $('email').value.trim(), celular: $('celular').value.trim(),
+                  profesion: $('profesion').value, password: $('password').value, acepto: $('acepto').checked };
+  const mal = t => { err.textContent = t; err.hidden = false; };
+  if (datos.nombre.length < 2) return mal('Escribe tu nombre.');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(datos.email)) return mal('Revisa tu correo.');
+  if (datos.password.length < 10) return mal('La contraseña debe tener al menos 10 caracteres.');
+  if (!datos.acepto) return mal('Necesitamos tu autorización para tratar tus datos.');
+  err.hidden = true; ok.disabled = true; ok.textContent = 'Creando tu cuenta…';
+  try {
+    const r = await fetch('/api/publico/prueba', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'No se pudo crear la cuenta.');
+    ok.textContent = '✓ Listo. Preparando tu demostración…';
+    location.href = '/' + (d.destino || 'index.html');
+  } catch (e) { mal(e.message); ok.disabled = false; ok.textContent = 'Crear mi cuenta de prueba'; }
+}
+cargar();
+</script>
+</body>
+</html>

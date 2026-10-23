@@ -393,6 +393,64 @@ def conceder_acceso():
 
 # ── Bitácora y modo soporte ────────────────────────────────────────────────
 
+# ── Pruebas gratis por QR (migración 016) ───────────────────────────────────
+def _url_prueba(codigo: str) -> str:
+    from ..config import Config
+    return f"{Config.URL_PUBLICA or request.host_url.rstrip('/')}/prueba/{codigo}"
+
+
+@bp.route("/api/pruebas")
+@requiere_super_admin
+def pruebas():
+    try:
+        with _super() as cur:
+            cur.execute("SELECT id, codigo, nombre, dias, max_usos, usos, activa, expira_en, creado_en "
+                        "FROM campanas_prueba ORDER BY creado_en DESC")
+            campanas = cur.fetchall()
+            cur.execute("SELECT * FROM skf_pruebas_registros()")
+            registros = cur.fetchall()
+    except Exception as e:
+        if "campanas_prueba" in str(e) or "skf_pruebas_registros" in str(e):
+            return jsonify({"disponible": False, "campanas": [], "registros": []})
+        raise
+    for c in campanas:
+        c["url"] = _url_prueba(c["codigo"])
+    return jsonify({"disponible": True, "campanas": campanas, "registros": registros})
+
+
+@bp.route("/api/pruebas", methods=["POST"])
+@requiere_super_admin
+def crear_campana():
+    import secrets
+    d = request.get_json(silent=True) or {}
+    nombre = str(d.get("nombre") or "").strip()
+    try:
+        dias, max_usos = int(d.get("dias") or 30), int(d.get("max_usos") or 50)
+    except (TypeError, ValueError):
+        return _json_error("Días y máximo de cuentas deben ser números.")
+    if not (2 <= len(nombre) <= 80) or not (1 <= dias <= 365) or not (1 <= max_usos <= 10000):
+        return _json_error("Revisa el nombre (2 a 80 letras), los días (1 a 365) y el máximo de cuentas.")
+    codigo = secrets.token_urlsafe(9)   # 12 caracteres: imposible de adivinar, corto para el QR
+    with _super() as cur:
+        cur.execute("INSERT INTO campanas_prueba (codigo, nombre, dias, max_usos, creado_por) "
+                    "VALUES (%s, %s, %s, %s, %s) RETURNING id", (codigo, nombre, dias, max_usos, current_user.id))
+        cid = cur.fetchone()["id"]
+    auditar("campana_prueba_creada", entidad="campanas_prueba", entidad_id=str(cid), detalle={"nombre": nombre, "dias": dias, "max_usos": max_usos})
+    return jsonify({"ok": True, "id": cid, "codigo": codigo, "url": _url_prueba(codigo)}), 201
+
+
+@bp.route("/api/pruebas/<uuid:cid>/estado", methods=["POST"])
+@requiere_super_admin
+def estado_campana(cid: uuid.UUID):
+    activa = bool((request.get_json(silent=True) or {}).get("activa"))
+    with _super() as cur:
+        cur.execute("UPDATE campanas_prueba SET activa = %s WHERE id = %s RETURNING id", (activa, str(cid)))
+        if not cur.fetchone():
+            return _json_error("No encontrada.", 404)
+    auditar("campana_prueba_" + ("activada" if activa else "pausada"), entidad="campanas_prueba", entidad_id=str(cid))
+    return jsonify({"ok": True})
+
+
 @bp.route("/api/uso")
 @requiere_super_admin
 def uso():

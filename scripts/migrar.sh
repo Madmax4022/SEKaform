@@ -65,6 +65,7 @@ correr migrations/012_equipos_baja.sql
 correr migrations/013_portal_fotos.sql
 correr migrations/014_push.sql
 correr migrations/015_uso.sql
+correr migrations/016_pruebas.sql
 
 echo "✓ Migraciones aplicadas."
 echo "→ Estado:"
