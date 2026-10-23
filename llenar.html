@@ -1055,6 +1055,10 @@ function openTemplate(id) {
   if (!t) { toast('Plantilla no encontrada','er'); return; }
   activeTmpl = t;
   submission = {}; _fichaPuesta = {};
+  // Evaluación de contratista: el contratista hace de Lugar (y puede llegar elegido desde el Panel).
+  _contratistaSel = null;
+  const _ctrP = new URLSearchParams(location.search).get('contratista');
+  if (_ctrP && getUnidades().some(u => u.id === _ctrP && u.tipo === 'contratista')) _contratistaSel = _ctrP;
   signatures = {};
   draftId = null;
   hallazgos = [];
@@ -1085,6 +1089,7 @@ function openTemplate(id) {
   const _sel = document.getElementById('fillUnidad');
   if (_u && _sel && [..._sel.options].some(o => o.value === _u)) _sel.value = _u;
 
+  if (t.campos.some(c => c.tipo === 'contratista')) document.getElementById('fg_unidad').classList.add('hidden');
   renderFields(t.campos);
   // Desde un aviso («EXT-004 lleva 35 días sin inspección») el equipo llega ya elegido, con su ficha.
   const _eqP = new URLSearchParams(location.search).get('equipo');
@@ -1320,6 +1325,11 @@ function buildFieldEl(c) {
       break;
     }
 
+    case 'contratista':
+      inner = document.createElement('div');
+      _contratistaRender(c, inner);
+      break;
+
     case 'equipo':
       inner = document.createElement('div');
       inner.id = `eq_${c.id}`;
@@ -1349,6 +1359,49 @@ function buildFieldEl(c) {
     }
   }
   return fg;
+}
+
+// ── Contratista evaluado ────────────────────────────────────────────
+// Los contratistas son Lugares de tipo «contratista»: el registro queda en ese Lugar, así el
+// Panel arma su historial, su puntaje y su informe. Se puede agregar uno nuevo aquí mismo.
+let _contratistaSel = null;
+function _contratistas() {
+  return getUnidades().filter(u => (u.tipo || 'sede') === 'contratista').sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+}
+function _contratistaRender(c, box) {
+  if (isPublicFill) {   // el visitante sin cuenta no ve la lista de la empresa: escribe el nombre
+    box.innerHTML = `<input type="text" placeholder="Nombre de la empresa contratista" autocomplete="organization">`;
+    const i = box.querySelector('input'); i.value = submission[c.id] || '';
+    i.addEventListener('input', () => { submission[c.id] = i.value; clearErr(c.id); updateProgress(); });
+    return;
+  }
+  const l = _contratistas();
+  if (!_contratistaSel && submission[c.id]) { const u = l.find(x => x.nombre === submission[c.id]); if (u) _contratistaSel = u.id; }
+  box.innerHTML = `<select id="ctr_${c.id}" aria-label="${_escU(c.etiqueta)}"><option value="">${l.length ? 'Elige el contratista…' : 'Aún no hay contratistas'}</option>
+    ${l.map(u => `<option value="${_escU(u.id)}">${_escU(u.nombre)}</option>`).join('')}<option value="__nuevo">＋ Agregar contratista…</option></select>`;
+  const sel = box.querySelector('select');
+  sel.value = _contratistaSel || '';
+  sel.addEventListener('change', () => _contratistaElegir(c, sel));
+}
+function _contratistaElegir(c, sel) {
+  if (sel.value === '__nuevo') {
+    const nombre = (prompt('Nombre de la empresa contratista:') || '').trim().replace(/\s+/g, ' ');
+    if (nombre.length < 2) { sel.value = _contratistaSel || ''; return; }
+    const ya = _contratistas().find(u => u.nombre.toLowerCase() === nombre.toLowerCase());
+    const u = ya || { id: skfUUID(), nombre, tipo: 'contratista', creadoEn: new Date().toISOString() };
+    if (!ya) {
+      const l = getUnidades(); l.push(u); localStorage.setItem('skf_unidades', JSON.stringify(l));
+      skfSyncOrQueue('unidad', u);
+      const o = document.createElement('option'); o.value = u.id; o.textContent = u.nombre;
+      sel.insertBefore(o, sel.lastElementChild);
+    }
+    sel.value = u.id;
+  }
+  _contratistaSel = sel.value || null;
+  const u = getUnidades().find(x => x.id === _contratistaSel);
+  submission[c.id] = u ? u.nombre : '';
+  clearErr(c.id); updateProgress();
+  if (u) pasoRespondido(c);
 }
 
 // ── Equipo (EXT-001, GAB-002…) ──────────────────────────────────────
@@ -1753,7 +1806,9 @@ function submitForm() {
       plantillaCodigo: activeTmpl.codigo || '',
       estado: 'enviado',
       datos: datosEnvio,
-      unidadId: isPublicFill ? null : (document.getElementById('fillUnidad') ? document.getElementById('fillUnidad').value || null : null),
+      unidadId: isPublicFill ? null
+        : activeTmpl.campos.some(c => c.tipo === 'contratista') ? _contratistaSel
+        : (document.getElementById('fillUnidad') ? document.getElementById('fillUnidad').value || null : null),
       llenadoPor: isPublicFill ? document.getElementById('fillerName').value.trim() : (_yo ? (_yo.nombre || _yo.email || '') : ''),
       llenadoCorreo: isPublicFill ? null : (_yo && _yo.email) || null,
       creadoEn: new Date().toISOString(),

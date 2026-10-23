@@ -48,7 +48,7 @@ function skfLocalizeTemplate(tmpl, paisCode) {
   if (!tmpl) return tmpl;
   const out = Object.assign({}, tmpl);
   const L = tmpl.localizacion && (tmpl.localizacion[paisCode] || tmpl.localizacion.co);
-  if (L && L.norma) out.norma = L.norma;
+  if (L && L.norma) out.norma = (tmpl.normaLocal && tmpl.normaLocal[paisCode]) || L.norma;
   out.nombre = skfLocalizeText(tmpl.nombre, paisCode);
   if (Array.isArray(tmpl.campos_clave)) {
     const LOC = SST_LOCAL[paisCode] || SST_LOCAL.co;
@@ -101,6 +101,7 @@ const SST_PRINCIPIO_MAP = {
   examen_medico_sst:               ['salud','proteccion'],
   matriz_peligros:                 ['prevencion','gestion'],
   autoevaluacion_res0312:          ['gestion','responsabilidad'],
+  evaluacion_contratista:          ['responsabilidad','cooperacion'],
 };
 
 // ── Lógica compartida (Centro de SST · Mapa de cumplimiento · Asistente) ─────
@@ -197,7 +198,7 @@ const AREA_KITS = [
   { id:'inmuebles',    ico:'🏢', nombre:'Edificio e instalaciones', desc:'Extintores, salidas de emergencia y alarma',        vertical:'inmuebles',
     forms:['inspeccion_extintores','inspeccion_salidas_emergencia','inspeccion_alarma_incendio'] },
   { id:'construccion', ico:'🏗️', nombre:'Obra o construcción',      desc:'Ingreso a obra, trabajo en alturas e inspección',   vertical:'construccion',
-    forms:['control_acceso_obra','permiso_altura_obra','inspeccion_seguridad_obra'] },
+    forms:['control_acceso_obra','permiso_altura_obra','inspeccion_seguridad_obra','evaluacion_contratista'] },
   { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia, rondas y turnos', desc:'Entrega de turno, ronda de vigilancia y salidas',   vertical:'inmuebles',
     forms:['entrega_turno','ronda_vigilancia','inspeccion_salidas_emergencia'],
     extra:{ label:'Turnos', href:'turnos.html' } },
@@ -241,7 +242,7 @@ async function skfAgregarKit(kit, paisCode, correo){
         id: 'c' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
         tipo: f.tipo, etiqueta: f.etiqueta, placeholder: '', requerido: f.tipo !== 'separador' && f.requerido !== false,
         opciones: conOpciones(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
-        prefijo: f.prefijo, equipoDato: f.equipoDato || undefined, _quality: 'ok' }; }),
+        prefijo: f.prefijo, equipoDato: f.equipoDato || undefined, severidad: f.severidad || undefined, _quality: 'ok' }; }),
     });
   });
   try { localStorage.setItem('skf_plantillas', JSON.stringify(lista.concat(nuevos))); } catch (e) { return 0; }
@@ -471,6 +472,27 @@ const FORM_LIBRARY = [
     {etiqueta:'Estándar evaluado',tipo:'texto'},{etiqueta:'¿Cumple?',tipo:'si_no'},
     {etiqueta:'Calificación (%)',tipo:'numero'},{etiqueta:'Plan de mejora / acción',tipo:'textarea',mostrarSi:{campo:'¿Cumple?',valores:['No']}},
     {etiqueta:'Responsable',tipo:'texto'},{etiqueta:'Firma del responsable SST',tipo:'firma'},
+  ]},
+
+  // Decreto 1072/2015 (art. 2.2.4.6.28): el contratante verifica que sus contratistas cumplan
+  // en seguridad y salud en el trabajo. Cada «No» abre un hallazgo con su acción correctiva.
+  {id:'evaluacion_contratista',vertical:'sst',nucleo:true,freq:20,localizacion:SST_LOCAL,normaLocal:{co:'Decreto 1072/2015 art. 2.2.4.6.28'},nombre:'Evaluación SST de Contratista',
+   keywords:['contratista','evaluacion de contratistas','proveedor','subcontratista','seleccion de contratistas','verificacion sst','planilla de seguridad social'],
+   campos_clave:[
+    {etiqueta:'Fecha de evaluación',tipo:'fecha_auto'},{etiqueta:'Contratista evaluado',tipo:'contratista'},
+    {etiqueta:'Servicio u obra que presta',tipo:'texto'},{etiqueta:'Número de trabajadores en el sitio',tipo:'numero',requerido:false},
+    {etiqueta:'¿Sus trabajadores están afiliados a seguridad social y riesgos laborales (planilla del mes al día)?',tipo:'si_no',severidad:'critico'},
+    {etiqueta:'¿Tiene su sistema de gestión SST documentado (política, responsable, plan de trabajo)?',tipo:'si_no',severidad:'mayor'},
+    {etiqueta:'¿Identificó los peligros y controles de la labor que realiza aquí?',tipo:'si_no',severidad:'mayor'},
+    {etiqueta:'¿Sus trabajadores recibieron la inducción SST de nuestra empresa?',tipo:'si_no',severidad:'mayor'},
+    {etiqueta:'¿Entrega y exige el uso de los EPP necesarios?',tipo:'si_no',severidad:'mayor'},
+    {etiqueta:'¿Hace tareas de alto riesgo (alturas, espacios confinados, caliente, eléctrico)?',tipo:'radio',opciones:['Sí','No']},
+    {etiqueta:'¿Tienen certificado vigente y permiso de trabajo para esas tareas?',tipo:'si_no',severidad:'critico',mostrarSi:{campo:'¿Hace tareas de alto riesgo (alturas, espacios confinados, caliente, eléctrico)?',valores:['Sí']}},
+    {etiqueta:'¿Reporta e investiga sus incidentes y accidentes de trabajo?',tipo:'si_no',severidad:'mayor'},
+    {etiqueta:'¿Conoce nuestro plan de emergencias y puntos de encuentro?',tipo:'si_no',severidad:'menor'},
+    {etiqueta:'Observaciones y compromisos',tipo:'textarea',requerido:false},
+    {etiqueta:'Nombre de quien atiende por el contratista',tipo:'texto'},
+    {etiqueta:'Firma del contratista',tipo:'firma'},{etiqueta:'Firma de quien evalúa',tipo:'firma'},
   ]},
 
   {id:'reporte_condicion_acto_inseguro',vertical:'sst',nucleo:true,freq:2,localizacion:SST_LOCAL,nombre:'Reporte de Acto y Condición Insegura',

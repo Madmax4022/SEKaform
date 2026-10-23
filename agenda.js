@@ -18,6 +18,7 @@ var SKF_AGENDA_TIPOS = {
   encargo: { ico: '👤', nombre: 'Encargo' },
   turno:   { ico: '🕒', nombre: 'Turno' },
   equipo:  { ico: '🧯', nombre: 'Equipo' },
+  contratista: { ico: '🤝', nombre: 'Contratista' },
 };
 var SKF_FRECUENCIAS = { diaria: 'cada día', semanal: 'cada semana', quincenal: 'cada 15 días', mensual: 'cada mes',
   bimestral: 'cada 2 meses', trimestral: 'cada 3 meses', semestral: 'cada 6 meses', anual: 'cada año' };
@@ -119,6 +120,32 @@ function skfAgenda(d, ahora) {
         detalle: cods.slice(0, 4).join(', ') + (cods.length > 4 ? ' y ' + (cods.length - 4) + ' más' : ''),
         estado: g[0].estado, cuando: g[0].cuando, dias: g[0].dias, href: g[0].href });
     });
+  }
+
+  // Contratistas: evaluación SST vencida (más de 6 meses) o que vence en 15 días; los que nunca
+  // se evaluaron, como pendientes. Solo si hay un formulario de evaluación. 3 o más se juntan.
+  if (typeof skfContratistasEstado === 'function') {
+    var pEval = plantillas.find(function (pl) { return (pl.campos || []).some(function (c) { return c.tipo === 'contratista'; }); });
+    if (pEval) {
+      var porEstado = {};
+      skfContratistasEstado(envios, plantillas, unidades, ahora).forEach(function (k) {
+        if (k.estado === 'ok') return;
+        var dias = k.venceEn, href = llenar(pEval.id) + '&contratista=' + encodeURIComponent(k.id);
+        var it = { id: 'k:' + k.id, tipo: 'contratista', titulo: 'Evaluar a ' + k.nombre,
+          detalle: k.estado === 'sin' ? 'Nunca se ha evaluado en seguridad y salud en el trabajo'
+            : 'Última evaluación hace ' + k.diasDesde + ' días' + (k.pct !== null ? ' · ' + k.pct + ' %' : ''),
+          estado: k.estado === 'sin' ? 'pendiente' : _agEstado(dias), cuando: null, dias: k.estado === 'sin' ? null : dias, href: href };
+        (porEstado[it.estado] = porEstado[it.estado] || []).push(it);
+      });
+      Object.keys(porEstado).forEach(function (e) {
+        var g = porEstado[e];
+        if (g.length < 3) { items.push.apply(items, g); return; }
+        var nombres = g.map(function (x) { return x.titulo.replace(/^Evaluar a /, ''); });
+        items.push({ id: 'kg:' + e, tipo: 'contratista', titulo: g.length + ' contratistas por evaluar',
+          detalle: nombres.slice(0, 3).join(', ') + (nombres.length > 3 ? ' y ' + (nombres.length - 3) + ' más' : ''),
+          estado: e, cuando: null, dias: g[0].dias, href: 'dashboard.html#contratistas' });
+      });
+    }
   }
 
   var orden = { vencido: 0, hoy: 1, pronto: 2, pendiente: 3, despues: 4 };
