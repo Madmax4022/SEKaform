@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
   <script src="form-library.js"></script>
+  <script src="field-types.js"></script>
+  <script src="demo-sembrar.js"></script>
   <script id="skfSidebarPre">
     if (localStorage.getItem('skf_sidebar_collapsed') === 'true' ||
         (localStorage.getItem('skf_sidebar_collapsed') === null && window.matchMedia('(max-width:860px)').matches)) {
@@ -46,6 +48,9 @@
     .b-aqui { border: 1px solid var(--pri-txt); background: none; color: var(--pri-txt); }
     .aviso { padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px dashed var(--bor); color: var(--mut); font-size: .86rem; line-height: 1.45; margin-bottom: 10px; }
     .pais { display: flex; flex-wrap: wrap; gap: 8px; }
+      .btn-demo { display: flex; width: 100%; align-items: center; justify-content: center; min-height: 48px; margin: -12px 0 22px;
+      border-radius: 14px; border: 1px dashed var(--bor); background: transparent; color: var(--mut); font: inherit; font-weight: 700; cursor: pointer; }
+    .btn-demo[hidden] { display: none; }
   </style>
 </head>
 <body>
@@ -56,6 +61,7 @@
   <h1 class="pg-h">Mis clientes</h1>
   <p class="pg-sub">Todas las empresas que atiendes, con lo que necesita atención primero. Toca «Entrar» para trabajar en una.</p>
   <button type="button" class="btn-planear-pg" id="btnNueva" hidden>＋ Nueva empresa cliente</button>
+  <button type="button" class="btn-demo" id="btnDemo" hidden>🎬 Crear empresa de demostración</button>
   <div id="totales" class="totales" hidden></div>
   <div id="lista"><div class="aviso">Cargando tus empresas…</div></div>
 </div>
@@ -166,6 +172,34 @@ function nueva() {
 }
 $('btnNueva').onclick = nueva;
 
+// Empresa de demostración para vender (demo-sembrar.js): se crea aparte, llena, con su portal.
+function demo() {
+  skfSheet('Empresa de demostración', `
+    <p class="pw-nota">Crea <b>«Constructora Andina (demo)»</b>, separada de tus clientes, con todo lo del guion de demo: sede y bodega,
+      dos contratistas, cinco extintores con código (uno atrasado y uno con la recarga vencida), inspecciones, un hallazgo crítico abierto,
+      uno cerrado con fotos de antes y después, la rutina de hoy, un encargo y el portal del cliente con fotos.</p>
+    <p class="pw-nota">Las fotos de ejemplo son dibujos; en la demo tomas una foto real al reportar el hallazgo.</p>
+    <p class="pw-err" id="dmErr" hidden></p><p class="pw-nota" id="dmPaso" hidden></p>
+    <button type="button" class="pw-sig pw-fin" id="dmOk">Crear la demostración</button>`);
+  $('dmOk').onclick = async () => {
+    const b = $('dmOk'), pasoEl = $('dmPaso');
+    b.disabled = true; b.textContent = 'Creando… (menos de un minuto)'; $('dmErr').hidden = true;
+    const paso = t => { pasoEl.hidden = false; pasoEl.textContent = t; };
+    try {
+      paso('Creando la empresa…');
+      const r = await skfAsesorCrearEmpresa('Constructora Andina ' + SKF_DEMO_SUFIJO, 'CO');
+      await skfCambiarEmpresa(r.id);
+      const hecho = await skfSembrarDemo(paso);
+      paso('✓ Lista: ' + hecho.registros + ' registros' + (hecho.portal ? ' y el portal del cliente.' : '. (El portal necesita la migración 011.)'));
+      setTimeout(() => { location.href = 'index.html'; }, 1200);
+    } catch (e) {
+      $('dmErr').textContent = e.message; $('dmErr').hidden = false;
+      b.disabled = false; b.textContent = 'Crear la demostración';
+    }
+  };
+}
+$('btnDemo').onclick = demo;
+
 function toast(m, tipo) {
   document.querySelectorAll('.toast').forEach(x => x.remove());
   const d = document.createElement('div'); d.className = 'toast ' + (tipo || 'ok'); d.setAttribute('role', 'status');
@@ -175,6 +209,7 @@ function toast(m, tipo) {
 (async () => {
   try { yo = await skfYo(); } catch (e) {}
   $('btnNueva').hidden = !(yo && yo.esAsesor);
+  $('btnDemo').hidden = !(yo && yo.esAsesor);
   try { datos = await skfAsesorResumen(); } catch (e) { datos = null; $('lista').innerHTML = '<div class="aviso">Sin conexión: el resumen de tus clientes necesita señal.</div>'; return; }
   pintar();
 })();

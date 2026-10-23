@@ -219,6 +219,32 @@ function skfKitFaltantes(kit, paisCode){
   });
 }
 
+// Un formulario del catálogo convertido en plantilla del usuario (la misma forma que guarda
+// el Digitalizador), localizado al país. Las condiciones «mostrar si» pasan de nombre a id.
+function skfPlantillaDesdeCatalogo(id, paisCode, correo, codigo){
+  var base = FORM_LIBRARY.find(function(x){ return x.id === id; });
+  if (!base) return null;
+  var t = skfLocalizeTemplate(base, paisCode);
+  var ahora = new Date().toISOString();
+  var conOpciones = function(tipo){ return typeof fieldNeedsOptions === 'function' ? fieldNeedsOptions(tipo) : ['select','radio','checkbox_multi'].indexOf(tipo) !== -1; };
+  var campos = t.campos_clave.map(function(f, i){ return {
+    id: 'c' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
+    tipo: f.tipo, etiqueta: f.etiqueta, placeholder: '', requerido: f.tipo !== 'separador' && f.requerido !== false,
+    opciones: conOpciones(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
+    prefijo: f.prefijo, equipoDato: f.equipoDato || undefined, severidad: f.severidad || undefined, _quality: 'ok' }; });
+  t.campos_clave.forEach(function(f, i){
+    if (!f.mostrarSi) return;
+    var j = t.campos_clave.findIndex(function(x){ return x.etiqueta === f.mostrarSi.campo; });
+    if (j >= 0 && j < i) campos[i].mostrarSi = { campoId: campos[j].id, valores: f.mostrarSi.valores.slice() };
+  });
+  return {
+    id: skfUUID(), nombre: t.nombre, descripcion: '', codigo: codigo || '',
+    norma: t.norma || '', imagen: null, sourceUrl: null, version: '1.0', logo: null, favorito: false,
+    publica: true, shareToken: (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)),
+    correoNotificacion: correo || '', creadoEn: ahora, actualizadoEn: ahora, campos: campos,
+  };
+}
+
 // Crea en el repositorio del usuario los formularios que falten del kit, con la
 // misma estructura que guarda el Digitalizador. Devuelve cuántos agregó.
 async function skfAgregarKit(kit, paisCode, correo){
@@ -226,25 +252,8 @@ async function skfAgregarKit(kit, paisCode, correo){
   if (!faltan.length) return 0;
   var lista = _skfPlantillasLocal();
   var max = 0; lista.forEach(function(p){ var m = /^FORM-(\d+)$/.exec(p.codigo || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
-  var conOpciones = function(tipo){ return typeof fieldNeedsOptions === 'function' ? fieldNeedsOptions(tipo) : ['select','radio','checkbox_multi'].indexOf(tipo) !== -1; };
   var nuevos = [];
-  faltan.forEach(function(id){
-    var base = FORM_LIBRARY.find(function(x){ return x.id === id; });
-    var t = skfLocalizeTemplate(base, paisCode);
-    var ahora = new Date().toISOString();
-    max++;
-    nuevos.push({
-      id: skfUUID(), nombre: t.nombre, descripcion: '', codigo: 'FORM-' + String(max).padStart(4, '0'),
-      norma: t.norma || '', imagen: null, sourceUrl: null, version: '1.0', logo: null, favorito: false,
-      publica: true, shareToken: (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)),
-      correoNotificacion: correo || '', creadoEn: ahora, actualizadoEn: ahora,
-      campos: t.campos_clave.map(function(f, i){ return {
-        id: 'c' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
-        tipo: f.tipo, etiqueta: f.etiqueta, placeholder: '', requerido: f.tipo !== 'separador' && f.requerido !== false,
-        opciones: conOpciones(f.tipo) ? (f.opciones && f.opciones.length ? f.opciones : ['']) : undefined,
-        prefijo: f.prefijo, equipoDato: f.equipoDato || undefined, severidad: f.severidad || undefined, _quality: 'ok' }; }),
-    });
-  });
+  faltan.forEach(function(id){ max++; nuevos.push(skfPlantillaDesdeCatalogo(id, paisCode, correo, 'FORM-' + String(max).padStart(4, '0'))); });
   try { localStorage.setItem('skf_plantillas', JSON.stringify(lista.concat(nuevos))); } catch (e) { return 0; }
   for (var k = 0; k < nuevos.length; k++) { try { await skfSyncOrQueue('plantilla', nuevos[k]); } catch (e) {} }
   return nuevos.length;

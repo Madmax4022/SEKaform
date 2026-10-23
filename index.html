@@ -21,6 +21,7 @@
     .saludo .fecha { color: var(--mut); font-size: .84rem; font-weight: 700; }
     .en-empresa { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 8px; padding: 0 12px; border-radius: 999px;
       background: var(--card); border: 1px solid var(--bor); color: var(--txt); text-decoration: none; font-weight: 800; font-size: .84rem; }
+    .en-empresa[hidden] { display: none; }   /* su display:inline-flex le ganaba a [hidden]: salía una cápsula vacía */
     .saludo h1 { font-size: 1.7rem; font-weight: 900; letter-spacing: -.8px; line-height: 1.15; margin-top: 2px; }
 
     /* Anillo de cumplimiento: el estado de la empresa de un vistazo */
