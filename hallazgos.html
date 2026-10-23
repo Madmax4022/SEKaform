@@ -43,7 +43,6 @@
     .hz-campo { font-size: .78rem; color: var(--mut); margin-top: 2px; }
     .hz-desc { font-size: .87rem; margin-top: 8px; line-height: 1.5; }
     .hz-meta { font-size: .74rem; color: var(--mut); margin-top: 8px; }
-    .hz-estado-sel { background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 7px; padding: 6px 10px; font-size: .8rem; font-family: inherit; cursor: pointer; }
 
     .hz-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
     .hz-foto { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; border: 1px solid var(--bor); background: var(--inp); padding: 0; cursor: pointer; font: inherit; color: var(--mut); }
@@ -54,6 +53,14 @@
     .hz-portal { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; font-size: .84rem; cursor: pointer; min-height: 44px; }
     .hz-portal input { width: 22px; height: 22px; flex: none; margin-top: 1px; }
     .hz-portal small { display: block; color: var(--mut); font-size: .76rem; margin-top: 2px; }
+    .hz-estado { font-size: .74rem; font-weight: 800; border-radius: 999px; padding: 4px 10px; background: var(--bor); color: var(--txt); }
+    .hz-estado.en_proceso { background: rgba(110,168,254,.16); color: var(--pri-txt); }
+    .hz-estado.vencido { background: rgba(248,113,113,.16); color: #fca5a5; }
+    .hz-estado.cerrado { background: var(--ok-dim); color: var(--ok); }
+    .hz-resp { margin-top: 10px; font-size: .86rem; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .hz-link { background: none; border: 0; color: var(--pri-txt); font: inherit; font-weight: 700; cursor: pointer; padding: 6px 4px; min-height: 36px; }
+    .hz-asignar { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; margin-top: 10px; border: 1px dashed var(--bor);
+      border-radius: 12px; background: transparent; color: var(--txt); font: inherit; font-weight: 700; cursor: pointer; }
     .hz-cerrar-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-radius: 12px; background: var(--ok); color: #04241d; font: inherit; font-weight: 800; cursor: pointer; }
     .cz-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .cz-tomar { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 1px solid var(--pri); border-radius: 12px; background: var(--pri-dim); color: var(--txt); font-weight: 800; cursor: pointer; }
@@ -62,12 +69,6 @@
     .cz-ok { border: 0; background: var(--ok); color: #04241d; }
     .cz-sin { border: 1px solid var(--bor); background: transparent; color: var(--mut); }
     .cz-nota { font-size: .8rem; color: var(--mut); margin: 0 0 12px; line-height: 1.45; }
-    .hz-capa { margin-top: 14px; border-top: 1px solid var(--bor); padding-top: 12px; }
-    .hz-capa-existing { font-size: .85rem; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
-    .hz-capa-form { display: flex; gap: 8px; flex-wrap: wrap; }
-    .hz-capa-form input { background: var(--inp); border: 1px solid var(--bor); color: var(--txt); border-radius: 7px; padding: 8px 10px; font-size: .82rem; font-family: inherit; outline: none; }
-    .hz-capa-form input[type="text"] { flex: 1; min-width: 140px; }
-    .hz-capa-form input[type="email"] { flex: 1; min-width: 140px; }
 
     .btn-sm { padding: 7px 13px; font-size: .8rem; border-radius: 7px; }
 
@@ -125,6 +126,7 @@ function normalizeHallazgoFromCloud(h) {
     campoEtiqueta: h.campo_etiqueta||h.campoEtiqueta, origen: h.origen, severidad: h.severidad,
     descripcion: h.descripcion, foto: h.foto, estado: h.estado||'abierto',
     unidadId: h.unidad_id||h.unidadId||null, fotoOcultaPortal: !!(h.foto_oculta_portal||h.fotoOcultaPortal),
+    cerradoEn: h.cerrado_en||h.cerradoEn||null, cerradoPor: h.cerrado_por||h.cerradoPor||null,
     reportadoPor: h.reportado_por||h.reportadoPor, creadoEn: h.creado_en||h.creadoEn
   };
 }
@@ -172,7 +174,7 @@ let filtEstado = 'todos';
 let filtSev = 'todas';
 
 function renderFilters() {
-  const estados = [['todos','Todos'],['abierto','Abiertos'],['en_proceso','En atención'],['cerrado','Cerrados']];
+  const estados = [['todos','Todos'],['abierto','Abiertos'],['vencido','Vencidos'],['cerrado','Cerrados']];
   document.getElementById('filtEstado').innerHTML = estados.map(([v,l]) =>
     `<button class="filt-btn${filtEstado===v?' active':''}" onclick="setFiltEstado('${v}')">${l}</button>`).join('');
 
@@ -189,7 +191,10 @@ function render() {
   const acciones = getAcciones();
 
   let list = hallazgos;
-  if (filtEstado !== 'todos') list = list.filter(h => (h.estado||'abierto') === filtEstado);
+  if (filtEstado !== 'todos') list = list.filter(h => {
+    const k = estadoHz(h, acciones.find(a => a.hallazgoId === h.id)).k;
+    return filtEstado === 'abierto' ? k !== 'cerrado' : k === filtEstado;
+  });
   if (filtSev !== 'todas') list = list.filter(h => h.severidad === filtSev);
   list = [...list].sort((a,b) => new Date(b.creadoEn||0) - new Date(a.creadoEn||0));
 
@@ -211,94 +216,78 @@ function render() {
   el.innerHTML = list.map(h => {
     const ac = acciones.find(a => a.hallazgoId === h.id);
     const fecha = h.creadoEn ? new Date(h.creadoEn).toLocaleString('es-CO',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-    const capaHtml = ac ? `<div class="hz-capa-existing">
-        <span>👤 ${esc(ac.responsable||'Sin asignar')}</span>
-        ${ac.fechaLimite ? `<span>📅 Límite: ${esc(ac.fechaLimite)}</span>` : ''}
-        <select class="hz-estado-sel" aria-label="Estado de la acción correctiva" onchange="setAccionEstado('${esc(ac.id)}',this.value)">
-          <option value="pendiente" ${ac.estado==='pendiente'?'selected':''}>Pendiente</option>
-          <option value="completada" ${ac.estado==='completada'?'selected':''}>Completada</option>
-          <option value="vencida" ${ac.estado==='vencida'?'selected':''}>Vencida</option>
-        </select>
-      </div>` : `<div class="hz-capa-form">
-        <input type="text" id="resp_${esc(h.id)}" aria-label="Responsable de la acción" placeholder="Responsable">
-        <input type="email" id="correo_${esc(h.id)}" aria-label="Correo del responsable" placeholder="Correo (opcional)">
-        <input type="date" id="fecha_${esc(h.id)}" aria-label="Fecha límite" min="${new Date().toISOString().split('T')[0]}">
-        <button class="btn btn-sec btn-sm" onclick="asignarAccion('${esc(h.id)}')">Asignar acción correctiva (CAPA)</button>
-      </div>`;
-
+    const est = estadoHz(h, ac);
+    const cerrado = est.k === 'cerrado';
+    // Un hallazgo y su acción correctiva son, para quien usa la app, UNA cosa: quién lo
+    // corrige, para cuándo, y la prueba de que se corrigió. La «acción» queda por dentro.
+    const resp = ac && ac.responsable
+      ? `<div class="hz-resp">👤 <b>${esc(ac.responsable)}</b>${ac.fechaLimite ? ` · 📅 antes del ${esc(fechaCorta(ac.fechaLimite))}` : ''}
+          ${cerrado ? '' : `<button type="button" class="hz-link" onclick="asignar('${esc(h.id)}', this)">Cambiar</button>`}</div>`
+      : (cerrado ? '' : `<button type="button" class="hz-asignar" onclick="asignar('${esc(h.id)}', this)">👤 Asignar responsable y fecha</button>`);
     return `<div class="hz-card sev-${esc(h.severidad)}">
       <div class="hz-top">
         <span class="hz-badge sev-${esc(h.severidad)}">${sevLbl[h.severidad]||h.severidad}</span>
-        <select class="hz-estado-sel" aria-label="Estado del hallazgo" onchange="setHallazgoEstado('${esc(h.id)}',this.value)">
-          <option value="abierto" ${(h.estado||'abierto')==='abierto'?'selected':''}>Abierto</option>
-          <option value="en_proceso" ${h.estado==='en_proceso'?'selected':''}>En atención</option>
-          <option value="cerrado" ${h.estado==='cerrado'?'selected':''}>Cerrado</option>
-        </select>
+        <span class="hz-estado ${est.k}">${est.t}</span>
       </div>
       <div class="hz-plantilla">${esc(h.plantillaNombre||'Formulario')}</div>
-      ${h.campoEtiqueta ? `<div class="hz-campo">Campo: ${esc(h.campoEtiqueta)}</div>` : '<div class="hz-campo">Reportado manualmente</div>'}
-      ${h.descripcion ? `<div class="hz-desc">${esc(h.descripcion)}</div>` : ''}
+      ${h.descripcion ? `<div class="hz-desc">${esc(h.descripcion)}</div>` : (h.campoEtiqueta ? `<div class="hz-desc">${esc(h.campoEtiqueta)}</div>` : '')}
       <div class="hz-meta">${fecha}${h.reportadoPor ? ' · ' + esc(h.reportadoPor) : ''}</div>
+      ${resp}
       ${fotosHtml(h, ac)}
-      ${(h.estado||'abierto') !== 'cerrado' ? `<button type="button" class="hz-cerrar-btn" onclick="abrirCierre('${esc(h.id)}', this)">✓ Cerrar con foto de después</button>` : ''}
-      <div class="hz-capa">${capaHtml}</div>
+      ${cerrado
+        ? `<div class="hz-meta">Cerrado${h.cerradoEn ? ' el ' + esc(fechaCorta(h.cerradoEn)) : ''}${h.cerradoPor ? ' por ' + esc(h.cerradoPor) : ''} · <button type="button" class="hz-link" onclick="reabrir('${esc(h.id)}')">Reabrir</button></div>`
+        : `<button type="button" class="hz-cerrar-btn" onclick="abrirCierre('${esc(h.id)}', this)">✓ Cerrar con foto de después</button>`}
     </div>`;
   }).join('');
 }
 
-function setHallazgoEstado(id, estado) {
-  if (estado === 'cerrado') { abrirCierre(id); return; }   // cerrar siempre pasa por la foto de después
-  const list = getHallazgos();
-  const h = list.find(x=>x.id===id);
-  if (!h) return;
-  h.estado = estado;
-  setHallazgos(list);
-  skfSyncOrQueue('hallazgo', h);
-  toast('Estado actualizado ✓','ok');
+function fechaCorta(f) {
+  const d = new Date(String(f).length === 10 ? f + 'T00:00:00' : f);
+  return isNaN(d) ? String(f) : d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+}
+// Un solo estado, deducido: cerrado · vencido (pasó la fecha) · en atención (tiene responsable) · abierto.
+function estadoHz(h, ac) {
+  if ((h.estado || 'abierto') === 'cerrado') return { k: 'cerrado', t: '✓ Cerrado' };
+  if (ac && ac.fechaLimite && new Date(ac.fechaLimite + 'T23:59:59') < new Date()) return { k: 'vencido', t: 'Vencido' };
+  if (ac && ac.responsable) return { k: 'en_proceso', t: 'En atención' };
+  return { k: 'abierto', t: 'Abierto' };
 }
 
-function asignarAccion(hallazgoId) {
-  const responsable = document.getElementById(`resp_${hallazgoId}`).value.trim();
-  const correo = document.getElementById(`correo_${hallazgoId}`).value.trim();
-  const fechaLimite = document.getElementById(`fecha_${hallazgoId}`).value;
-  if (!responsable) { toast('Indica un responsable','er'); return; }
-  const ac = {
-    id: skfUUID(),
-    hallazgoId, responsable, correo: correo||null, fechaLimite: fechaLimite||null,
-    estado: 'pendiente', creadoEn: new Date().toISOString()
+// Responsable y fecha: crea (o cambia) la acción correctiva del hallazgo.
+function asignar(id, origen) {
+  const ac = getAcciones().find(a => a.hallazgoId === id) || {};
+  const hoy = new Date().toISOString().slice(0, 10);
+  skfSheet('¿Quién lo corrige y para cuándo?', `
+    <label class="pw-sub" for="asResp" style="margin-top:4px">Responsable</label>
+    <input class="pw-inp" id="asResp" value="${esc(ac.responsable || '')}" placeholder="Nombre de quien lo corrige" autocomplete="name">
+    <label class="pw-sub" for="asCorreo">Correo <span style="font-weight:400">(opcional: le llega el aviso)</span></label>
+    <input class="pw-inp" id="asCorreo" type="email" value="${esc(ac.correo || '')}" inputmode="email">
+    <label class="pw-sub" for="asFecha">Corregir antes del</label>
+    <input class="pw-inp" id="asFecha" type="date" min="${hoy}" value="${esc(ac.fechaLimite || '')}">
+    <p class="pw-err" id="asErr" hidden></p>
+    <button type="button" class="pw-sig pw-fin" id="asOk" style="margin-top:14px">Guardar</button>`, origen);
+  document.getElementById('asOk').onclick = () => {
+    const responsable = document.getElementById('asResp').value.trim();
+    if (!responsable) { const e = document.getElementById('asErr'); e.textContent = 'Escribe quién lo corrige.'; e.hidden = false; return; }
+    const acciones = getAcciones();
+    let a = acciones.find(x => x.hallazgoId === id);
+    if (!a) { a = { id: skfUUID(), hallazgoId: id, estado: 'pendiente', creadoEn: new Date().toISOString() }; acciones.push(a); }
+    a.responsable = responsable; a.correo = document.getElementById('asCorreo').value.trim() || null;
+    a.fechaLimite = document.getElementById('asFecha').value || null;
+    setAcciones(acciones); skfSyncOrQueue('accionCorrectiva', a);
+    const list = getHallazgos(), h = list.find(x => x.id === id);
+    if (h && (h.estado || 'abierto') === 'abierto') { h.estado = 'en_proceso'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
+    skfSheetCerrar(); toast('Responsable asignado ✓', 'ok'); render();
   };
-  const acciones = getAcciones();
-  acciones.push(ac);
-  setAcciones(acciones);
-  skfSyncOrQueue('accionCorrectiva', ac);
-
-  const list = getHallazgos();
-  const h = list.find(x=>x.id===hallazgoId);
-  if (h && (h.estado||'abierto') === 'abierto') { h.estado = 'en_proceso'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
-
-  toast('Acción correctiva asignada ✓','ok');
-  render();
 }
-
-function setAccionEstado(id, estado) {
-  const acciones = getAcciones();
-  const ac = acciones.find(x=>x.id===id);
-  if (!ac) return;
-  if (estado === 'completada') { abrirCierre(ac.hallazgoId); return; }
-  ac.estado = estado;
-  if (estado === 'completada') ac.cerradoEn = new Date().toISOString();
-  setAcciones(acciones);
-  skfSyncOrQueue('accionCorrectiva', ac);
-
-  if (estado === 'completada') {
-    const list = getHallazgos();
-    const h = list.find(x=>x.id===ac.hallazgoId);
-    if (h) { h.estado = 'cerrado'; setHallazgos(list); skfSyncOrQueue('hallazgo', h); }
-    toast('Acción completada — hallazgo cerrado automáticamente ✓','ok');
-  } else {
-    toast('Acción correctiva actualizada ✓','ok');
-  }
-  render();
+function reabrir(id) {
+  if (!confirm('¿Reabrir este hallazgo? Volverá a contar como abierto.')) return;
+  const list = getHallazgos(), h = list.find(x => x.id === id); if (!h) return;
+  const acciones = getAcciones(), a = acciones.find(x => x.hallazgoId === id);
+  if (a) { a.estado = 'pendiente'; a.cerradoEn = null; setAcciones(acciones); skfSyncOrQueue('accionCorrectiva', a); }
+  h.estado = a && a.responsable ? 'en_proceso' : 'abierto'; delete h.cerradoEn; delete h.cerradoPor;
+  setHallazgos(list); skfSyncOrQueue('hallazgo', h);
+  toast('Hallazgo reabierto', 'ok'); render();
 }
 
 // ── Antes y después ───────────────────────────────────────────────────

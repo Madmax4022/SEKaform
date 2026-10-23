@@ -210,7 +210,7 @@ const SKF_SECCIONES = {
   hoy:          { t: 'Hoy',          ico: '🏠', href: 'index.html' },
   plan:         { t: 'Plan',         ico: '📅', href: 'plan.html' },
   hallazgos:    { t: 'Hallazgos',    ico: '⚠️', href: 'hallazgos.html' },
-  cumplimiento: { t: 'Cumplimiento', ico: '🎯', href: 'cumplimiento.html' },
+  cumplimiento: { t: 'Cumplimiento', ico: '🎯', href: 'dashboard.html' },
   empresa:      { t: 'Mi empresa',   ico: '🏢', href: 'empresa.html' },
 };
 // página → [sección, título si es una subpágina (muestra «‹ sección» para volver)]
@@ -218,8 +218,8 @@ const SKF_PAGINAS = {
   '': ['hoy'], 'index.html': ['hoy'],
   'plan.html': ['plan'], 'programadas.html': ['plan', 'Rutinas'], 'asignaciones.html': ['plan', 'Encargos'], 'turnos.html': ['plan', 'Turnos'],
   'hallazgos.html': ['hallazgos'],
-  'cumplimiento.html': ['cumplimiento'], 'dashboard.html': ['cumplimiento', 'Panel y reportes'],
-  'empresa.html': ['empresa'], 'organizacion.html': ['empresa', 'Datos de la empresa'], 'unidades.html': ['empresa', 'Lugares'], 'personas.html': ['empresa', 'Personas'], 'clientes.html': ['empresa', 'Mis clientes'],
+  'cumplimiento.html': ['cumplimiento'], 'dashboard.html': ['cumplimiento'],
+  'empresa.html': ['empresa'], 'organizacion.html': ['empresa'], 'unidades.html': ['empresa', 'Lugares'], 'personas.html': ['empresa', 'Personas'], 'clientes.html': ['empresa', 'Mis clientes'],
   'plantillas.html': ['empresa', 'Catálogo'], 'llenar.html': ['empresa', 'Formularios'], 'digitalizador.html': ['empresa', 'Crear formulario'],
   'bienvenida.html': ['empresa', 'Configurar'],
 };
@@ -305,8 +305,7 @@ function skfRenderSidebar() {
   // y aparte, «Mi empresa» para configurar. 8 enlaces en lugar de 13.
   const PRINCIPAL = [
     { href: 'index.html', s: 'hoy' }, { href: 'plan.html', s: 'plan' },
-    { href: 'hallazgos.html', s: 'hallazgos' }, { href: 'cumplimiento.html', s: 'cumplimiento' },
-    { href: 'dashboard.html', ico: '📊', label: 'Panel y reportes' },
+    { href: 'hallazgos.html', s: 'hallazgos' }, { href: 'dashboard.html', s: 'cumplimiento' },
   ];
   const EMPRESA = [
     { href: 'empresa.html', s: 'empresa' },

@@ -102,7 +102,7 @@
     </div>
 
     <!-- Estado de cumplimiento (9 principios) -->
-    <a class="anillo" href="cumplimiento.html" id="anillo" aria-label="Ver el mapa de cumplimiento">
+    <a class="anillo" href="dashboard.html#principios" id="anillo" aria-label="Ver los 9 principios en Cumplimiento">
       <svg viewBox="0 0 104 104" role="img" aria-labelledby="anT">
         <circle cx="52" cy="52" r="44" fill="none" stroke="var(--bor)" stroke-width="10"/>
         <circle id="anArco" cx="52" cy="52" r="44" fill="none" stroke="var(--ok)" stroke-width="10" stroke-linecap="round"
@@ -114,7 +114,7 @@
         <div class="an-t" id="anT">Principios de SST con evidencia al día</div>
         <div class="an-s" id="anS">Lo que un inspector del trabajo viene a verificar.</div>
         <div class="an-chips" id="anChips"></div>
-        <span class="an-ver">Ver el mapa ›</span>
+        <span class="an-ver">Ver detalle ›</span>
       </div>
     </a>
 
@@ -260,15 +260,15 @@
           const x = atras[0], d = skfFormularioParaPrincipio(x.p.id, pc, mias);
           paso = { ico:'🔄', t:'Renueva la evidencia de «' + x.p.nombre + '»',
             s:'La última tiene ' + x.ev.dias + ' días. ' + (d ? 'Renuévala con «' + d.nombre + '».' : 'Ábrelo en tu mapa de cumplimiento.'),
-            href: d ? d.href : 'cumplimiento.html', cls:'warn' };
+            href: d ? d.href : 'dashboard.html#principios', cls:'warn' };
         } else {
           const x = pend[0], d = skfFormularioParaPrincipio(x.p.id, pc, mias);
           paso = { ico:'🎯', t:'Te falta evidencia de «' + x.p.nombre + '»',
             s:(d ? 'Empieza con «' + d.nombre + '».' : 'Mira qué formulario lo cubre.'),
-            href: d ? d.href : 'cumplimiento.html' };
+            href: d ? d.href : 'dashboard.html#principios' };
         }
       }
-      else paso = { ico:'✅', t:'Todo al día', s:'Tienes evidencia reciente de los 9 principios.', href:'cumplimiento.html', cls:'ok' };
+      else paso = { ico:'✅', t:'Todo al día', s:'Tienes evidencia reciente de los 9 principios.', href:'dashboard.html#principios', cls:'ok' };
 
       const card = document.getElementById('nextStep');
       card.href = paso.href;

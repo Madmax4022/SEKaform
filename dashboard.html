@@ -7,9 +7,10 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>Panel y reportes — SEKaform</title>
+  <title>Cumplimiento — SEKaform</title>
   <link rel="stylesheet" href="styles.css">
   <script src="skf-api.js"></script>
+  <script src="form-library.js"></script>
   <script src="field-types.js"></script>
   <script src="qrcode.js"></script>
   <script src="etiquetas.js"></script>
@@ -201,6 +202,25 @@
     .section-title{font-size:1rem;font-weight:800;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
     .stat-card.c-err .stat-num{color:var(--err-txt);}
     .rank-list{display:flex;flex-direction:column;gap:12px;}
+    .prn{margin-bottom:26px}
+    .prn-res{background:var(--card);border:1px solid var(--bor);border-radius:16px;padding:16px 18px;margin-bottom:10px}
+    .prn-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 12px;font-size:1.05rem}
+    .prn-top > span{font-size:.8rem;color:var(--mut)}
+    #prnOk{color:var(--ok);font-size:1.4rem}
+    .prn-bar{height:10px;border-radius:6px;background:var(--bor);overflow:hidden;margin-top:12px;display:flex}
+    .prn-bar span{height:100%}.prn-bar .ok{background:var(--ok)}.prn-bar .warn{background:var(--warn)}
+    .prn-pais{font-size:.76rem;color:var(--mut);margin-top:10px}
+    .prn-p{background:var(--card);border:1px solid var(--bor);border-left:4px solid var(--bor);border-radius:12px;margin-bottom:8px}
+    .prn-p.st-ok{border-left-color:var(--ok)}.prn-p.st-warn{border-left-color:var(--warn)}
+    .prn-p summary{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 14px;cursor:pointer;list-style:none}
+    .prn-p summary::-webkit-details-marker{display:none}
+    .prn-n{color:var(--mut);font-weight:800;min-width:1.2em}.prn-nom{flex:1;font-weight:700;font-size:.92rem}
+    .prn-st{font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
+    .prn-st.ok{background:var(--ok-dim);color:var(--ok)}.prn-st.warn{background:rgba(245,158,11,.15);color:var(--warn)}.prn-st.pend{background:var(--bor);color:var(--txt)}
+    .prn-body{padding:0 14px 14px 36px;font-size:.84rem;color:var(--mut);line-height:1.5}
+    .prn-forms{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .prn-f{display:inline-flex;align-items:center;min-height:40px;padding:4px 10px;border:1px solid var(--bor);border-radius:8px;color:var(--txt);text-decoration:none;font-size:.8rem;background:var(--bg)}
+    .prn-f.done{border-color:var(--ok)}.prn-f small{margin-left:6px;color:var(--warn);font-weight:700}
     .eq-print{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin-top:12px;border:1px solid var(--pri);border-radius:12px;background:var(--pri-dim);color:var(--txt);font:inherit;font-weight:800;cursor:pointer}
     body.panel-readonly .eq-print{display:none} body.panel-readonly .eq-fila{pointer-events:none}
     .eq-bajas{margin-top:12px;font-size:.84rem;color:var(--mut)} .eq-bajas summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700}
@@ -272,13 +292,8 @@
 <script src="sidebar.js"></script>
 
 <div class="wrap">
-  <nav class="seg-tabs" aria-label="Cumplimiento">
-    <a href="cumplimiento.html">🎯 Mapa</a>
-    <a href="dashboard.html" aria-current="page">📊 Panel y reportes</a>
-  </nav>
-  <div class="pg-eyebrow">🎯 Cumplimiento</div>
-  <h1 class="pg-h">Panel y reportes</h1>
-  <p class="pg-sub">Formularios, envíos y cumplimiento de tu organización</p>
+  <h1 class="pg-h">Cumplimiento</h1>
+  <p class="pg-sub">Lo que un inspector viene a verificar y cómo demostrarlo: los 9 principios, tus equipos, tus contratistas y la evidencia lista para entregar.</p>
 
   <div class="setup-banner" id="setupBanner">
     <div class="setup-banner-ico">☁</div>
@@ -300,6 +315,17 @@
   </div>
 
   <div id="mainContent" style="display:none">
+
+    <!-- Los 9 principios (antes «Mapa de cumplimiento», otra pantalla): evidencia de 6 meses,
+         no depende de los filtros de abajo. -->
+    <section id="principios" class="prn" aria-labelledby="prnT">
+      <div class="prn-res">
+        <div class="prn-top"><b id="prnT"><span id="prnOk">–</span> de 9 principios de SST con evidencia al día</b><span id="prnSub"></span></div>
+        <div class="prn-bar" id="prnBar"></div>
+        <div class="prn-pais" id="prnPais"></div>
+      </div>
+      <div id="prnLista"></div>
+    </section>
 
     <!-- barra de filtros global: recalcula todo el panel y los reportes -->
     <div class="flt-bar" id="fltBar">
@@ -846,6 +872,37 @@ async function equipoReactivar(cod, btn) {
   btn.disabled = true;
   try { await skfEquipoReactivar(cod); _bi.bajas = (_bi.bajas || []).filter(x => x.codigo !== cod); renderEquipos(); }
   catch (e) { btn.disabled = false; alert(navigator.onLine ? (e.message || 'No se pudo reactivar.') : 'Necesitas conexión para reactivar un equipo.'); }
+}
+
+// ── Los 9 principios (skfEvidenciaPrincipios, form-library.js) ────
+// Antes era otra pantalla («Mapa de cumplimiento»): ahora abre Cumplimiento.
+const _PRN_PAIS = { colombia:'co', co:'co', 'panamá':'pa', panama:'pa', pa:'pa', 'costa rica':'cr', cr:'cr', 'el salvador':'sv', sv:'sv' };
+async function renderPrincipios() {
+  let org = null; try { org = await sbLoadOrg(); } catch (e) {}
+  const pais = _PRN_PAIS[String((org && org.pais) || '').trim().toLowerCase()] || 'co';
+  const L = SST_LOCAL[pais] || SST_LOCAL.co;
+  const ev = skfEvidenciaPrincipios(_bi.envios || [], pais);
+  const n = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  const tiene = {};
+  (_bi.plantillas || []).forEach(p => { if (p && p.id && p.nombre) tiene[n(p.nombre)] = tiene[n(p.nombre)] || p.id; });
+  const cuenta = { ok: 0, warn: 0, pend: 0 }, LBL = { ok: 'Al día', warn: 'Atrasado', pend: 'Pendiente' };
+  document.getElementById('prnLista').innerHTML = SST_PRINCIPIOS.map(pr => {
+    const e = ev[pr.id], st = skfEstadoPrincipio(e); cuenta[st]++;
+    const esEv = t => SST_FORMS_DE_EVENTO.indexOf(t.id) !== -1;
+    const forms = FORM_LIBRARY.filter(t => (SST_PRINCIPIO_MAP[t.id] || []).includes(pr.id)).sort((a, b) => esEv(a) - esEv(b)).map(t => {
+      const nom = skfLocalizeText(t.nombre, pais), mio = tiene[n(nom)];
+      return `<a class="prn-f${mio ? ' done' : ''}" href="${mio ? 'llenar.html?tmpl=' + encodeURIComponent(mio) : 'digitalizador.html?preset=' + encodeURIComponent(t.id)}">${mio ? '✓ ' : ''}${escD(nom)}${esEv(t) ? '<small>si ocurre</small>' : ''}</a>`;
+    }).join('');
+    return `<details class="prn-p st-${st}"><summary><span class="prn-n">${pr.num}</span><span class="prn-nom">${escD(pr.nombre)}</span><span class="prn-st ${st}">${LBL[st]}</span></summary>
+      <div class="prn-body">${escD(pr.desc)}<br>${e ? `Última evidencia: <b>hace ${e.dias} día${e.dias !== 1 ? 's' : ''}</b> · ${escD(e.formNombre)}` : 'Sin evidencia todavía: llena un formulario que lo cubra.'}
+        <div class="prn-forms">${forms}</div></div></details>`;
+  }).join('');
+  document.getElementById('prnOk').textContent = cuenta.ok;
+  document.getElementById('prnSub').textContent = [cuenta.warn ? cuenta.warn + ' atrasado' + (cuenta.warn !== 1 ? 's' : '') : '', cuenta.pend ? cuenta.pend + ' pendiente' + (cuenta.pend !== 1 ? 's' : '') : ''].filter(Boolean).join(' · ');
+  const pct = v => (v / 9 * 100).toFixed(2) + '%';
+  document.getElementById('prnBar').innerHTML = `<span class="ok" style="width:${pct(cuenta.ok)}"></span><span class="warn" style="width:${pct(cuenta.warn)}"></span>`;
+  document.getElementById('prnPais').innerHTML = `Según ${escD(L.pais)} · ${escD(L.norma)}. Toca un principio para ver qué formulario lo cubre.`;
+  if (location.hash === '#principios') document.getElementById('principios').scrollIntoView();
 }
 
 // ── Contratistas (skfContratistasEstado, field-types.js) ─────────
@@ -2243,6 +2300,7 @@ function pintar() {
   renderPuntaje(ds);
   try { renderEquipos(); } catch (e) { console.warn('equipos', e); }
   try { renderContratistas(); } catch (e) { console.warn('contratistas', e); }
+  renderPrincipios().catch(e => console.warn('principios', e));
   asegurarGraficas();   // carga Chart.js (si hace falta) y dibuja; en vista simple no hace nada
 
   _biEnvios = ds.envios; _biHallazgos = ds.hallazgos; _biUnidades = ds.unidades;
