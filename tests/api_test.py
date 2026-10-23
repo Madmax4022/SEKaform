@@ -412,6 +412,26 @@ class Fechas(unittest.TestCase):
 
 
 @unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class Uso(unittest.TestCase):
+    """Se cuenta qué pantallas se abren y qué funciones se usan; solo el super administrador lo ve."""
+    def test_uso(self):
+        import psycopg2
+        with APP.test_client() as c:
+            c.post("/login", data={"email": MAIL_E, "password": CLAVE})
+            self.assertEqual(c.get("/turnos.html").status_code, 200)
+            self.assertEqual(c.post("/api/uso", json={"que": "panel:completo"}).status_code, 204)
+            self.assertEqual(c.post("/api/uso", json={"que": "DROP TABLE"}).status_code, 204, "lo raro se ignora sin error")
+            self.assertEqual(c.get("/admin/api/uso").status_code, 404, "solo el super administrador (a los demás ni se les confirma que existe)")
+        with psycopg2.connect(OWNER_DB) as con, con.cursor() as cur:
+            cur.execute("SELECT que, sum(veces) FROM uso_diario WHERE user_id = %s GROUP BY que", (EDITOR,))
+            filas = dict(cur.fetchall())
+            cur.execute("DELETE FROM uso_diario WHERE user_id = %s", (EDITOR,))
+        self.assertEqual(filas.get("pagina:turnos"), 1)
+        self.assertEqual(filas.get("panel:completo"), 1)
+        self.assertNotIn("DROP TABLE", filas)
+
+
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
 class Redireccion(unittest.TestCase):
     """Escanear el QR de un equipo sin sesión debe volver al mismo equipo tras entrar."""
     def test_login_conserva_la_consulta(self):

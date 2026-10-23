@@ -173,7 +173,27 @@ async function skfYo({ forzar = false } = {}) {
     _skfYo = r.autenticado ? r.usuario : null;
   } catch { _skfYo = null; }
   if (_skfYo && _skfYo.orgId) _skfVigilarEmpresa(_skfYo.orgId);
+  if (_skfYo) _skfMarcarAvanzado(!!_skfYo.esSuper);
   return _skfYo;
+}
+
+// ── Funciones avanzadas (recorte del 50 %, paso 1: ocultar y medir) ─────────
+// Lo que salió del producto principal (turnos, panel completo, compartir foto del
+// panel, digitalizador por enlace/PDF/HTML, kits fuera de SST, umbral de aviso por
+// formulario, modo ejemplo local) lleva la clase `skf-av`: solo lo ve el super
+// administrador, o una empresa que ya lo usa. Nada se borra todavía: se mide con
+// skfUso() y se decide con datos.
+function _skfMarcarAvanzado(si) {
+  try { localStorage.setItem('skf_avanzado', si ? '1' : '0'); } catch (e) {}
+  document.documentElement.classList.toggle('skf-avanzado', si);
+}
+function skfAvanzado() { return document.documentElement.classList.contains('skf-avanzado'); }
+try { if (localStorage.getItem('skf_avanzado') === '1') document.documentElement.classList.add('skf-avanzado'); } catch (e) {}
+
+// Cuenta un uso (qué función se abrió) para decidir qué se borra. Nunca falla ni demora.
+function skfUso(que) {
+  if (!/^[a-z_]{2,30}(:[a-z0-9_]{1,28})?$/.test(que || '')) return;
+  skfFetch('/api/uso', { method: 'POST', body: JSON.stringify({ que }), keepalive: true }).catch(() => {});
 }
 
 // ── Varias empresas (asesores) ─────────────────────────────────────────────

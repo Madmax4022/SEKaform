@@ -190,6 +190,9 @@ def _registrar_frontend(app: Flask) -> None:
             publico = ACCESO_PUBLICO.get(ruta)
             if not current_user.is_authenticated and not (publico and request.args.get(publico)):
                 return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+            if current_user.is_authenticated:   # qué pantallas se abren (migración 015)
+                from .uso import contar
+                contar("pagina:" + (ruta.rsplit(".", 1)[0] or "index"))
             return _enviar(PAGINAS[ruta], cache=False)
         if ruta in ESTATICOS:
             return _enviar(ruta, cache=True)

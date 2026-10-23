@@ -536,3 +536,7 @@ html.skf-lector .btn-planear-pg { display: none; }
 .toast.er { border-color: var(--err); }
 
 .btn-planear-pg[hidden], .btn-planear[hidden] { display: none; }
+
+/* Funciones avanzadas (skf-api.js · skfAvanzado): ocultas salvo para el super administrador
+   o una empresa que ya las usa (a esa se le quita la clase skf-av al detectarlo). */
+html:not(.skf-avanzado) .skf-av { display: none !important; }

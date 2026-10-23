@@ -139,7 +139,7 @@
       <a class="tile" href="dashboard.html" id="tReg"><div class="tn" id="tRegN">–</div><div class="tl">registros en los últimos 7 días</div></a>
     </div>
 
-    <button type="button" class="demo-link" id="demoBtn" hidden>🧪 Probar con datos de ejemplo — ver la app llena antes de capturar los tuyos</button>
+    <button type="button" class="demo-link skf-av" id="demoBtn" hidden>🧪 Probar con datos de ejemplo — ver la app llena antes de capturar los tuyos</button>
 
     <footer>SEKaform · Kanan Sentinel</footer>
   </div>
@@ -281,7 +281,7 @@
       if (!skfDemoActivo() && env.length < 3) {
         const db = document.getElementById('demoBtn');
         db.hidden = false;
-        db.onclick = () => { if (skfDemoEntrar()) location.reload(); else alert('No se pudo preparar el ejemplo en este dispositivo.'); };
+        db.onclick = () => { skfUso('demo:local'); if (skfDemoEntrar()) location.reload(); else alert('No se pudo preparar el ejemplo en este dispositivo.'); };
       }
       if (typeof skfGlosar === 'function') skfGlosar(document.querySelector('.wrapper'));
     })();

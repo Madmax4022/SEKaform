@@ -981,7 +981,7 @@ function renderList() {
       <div class="tmpl-info">
         <div class="tmpl-name">${t.nombre}</div>
         <div class="tmpl-meta">${t.campos.length} pregunta${t.campos.length!==1?'s':''} · ${subs} registro${subs!==1?'s':''} · ${d}</div>
-        <button class="tmpl-aviso" onclick="abrirAvisos('${t.id}')">${resumenAviso(t)}</button>
+        <button class="tmpl-aviso${t.avisoUmbral != null || t.avisoMaxHora != null ? '' : ' skf-av'}" onclick="abrirAvisos('${t.id}')">${resumenAviso(t)}</button>
       </div>
       <div class="tmpl-acts">
         <button class="btn-fav ${t.favorito?'on':''}" onclick="toggleFavorito('${t.id}')" title="Marcar como favorito">${t.favorito?'★':'☆'}</button>
@@ -1003,6 +1003,7 @@ function resumenAviso(t) {
 }
 let _avisoId = null;
 function abrirAvisos(id) {
+  if (typeof skfUso === 'function') skfUso('avisos:formulario');
   const t = JSON.parse(localStorage.getItem('skf_plantillas')||'[]').find(x=>x.id===id);
   if (!t) return;
   _avisoId = id;

@@ -152,7 +152,7 @@ function pick(groupId, key){
 pick('optTrab', 'trab'); pick('optRiesgo', 'riesgo');
 
 // Áreas opcionales (kits de inicio): chips de selección múltiple.
-$('optAreas').innerHTML = AREA_KITS.map(function(k){
+$('optAreas').innerHTML = skfKitsVisibles().map(function(k){
   return '<button type="button" class="opt" data-id="' + k.id + '">' + k.ico + ' ' + k.nombre + '<small>' + k.desc + '</small></button>';
 }).join('');
 $('optAreas').addEventListener('click', function(e){

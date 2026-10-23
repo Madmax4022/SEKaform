@@ -82,7 +82,7 @@
   <div class="admin-h">Ver y editar</div>
   <a class="skf-opt" href="programadas.html"><span class="so-ico">🔁</span><span class="so-txt"><b>Rutinas</b><small id="nRut">Inspecciones que se repiten: extintores cada mes, botiquín cada semana…</small></span><span class="so-arr">›</span></a>
   <a class="skf-opt" href="asignaciones.html"><span class="so-ico">👤</span><span class="so-txt"><b>Encargos</b><small id="nEnc">Formularios que le pides a una persona, con su avance</small></span><span class="so-arr">›</span></a>
-  <a class="skf-opt" href="turnos.html"><span class="so-ico">🕒</span><span class="so-txt"><b>Turnos</b><small id="nTur">Mañana, tarde, noche… y qué se espera en cada uno</small></span><span class="so-arr">›</span></a>
+  <a class="skf-opt skf-av" id="lnkTurnos" href="turnos.html"><span class="so-ico">🕒</span><span class="so-txt"><b>Turnos</b><small id="nTur">Mañana, tarde, noche… y qué se espera en cada uno</small></span><span class="so-arr">›</span></a>
 </div>
 
 <script>
@@ -136,6 +136,7 @@ async function cargar() {
   const enc = items.filter(i => i.tipo === 'encargo').length;
   if ((d.asignaciones || []).length) document.getElementById('nEnc').textContent = enc ? enc + ' encargo' + (enc !== 1 ? 's' : '') + ' sin completar' : 'Todos los encargos están completos';
   const tn = ((d.turnosConfig && d.turnosConfig.turnos) || []).length;
+  if (tn) document.getElementById('lnkTurnos').classList.remove('skf-av');   // la empresa ya usa turnos: se queda
   if (tn) document.getElementById('nTur').textContent = tn + ' turno' + (tn !== 1 ? 's' : '') + ' definido' + (tn !== 1 ? 's' : '');
   pintar();
 }

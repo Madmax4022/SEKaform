@@ -51,6 +51,7 @@
 
     /* ─ PAGE 1: source tabs + upload ─ */
     .src-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:24px;}
+    html:not(.skf-avanzado) .src-tabs{grid-template-columns:repeat(2,1fr)!important;}   /* solo Foto y Escribir */
     .src-tab{background:var(--card);border:2px solid var(--bor);border-radius:10px;padding:14px 8px;cursor:pointer;text-align:center;transition:all .18s;font-family:inherit;color:var(--txt);}
     .src-tab:hover{border-color:var(--pri);background:var(--pri-dim);}
     .src-tab.active{border-color:var(--pri);background:var(--pri-dim);}
@@ -279,11 +280,11 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
         <span class="src-tab-ico">📸</span>
         <span class="src-tab-lbl">Foto / Escaneo</span>
       </button>
-      <button class="src-tab" id="tab-url" onclick="selectSrc('url')">
+      <button class="src-tab skf-av" id="tab-url" onclick="selectSrc('url')">
         <span class="src-tab-ico">🌐</span>
         <span class="src-tab-lbl">Enlace web</span>
       </button>
-      <button class="src-tab" id="tab-pdf" onclick="selectSrc('pdf')">
+      <button class="src-tab skf-av" id="tab-pdf" onclick="selectSrc('pdf')">
         <span class="src-tab-ico">📄</span>
         <span class="src-tab-lbl">PDF</span>
       </button>
@@ -291,7 +292,7 @@ En todos los casos SEKaform detecta los campos por ti — después podrás revis
         <span class="src-tab-ico">✍️</span>
         <span class="src-tab-lbl">Escribir</span>
       </button>
-      <button class="src-tab" id="tab-html" onclick="selectSrc('html')">
+      <button class="src-tab skf-av" id="tab-html" onclick="selectSrc('html')">
         <span class="src-tab-ico">🗂️</span>
         <span class="src-tab-lbl">HTML</span>
       </button>
@@ -769,6 +770,7 @@ function needsOptions(tipo) { return fieldNeedsOptions(tipo); }
 // ══════════════════════════════════════════════════════════════════
 function selectSrc(src) {
   curSrc = src;
+  if (typeof skfUso === 'function') skfUso('digitalizador:' + src);
   document.querySelectorAll('.src-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.src-panel').forEach(p => p.classList.remove('on'));
   document.getElementById(`tab-${src}`).classList.add('active');
