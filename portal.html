@@ -48,6 +48,15 @@
     .ins:last-child { border-bottom: none; }
     .pct { font-weight: 900; font-variant-numeric: tabular-nums; font-size: .95rem; }
     .pct.alto { color: var(--ok); } .pct.medio { color: var(--warn); } .pct.bajo { color: var(--err-txt); }
+    .ad { padding: 12px 14px; border-bottom: 1px solid var(--bor); }
+    .ad:last-child { border-bottom: none; }
+    .ad-f { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .ad-f button, .ad-f div { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; border: 1px solid var(--bor); background: var(--bg); padding: 0; cursor: zoom-in; }
+    .ad-f img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ad-f b { position: absolute; left: 6px; top: 6px; padding: 2px 8px; border-radius: 99px; font-size: .68rem; background: rgba(0,0,0,.65); color: #fff; }
+    .ad-f div { display: flex; align-items: center; justify-content: center; color: var(--mut); font-size: .76rem; cursor: default; }
+    .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.9); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; cursor: zoom-out; }
+    .zoom img { max-width: 100%; max-height: 100%; border-radius: 10px; }
     .vacio { padding: 14px; color: var(--mut); font-size: .88rem; }
     .acc { display: flex; gap: 8px; margin-top: 22px; }
     .acc button { flex: 1; min-height: 48px; border-radius: 14px; font: inherit; font-weight: 800; cursor: pointer; border: 1px solid var(--bor); background: var(--card); color: var(--txt); }
@@ -61,7 +70,8 @@
       :root { --bg: #fff; --card: #fff; --txt: #0f172a; --mut: #475569; --bor: #cbd5e1; --ok: #047857; --warn: #b45309; --err-txt: #b91c1c; --pri-txt: #1d4ed8; }
       body { background: #fff !important; color: #0f172a; }
       .acc { display: none; }
-      .caja, .kpi { break-inside: avoid; }
+      .caja, .kpi, .ad { break-inside: avoid; }
+      .ad-f button, .ad-f div { aspect-ratio: auto; height: 150px; }
     }
   </style>
 </head>
@@ -98,6 +108,14 @@ function pintar(d) {
     <div class="hz-d">${[h.formulario, h.lugar, 'Detectado el ' + fecha(h.creado_en),
       h.estado === 'cerrado' ? 'cerrado el ' + fecha(h.cerrado_en) : (h.fecha_limite ? 'corregir antes del ' + fecha(h.fecha_limite) : 'sin fecha de corrección')]
       .filter(Boolean).map(esc).join(' · ')}</div></div>`;
+  // Corregido, con prueba: antes y después de hallazgos cerrados (si la empresa lo permite).
+  const foto = u => /^(data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https:\/\/storage\.googleapis\.com\/\S+)$/.test(u || '') ? u : '';
+  const conFotos = d.hallazgos.filter(h => h.estado === 'cerrado' && (foto(h.antes) || foto(h.despues)));
+  const caja = (u, t) => u ? `<button type="button" onclick="ampliar(this)" aria-label="Ampliar foto de ${t.toLowerCase()}"><img src="${u}" alt="Foto de ${t.toLowerCase()}" loading="lazy"><b>${t}</b></button>` : `<div>Sin foto de ${t.toLowerCase()}</div>`;
+  const corregidos = conFotos.length ? `<h2>✅ Corregido — antes y después</h2>
+    <div class="caja">${conFotos.map(h => `<div class="ad"><div class="hz-t">${esc(h.descripcion)}</div>
+      <div class="hz-d">${[h.formulario, h.lugar, 'detectado el ' + fecha(h.creado_en), 'corregido el ' + fecha(h.cerrado_en)].filter(Boolean).map(esc).join(' · ')}</div>
+      <div class="ad-f">${caja(foto(h.antes), 'Antes')}${caja(foto(h.despues), 'Después')}</div></div>`).join('')}</div>` : '';
   document.getElementById('app').innerHTML = `
     <div class="cab"><div class="av" aria-hidden="true">${esc((d.org.nombre || '?').trim()[0].toUpperCase())}</div>
       <div><div class="org">${esc(d.org.nombre)}</div><div class="sub">Seguridad y salud en el trabajo · al ${fecha(new Date())}, ${new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div></div></div>
@@ -109,6 +127,7 @@ function pintar(d) {
       <div class="kpi ${abiertos.length ? 'mal' : 'alto'}"><b>${abiertos.length}</b><span>hallazgos abiertos${criticos ? ' · ' + criticos + ' crítico' + (criticos !== 1 ? 's' : '') : ''}</span></div>
       <div class="kpi"><b>${d.hallazgos.length - abiertos.length}</b><span>hallazgos cerrados en 90 días</span></div>
     </div>
+    ${corregidos}
     <h2>Los 9 principios de SST</h2>
     <div class="caja">${est.map(x => `<div class="pr"><span class="n">${x.p.num}</span><span class="t">${esc(x.p.nombre)}</span><span class="est ${x.st}">${ST[x.st]}</span></div>`).join('')}</div>
     <h2>Hallazgos</h2>
@@ -118,7 +137,16 @@ function pintar(d) {
       <div class="hz-d">${[fecha(i.fecha), i.lugar].filter(Boolean).map(esc).join(' · ')}</div></div>
       ${i.pct == null ? '' : `<span class="pct ${i.nivel}">${i.pct} %</span>`}</div>`).join('') : '<p class="vacio">Aún no hay inspecciones registradas.</p>'}</div>
     <div class="acc"><button type="button" onclick="cargar()">↻ Actualizar</button><button type="button" onclick="print()">⬇ Descargar PDF</button></div>
-    <p class="pie">Portal de solo lectura. No muestra respuestas detalladas, firmas ni fotos.<br>Hecho con <a href="https://sekaform.kanansentinel.com" rel="noopener">SEKaform · Kanan Sentinel</a></p>`;
+    <p class="pie">Portal de solo lectura. No muestra respuestas detalladas ni firmas${conFotos.length ? '; las fotos son solo de hallazgos ya corregidos' : ' ni fotos'}.<br>Hecho con <a href="https://sekaform.kanansentinel.com" rel="noopener">SEKaform · Kanan Sentinel</a></p>`;
+}
+
+function ampliar(b) {
+  const z = document.createElement('div');
+  z.className = 'zoom'; z.setAttribute('role', 'dialog'); z.setAttribute('aria-label', 'Foto ampliada');
+  z.innerHTML = `<img src="${b.querySelector('img').src}" alt="${esc(b.querySelector('img').alt)}">`;
+  z.onclick = () => z.remove();
+  document.addEventListener('keydown', function f(e) { if (e.key === 'Escape') { z.remove(); document.removeEventListener('keydown', f); } });
+  document.body.appendChild(z);
 }
 
 async function cargar() {

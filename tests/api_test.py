@@ -228,6 +228,33 @@ class Portal(unittest.TestCase):
             c.post("/logout")
             self.assertEqual(c.get("/api/publico/portal/" + token).status_code, 404)
 
+    def test_6b_antes_despues(self):
+        """Solo hallazgos cerrados, solo imágenes de verdad, ocultables y con la opción del portal."""
+        foto = "data:image/jpeg;base64,QUJDRA=="
+        h1, h2 = str(uuid.uuid4()), str(uuid.uuid4())
+        with self.app.test_client() as c:
+            self.assertEqual(c.post("/login", data={"email": MAIL_D, "password": CLAVE}).status_code, 302)
+            c.post("/api/sync", json={"operaciones": [
+                {"opId": "1", "tipo": "hallazgo", "datos": {"id": h1, "severidad": "mayor", "descripcion": "Con fotos", "foto_url": foto, "estado": "cerrado"}},
+                {"opId": "2", "tipo": "hallazgo", "datos": {"id": h2, "severidad": "menor", "descripcion": "Foto rara", "foto_url": "javascript:alert(1)", "estado": "cerrado"}},
+                {"opId": "3", "tipo": "accionCorrectiva", "datos": {"id": str(uuid.uuid4()), "hallazgo_id": h1, "estado": "completada", "evidencia_url": foto}}]})
+            r = c.post("/api/portal", json={"fotos": True})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            token = r.get_json()["portal"]["url"].split("t=")[1]
+            self.assertIs(c.get("/api/portal").get_json()["portal"]["mostrarFotos"], True)
+
+            def hz(desc):
+                return next(x for x in c.get("/api/publico/portal/" + token).get_json()["hallazgos"] if x["descripcion"] == desc)
+            self.assertEqual((hz("Con fotos").get("antes"), hz("Con fotos").get("despues")), (foto, foto))
+            self.assertNotIn("antes", hz("Foto rara"), "lo que no es una imagen no sale")
+            self.assertEqual(c.post(f"/api/hallazgos/{h1}/foto-portal", json={"oculta": True}).status_code, 200)
+            self.assertNotIn("antes", hz("Con fotos"), "ocultado desde Hallazgos")
+            c.post(f"/api/hallazgos/{h1}/foto-portal", json={"oculta": False})
+            self.assertEqual(c.post("/api/portal/fotos", json={"fotos": False}).status_code, 200)
+            self.assertNotIn("antes", hz("Con fotos"), "el portal sin fotos no muestra ninguna")
+            self.assertEqual(c.post("/api/portal/fotos", json={"fotos": "si"}).status_code, 400)
+            c.delete("/api/portal")
+
     def test_7_limite_por_ip(self):
         with self.app.test_client() as c:
             codigos = [c.get("/api/publico/portal/" + "z" * 40).status_code for _ in range(65)]

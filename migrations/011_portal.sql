@@ -31,13 +31,19 @@ DROP POLICY IF EXISTS portales_sel ON portales;
 CREATE POLICY portales_sel ON portales FOR SELECT USING (skf_puede_leer(org_id));
 -- Escribir solo por las funciones de abajo (sin policies de escritura para la app).
 
--- Portal vigente de la empresa activa (para quien administra).
-CREATE OR REPLACE FUNCTION skf_portal_actual()
-RETURNS TABLE (token TEXT, creado_en TIMESTAMPTZ, accesos INTEGER, ultimo_acceso TIMESTAMPTZ)
-LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
-  SELECT p.token, p.creado_en, p.accesos, p.ultimo_acceso FROM portales p
-   WHERE p.org_id = skf_org_id() AND p.revocado_en IS NULL AND skf_es_miembro(skf_org_id());
-$$;
+-- Portal vigente de la empresa activa (para quien administra). Solo si no existe: la 013
+-- la recrea con otra forma, y volver a correr esta no debe chocar con ella.
+DO $do$
+BEGIN
+  IF to_regprocedure('skf_portal_actual()') IS NULL THEN
+    CREATE FUNCTION skf_portal_actual()
+    RETURNS TABLE (token TEXT, creado_en TIMESTAMPTZ, accesos INTEGER, ultimo_acceso TIMESTAMPTZ)
+    LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+      SELECT p.token, p.creado_en, p.accesos, p.ultimo_acceso FROM portales p
+       WHERE p.org_id = skf_org_id() AND p.revocado_en IS NULL AND skf_es_miembro(skf_org_id());
+    $$;
+  END IF;
+END $do$;
 
 -- Crear (o regenerar) el portal: solo dueño o administrador. El token lo genera la
 -- base (32 bytes aleatorios), nunca el cliente. Regenerar revoca el anterior.

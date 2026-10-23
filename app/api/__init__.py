@@ -1069,6 +1069,9 @@ def _sin_011(e) -> bool:
     return isinstance(e, psycopg2.errors.UndefinedFunction)
 
 
+_RE_FOTO = re.compile(r"^(data:image/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https://storage\.googleapis\.com/\S+)$")
+
+
 def _url_portal(token: str) -> str:
     from ..config import Config
     return f"{Config.URL_PUBLICA or request.host_url.rstrip('/')}/portal.html?t={token}"
@@ -1088,15 +1091,24 @@ def portal_actual():
     if not f:
         return jsonify({"disponible": True, "portal": None})
     return jsonify({"disponible": True, "portal": {"url": _url_portal(f["token"]), "creadoEn": f["creado_en"],
-                                                   "accesos": f["accesos"], "ultimoAcceso": f["ultimo_acceso"]}})
+                                                   "accesos": f["accesos"], "ultimoAcceso": f["ultimo_acceso"],
+                                                   # None = falta la 013: el portal no puede mostrar fotos todavía
+                                                   "mostrarFotos": f.get("mostrar_fotos")}})
 
 
 @bp.route("/portal", methods=["POST"])
 @requiere_organizacion
 def portal_crear():
+    fotos = (request.get_json(silent=True) or {}).get("fotos")
     try:
         with sesion_usuario() as cur:
-            cur.execute("SELECT * FROM skf_portal_crear()")
+            # Con la 013 se elige si muestra el antes y después; sin ella, el portal de siempre.
+            cur.execute("SAVEPOINT sp_portal")
+            try:
+                cur.execute("SELECT * FROM skf_portal_crear(%s)", (fotos if isinstance(fotos, bool) else True,))
+            except psycopg2.errors.UndefinedFunction:
+                cur.execute("ROLLBACK TO SAVEPOINT sp_portal")
+                cur.execute("SELECT * FROM skf_portal_crear()")
             r = cur.fetchone()
     except Exception as e:
         if _sin_011(e):
@@ -1106,6 +1118,49 @@ def portal_crear():
         return jsonify({"error": "Solo el dueño o un administrador puede crear el portal."}), 403
     auditar("portal_crear", entidad="portal")
     return jsonify({"ok": True, "portal": {"url": _url_portal(r["token"]), "accesos": 0, "ultimoAcceso": None}}), 201
+
+
+@bp.route("/portal/fotos", methods=["POST"])
+@requiere_organizacion
+def portal_fotos():
+    fotos = (request.get_json(silent=True) or {}).get("fotos")
+    if not isinstance(fotos, bool):
+        return jsonify({"error": "Indica si se muestran las fotos."}), 400
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT skf_portal_fotos(%s) AS r", (fotos,))
+            r = cur.fetchone()["r"]
+    except Exception as e:
+        if _sin_011(e):
+            return jsonify({"error": "Falta preparar la base (migración 013) para mostrar fotos en el portal."}), 503
+        raise
+    if r == "sin_permiso":
+        return jsonify({"error": "Solo el dueño o un administrador puede cambiarlo."}), 403
+    if r != "ok":
+        return jsonify({"error": "No hay un portal activo."}), 404
+    auditar("portal_fotos", entidad="portal", detalle={"fotos": fotos})
+    return jsonify({"ok": True, "mostrarFotos": fotos})
+
+
+@bp.route("/hallazgos/<hallazgo_id>/foto-portal", methods=["POST"])
+@requiere_organizacion
+@requiere_escritura
+def hallazgo_foto_portal(hallazgo_id):
+    """Ocultar (o volver a mostrar) en el portal las fotos de un hallazgo."""
+    hz = _uuid_valido(hallazgo_id)
+    oculta = (request.get_json(silent=True) or {}).get("oculta")
+    if not hz or not isinstance(oculta, bool):
+        return jsonify({"error": "Datos inválidos."}), 400
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("UPDATE hallazgos SET foto_oculta_portal = %s WHERE id = %s RETURNING id", (oculta, hz))
+            fila = cur.fetchone()
+    except psycopg2.errors.UndefinedColumn:
+        return jsonify({"error": "Falta preparar la base (migración 013)."}), 503
+    if not fila:
+        return jsonify({"error": "No encontrado."}), 404
+    auditar("hallazgo_foto_portal", entidad="hallazgos", entidad_id=hz, detalle={"oculta": oculta})
+    return jsonify({"ok": True, "oculta": oculta})
 
 
 @bp.route("/portal", methods=["DELETE"])
@@ -1153,8 +1208,16 @@ def portal_publico(token: str):
             pcts.append(p["pct"])
         insp.append({"formulario": i.get("formulario"), "fecha": i.get("fecha"), "lugar": i.get("lugar"),
                      "pct": p["pct"] if p else None, "nivel": p["nivel"] if p else None})
+    # Solo imágenes de verdad (lo guardado viene de los teléfonos): lo demás no sale.
+    hallazgos = []
+    for h in d.get("hallazgos") or []:
+        h = dict(h)
+        for k in ("antes", "despues"):
+            if k in h and not (isinstance(h[k], str) and _RE_FOTO.match(h[k])):
+                h.pop(k)
+        hallazgos.append(h)
     resp = jsonify({"org": d["org"], "evidencia": d.get("evidencia") or [], "inspecciones": insp,
-                    "hallazgos": d.get("hallazgos") or [], "envios30d": d.get("envios_30d") or 0,
+                    "hallazgos": hallazgos, "envios30d": d.get("envios_30d") or 0,
                     "puntajePromedio": round(sum(pcts) / len(pcts)) if pcts else None})
     resp.headers["Cache-Control"] = "no-store"
     resp.headers["X-Robots-Tag"] = "noindex"
