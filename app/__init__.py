@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 from pathlib import Path
 
 from flask import (Flask, Response, jsonify, redirect, request,
                    send_from_directory, url_for)
+from flask.json.provider import DefaultJSONProvider
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import LoginManager, current_user
@@ -54,7 +56,7 @@ PAGINAS = {
 
 ESTATICOS = {
     "styles.css", "field-types.js", "form-library.js", "sidebar.js", "agenda.js", "planear.js", "portal-admin.js",
-    "chart.min.js", "qrcode.js", "etiquetas.js", "sw.js", "manifest.json", "skf-api.js",
+    "chart.min.js", "qrcode.js", "etiquetas.js", "demo-sembrar.js", "sw.js", "manifest.json", "skf-api.js",
     # login.html ya no es una pantalla: es un desvío a /login, que es donde
     # Flask sirve el formulario de verdad. Va aquí y no en PAGINAS porque no
     # puede exigir sesión — la pide justo quien no la tiene. Además el service
@@ -80,10 +82,23 @@ ACCESO_PUBLICO = {
 }
 
 
+class _JSONIso(DefaultJSONProvider):
+    """Fechas en ISO 8601 (2026-10-23, 2026-10-23T08:30:00+00:00) en vez del formato por
+    defecto de Flask («Fri, 23 Oct 2026 00:00:00 GMT»). El cliente compara y corta fechas
+    como texto (la agenda toma los 10 primeros caracteres): con el formato por defecto una
+    rutina de hoy salía «vencida hace 9131 días»."""
+    @staticmethod
+    def default(o):
+        if isinstance(o, (datetime.datetime, datetime.date)):
+            return o.isoformat()
+        return DefaultJSONProvider.default(o)
+
+
 def crear_app(config: type[Config] = Config) -> Flask:
     Config.validar()
 
     app = Flask(__name__, static_folder=None, template_folder="templates")
+    app.json = _JSONIso(app)
     app.config.from_object(config)
 
     _configurar_logs(app)

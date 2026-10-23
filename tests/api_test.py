@@ -392,6 +392,26 @@ class Push(unittest.TestCase):
 
 
 @unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class Fechas(unittest.TestCase):
+    """Las fechas salen en ISO 8601: el cliente las corta y compara como texto."""
+    def test_iso(self):
+        import re as _re
+        with APP.test_client() as c:
+            c.post("/login", data={"email": MAIL_D, "password": CLAVE})
+            pid, rid = str(uuid.uuid4()), str(uuid.uuid4())
+            c.post("/api/sync", json={"operaciones": [
+                {"opId": "p", "tipo": "plantilla", "datos": {"id": pid, "nombre": "Ronda ISO", "campos": []}},
+                {"opId": "r", "tipo": "inspeccion", "datos": {"id": rid, "plantilla_id": pid, "nombre": "Ronda ISO", "frecuencia": "semanal", "proximo_en": "2026-10-23"}}]})
+            b = c.get("/api/bootstrap").get_json()
+            r = next(x for x in b["programadas"] if x["id"] == rid)
+            self.assertEqual(r["proximo_en"], "2026-10-23", "una fecha sale como AAAA-MM-DD")
+            c.post("/api/sync", json={"operaciones": [{"opId": "e", "tipo": "envio", "datos": {"id": str(uuid.uuid4()), "plantilla_id": pid,
+                                                                                          "plantilla_nombre": "Ronda ISO", "datos": {}}}]})
+            e = c.get("/api/envios?limite=5").get_json()["envios"][0]
+            self.assertRegex(e["enviado_en"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "un instante sale en ISO 8601")
+
+
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
 class Redireccion(unittest.TestCase):
     """Escanear el QR de un equipo sin sesión debe volver al mismo equipo tras entrar."""
     def test_login_conserva_la_consulta(self):
