@@ -393,6 +393,21 @@ def conceder_acceso():
 
 # ── Bitácora y modo soporte ────────────────────────────────────────────────
 
+@bp.route("/api/uso")
+@requiere_super_admin
+def uso():
+    """Qué pantallas y funciones se usan (migración 015): para decidir qué se borra."""
+    dias = max(1, min(int(request.args.get("dias", 30)), 365))
+    try:
+        with _super() as cur:
+            cur.execute("SELECT * FROM skf_uso_resumen(%s)", (dias,))
+            return jsonify({"disponible": True, "dias": dias, "filas": cur.fetchall()})
+    except Exception as e:
+        if "skf_uso_resumen" in str(e):
+            return jsonify({"disponible": False, "filas": []})
+        raise
+
+
 @bp.route("/api/auditoria")
 @requiere_super_admin
 def auditoria():

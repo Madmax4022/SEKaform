@@ -220,7 +220,7 @@ function renderFilters() {
   // La SST es la punta de lanza: chip destacado y primero. El resto de las
   // áreas van detrás de una etiqueta "otras áreas", apagadas, como complemento.
   const active = currentFilter();
-  const others = [...new Set(FORM_LIBRARY.map(t => t.vertical))].filter(v => v !== 'sst');
+  const others = [...new Set(skfCatalogoVisible().map(t => t.vertical))].filter(v => v !== 'sst');
   const chip = (v, lbl, cls) =>
     `<button class="filt-btn ${cls}${v===active?' active':''}" onclick="setFilter('${v}')">${esc(lbl)}</button>`;
   // Los chips de otras áreas quedan plegados tras "+ otras áreas" para que no
@@ -303,7 +303,7 @@ function render() {
   const active = currentFilter();
   // Núcleo SST ordenado por frecuencia de uso (los más usados primero); el
   // resto conserva su orden. .slice() para no mutar el catálogo compartido.
-  const list = (active === 'todas' ? FORM_LIBRARY.slice() : FORM_LIBRARY.filter(t => t.vertical === active))
+  const list = (active === 'todas' ? skfCatalogoVisible().slice() : skfCatalogoVisible().filter(t => t.vertical === active))
     .sort((a, b) => (a.freq || 99) - (b.freq || 99));
 
   if (active === 'calidad') {
@@ -341,7 +341,7 @@ function render() {
 
   // ── Con búsqueda activa: resultados planos en todas las categorías ──
   if (searchQuery) {
-    const results = FORM_LIBRARY.filter(t => (active === 'todas' || t.vertical === active) && matchesSearch(t, searchQuery));
+    const results = skfCatalogoVisible().filter(t => (active === 'todas' || t.vertical === active) && matchesSearch(t, searchQuery));
     countEl.style.display = 'block';
     countEl.textContent = `${results.length} resultado${results.length!==1?'s':''} para "${document.getElementById('searchInp').value.trim()}"`;
     grid.className = 'grid-t';
@@ -365,7 +365,7 @@ function render() {
   grid.className = '';
   const L = (typeof SST_LOCAL !== 'undefined') ? SST_LOCAL[_skfPaisCode] : null;
   const secHtml = (v, cls, headCls, lbl, badgeCls) => {
-    let items = FORM_LIBRARY.filter(t => t.vertical === v);
+    let items = skfCatalogoVisible().filter(t => t.vertical === v);
     if (v === 'sst') items = items.slice().sort((a, b) => (a.freq || 99) - (b.freq || 99));
     const open = openSections.has(v);
     const inner = v === 'sst'
@@ -382,7 +382,7 @@ function render() {
   };
 
   const sstLbl = L ? `SST — 📍 ${L.pais} · ${L.comite}` : (VERTICAL_LABELS.sst || 'SST');
-  const others = [...new Set(FORM_LIBRARY.map(t => t.vertical))].filter(v => v !== 'sst');
+  const others = [...new Set(skfCatalogoVisible().map(t => t.vertical))].filter(v => v !== 'sst');
   grid.innerHTML =
     secHtml('sst', 'cat-hero', 'cat-head-hero', sstLbl, '') +
     `<div class="cat-otras-hd">➕ Otras áreas <span>— un complemento, por si tu empresa también las necesita</span></div>` +

@@ -318,7 +318,7 @@
       </span>
       <select class="filter-sel" id="fltUnidad" aria-label="Unidad" onchange="onFiltroChange()"><option value="">Todas las unidades</option></select>
       <select class="filter-sel" id="fltFormulario" aria-label="Formulario" onchange="onFiltroChange()"><option value="">Todos los formularios</option></select>
-      <button class="filter-sel" id="btnVista" onclick="toggleVista()" title="Cambia entre lo esencial y el panel completo">🔎 Vista simple</button>
+      <button class="filter-sel skf-av" id="btnVista" onclick="toggleVista()" title="Cambia entre lo esencial y el panel completo">🔎 Vista simple</button>
       <span class="flt-count" id="fltCount"></span>
     </div>
 
@@ -328,7 +328,7 @@
         <span class="pa-lbl">📈 Para gerencia · estatus</span>
         <button class="btn-export" onclick="exportarPanelPDF()">🖨 Panel (PDF)</button>
         <button class="btn-export" onclick="skfPortalAdministrar(this)" title="Enlace con el estado siempre al día, sin cuenta">🔗 Portal del cliente</button>
-        <button class="btn-export" onclick="abrirCompartirPanel()">📤 Compartir</button>
+        <button class="btn-export skf-av" onclick="abrirCompartirPanel()">📤 Compartir</button>
       </div>
       <div class="pa-group">
         <span class="pa-lbl">🔧 Para campo · correcciones</span>
@@ -337,7 +337,7 @@
           <option value="responsable">Por responsable</option>
         </select>
         <button class="btn-export" onclick="informeOperativo()">📋 Correcciones (PDF)</button>
-        <button class="btn-export" onclick="abrirCompartirCorrecciones()">📤 Compartir</button>
+        <button class="btn-export skf-av" onclick="abrirCompartirCorrecciones()">📤 Compartir</button>
       </div>
     </div>
 
@@ -1769,8 +1769,8 @@ async function _compartir(modo) {
     ? '☁ <strong>Link en la nube:</strong> funciona en cualquier dispositivo. Es una foto de este momento — vuelve a compartir para actualizarla.'
     : '💾 Guardado en <strong>este dispositivo</strong>. No se pudo publicar en la nube — revisa tu conexión y vuelve a compartir para que el link abra en otros equipos.';
 }
-function abrirCompartirPanel() { _compartir('estatus'); }
-function abrirCompartirCorrecciones() { _compartir('operativo'); }
+function abrirCompartirPanel() { skfUso('compartir:panel'); _compartir('estatus'); }
+function abrirCompartirCorrecciones() { skfUso('compartir:correcciones'); _compartir('operativo'); }
 
 // ══════════════════════════════════════════════════════════════════
 // INFORME OPERATIVO — lo que hay que ir a corregir (punch list). Solo los
@@ -2270,7 +2270,8 @@ function onFiltroChange() {
 // intimidante para el usuario no técnico); la completa muestra todo el BI.
 // Por defecto arranca en simple; la preferencia se guarda por dispositivo.
 function aplicarVista() {
-  const simple = (localStorage.getItem('skf_dash_simple') || '1') === '1';
+  // El panel completo salió del producto principal: fuera del modo avanzado, siempre simple.
+  const simple = !skfAvanzado() || (localStorage.getItem('skf_dash_simple') || '1') === '1';
   document.body.classList.toggle('dash-simple', simple);
   const b = document.getElementById('btnVista');
   if (b) b.textContent = simple ? '📊 Ver panel completo' : '🔎 Vista simple';
@@ -2278,6 +2279,7 @@ function aplicarVista() {
 function toggleVista() {
   const simple = !((localStorage.getItem('skf_dash_simple') || '1') === '1');
   localStorage.setItem('skf_dash_simple', simple ? '1' : '0');
+  if (!simple) skfUso('panel:completo');
   aplicarVista();
   if (!simple) asegurarGraficas();   // pasó a «panel completo»: ahora sí hacen falta
 }

@@ -66,6 +66,7 @@
     <button class="adm-tab" data-p="usuarios">Usuarios</button>
     <button class="adm-tab" data-p="invitaciones">Invitaciones</button>
     <button class="adm-tab" data-p="formularios">Acceso a formularios</button>
+    <button class="adm-tab" data-p="uso">Uso</button>
     <button class="adm-tab" data-p="auditoria">Auditoría</button>
   </div>
 
@@ -145,6 +146,23 @@
   </div>
 
   <!-- ── Auditoría ── -->
+  <!-- ── Uso: qué se abre de verdad (recorte del 50 %, paso 1) ── -->
+  <div class="adm-panel" id="p-uso">
+    <div class="k-alert k-alert-warn">
+      Lo marcado <b>oculto</b> salió del producto principal: solo lo ven el super administrador y las
+      empresas que ya lo usaban. Si en 30 a 60 días nadie lo abre, se borra; si alguien lo pide, se devuelve.
+    </div>
+    <div class="adm-form-row">
+      <div class="k-field"><label>Periodo</label>
+        <select id="usoDias" onchange="cargarUso()"><option value="7">7 días</option><option value="30" selected>30 días</option><option value="90">90 días</option></select>
+      </div>
+    </div>
+    <div class="k-table-wrap"><table class="k-table">
+      <thead><tr><th>Qué</th><th>Veces</th><th>Personas</th><th>Empresas</th><th>Último uso</th></tr></thead>
+      <tbody id="tUso"></tbody>
+    </table></div>
+  </div>
+
   <div class="adm-panel" id="p-auditoria">
     <div class="k-table-wrap"><table class="k-table">
       <thead><tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Entidad</th><th>Detalle</th><th>IP</th></tr></thead>
@@ -175,6 +193,7 @@ document.querySelectorAll('.adm-tab').forEach(b => b.onclick = () => {
   b.classList.add('on');
   document.getElementById('p-' + b.dataset.p).classList.add('on');
   if (b.dataset.p === 'auditoria') cargarAuditoria();
+  if (b.dataset.p === 'uso') cargarUso();
   if (b.dataset.p === 'formularios') cargarFormularios();
 });
 
@@ -295,6 +314,28 @@ function pintarFormularios(formularios) {
                 <button title="Revocar" onclick="acceso('${f.id}','${g.orgId}',false)">✕</button></span>`).join('')
             : '<span style="color:var(--text-dim);font-size:13px">Sin acceso concedido</span>'}</td>
       <td><button class="k-btn k-btn-primary k-btn-sm" onclick="concederSeleccion('${f.id}')">Conceder</button></td>
+    </tr>`).join('');
+}
+
+// Lo que se ocultó en el paso 1 del recorte: se marca para leer la tabla de un vistazo.
+const USO_OCULTO = /^(pagina:turnos|panel:completo|compartir:|digitalizador:(url|pdf|html)|avisos:formulario|demo:local)/;
+const USO_NOMBRE = { 'pagina:index': 'Hoy', 'pagina:plan': 'Plan', 'pagina:hallazgos': 'Hallazgos', 'pagina:cumplimiento': 'Cumplimiento',
+  'pagina:dashboard': 'Panel y reportes', 'pagina:llenar': 'Formularios', 'pagina:digitalizador': 'Crear formulario',
+  'pagina:turnos': 'Turnos', 'pagina:programadas': 'Rutinas', 'pagina:asignaciones': 'Encargos', 'pagina:empresa': 'Mi empresa',
+  'pagina:personas': 'Personas', 'pagina:unidades': 'Lugares', 'pagina:plantillas': 'Catálogo', 'pagina:clientes': 'Mis clientes',
+  'panel:completo': 'Panel completo (gráficas y análisis)', 'compartir:panel': 'Compartir foto del panel',
+  'compartir:correcciones': 'Compartir correcciones', 'digitalizador:img': 'Digitalizar desde foto', 'digitalizador:man': 'Digitalizar escribiendo',
+  'digitalizador:url': 'Digitalizar desde enlace', 'digitalizador:pdf': 'Digitalizar desde PDF', 'digitalizador:html': 'Digitalizar desde HTML',
+  'avisos:formulario': 'Umbral de aviso por formulario', 'demo:local': 'Modo ejemplo en el teléfono' };
+async function cargarUso() {
+  const t = document.getElementById('tUso');
+  const r = await (await fetch('/admin/api/uso?dias=' + document.getElementById('usoDias').value, { credentials: 'same-origin' })).json();
+  if (!r.disponible) { t.innerHTML = '<tr><td colspan="5" class="adm-empty">Falta la migración 015 para medir el uso.</td></tr>'; return; }
+  if (!r.filas.length) { t.innerHTML = '<tr><td colspan="5" class="adm-empty">Sin uso registrado en el periodo.</td></tr>'; return; }
+  t.innerHTML = r.filas.map(f => `
+    <tr>
+      <td><b>${esc(USO_NOMBRE[f.que] || f.que)}</b>${USO_OCULTO.test(f.que) ? ' <span class="k-badge">oculto</span>' : ''}<br><code style="font-size:11px">${esc(f.que)}</code></td>
+      <td>${f.veces}</td><td>${f.personas}</td><td>${f.empresas}</td><td>${esc(f.ultimo)}</td>
     </tr>`).join('');
 }
 

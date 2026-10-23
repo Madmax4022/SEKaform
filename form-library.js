@@ -193,7 +193,7 @@ function skfPerfilSet(email, p){
 // formularios para empezar a usarla sin recorrer el catálogo. «Agregar el kit»
 // los deja en el repositorio del usuario de un toque.
 const AREA_KITS = [
-  { id:'alimentos',    ico:'🍽️', nombre:'Cocina o alimentos',      desc:'Temperatura, limpieza y control de plagas',        vertical:'alimentos',
+  { id:'alimentos', avanzado:true,    ico:'🍽️', nombre:'Cocina o alimentos',      desc:'Temperatura, limpieza y control de plagas',        vertical:'alimentos',
     forms:['control_temperatura_haccp','limpieza_desinfeccion','control_plagas'] },
   { id:'inmuebles',    ico:'🏢', nombre:'Edificio e instalaciones', desc:'Extintores, salidas de emergencia y alarma',        vertical:'inmuebles',
     forms:['inspeccion_extintores','inspeccion_salidas_emergencia','inspeccion_alarma_incendio'] },
@@ -202,13 +202,26 @@ const AREA_KITS = [
   { id:'vigilancia',   ico:'🛡️', nombre:'Vigilancia, rondas y turnos', desc:'Entrega de turno, ronda de vigilancia y salidas',   vertical:'inmuebles',
     forms:['entrega_turno','ronda_vigilancia','inspeccion_salidas_emergencia'],
     extra:{ label:'Turnos', href:'turnos.html' } },
-  { id:'calidad',      ico:'🏆', nombre:'Calidad ISO 9001',         desc:'Auditoría interna, no conformidad y acción correctiva', vertical:'calidad',
+  { id:'calidad', avanzado:true,      ico:'🏆', nombre:'Calidad ISO 9001',         desc:'Auditoría interna, no conformidad y acción correctiva', vertical:'calidad',
     forms:['auditoria_interna_iso','no_conformidad_iso','capa_iso'] },
-  { id:'salud',        ico:'🏥', nombre:'Clínica o laboratorio',    desc:'Triage, consentimiento y evento adverso',           vertical:'salud',
+  { id:'salud', avanzado:true,        ico:'🏥', nombre:'Clínica o laboratorio',    desc:'Triage, consentimiento y evento adverso',           vertical:'salud',
     forms:['triage_urgencias','consentimiento_informado','reporte_evento_adverso'] },
 ];
 
 function _skfPlantillasLocal(){ try { return JSON.parse(localStorage.getItem('skf_plantillas') || '[]'); } catch (e) { return []; } }
+
+// Recorte del 50 % (paso 1): las áreas fuera de seguridad y salud en el trabajo salen del
+// producto principal. Solo las ve el super administrador (skfAvanzado, skf-api.js) o quien
+// ya eligió ese kit. El catálogo completo sigue existiendo: los enlaces viejos funcionan.
+var SKF_VERTICALES_AVANZADAS = ['alimentos', 'calidad', 'salud'];
+function _skfAvz(){ return typeof document !== 'undefined' && document.documentElement.classList.contains('skf-avanzado'); }
+function skfKitsVisibles(elegidos){
+  elegidos = elegidos || [];
+  return AREA_KITS.filter(function(k){ return !k.avanzado || _skfAvz() || elegidos.indexOf(k.id) !== -1; });
+}
+function skfCatalogoVisible(){
+  return FORM_LIBRARY.filter(function(t){ return SKF_VERTICALES_AVANZADAS.indexOf(t.vertical) === -1 || _skfAvz(); });
+}
 
 // Formularios del kit que el usuario todavía no tiene (se compara por nombre localizado).
 function skfKitFaltantes(kit, paisCode){

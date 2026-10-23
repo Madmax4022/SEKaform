@@ -333,6 +333,16 @@ def sync():
     return jsonify({"resultados": resultados, "aplicadas": aplicadas})
 
 
+# ── Qué se usa (migración 015, app/uso.py) ─────────────────────────────────
+@bp.route("/uso", methods=["POST"])
+@limiter.limit("120 per minute")
+@requiere_sesion
+def uso():
+    from ..uso import contar
+    contar(str((request.get_json(silent=True) or {}).get("que") or ""))
+    return ("", 204)
+
+
 # ── Avisos push al celular (migración 014, app/push.py) ─────────────────────
 def _enviar_pushes(eventos, excluir=None) -> None:
     """Hallazgo crítico → dueños y administradores de la empresa (menos quien lo reportó).

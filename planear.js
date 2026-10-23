@@ -114,7 +114,10 @@ async function skfPlanear(opts) {
       html += '<div role="radiogroup" aria-label="Frecuencia">' +
         tile('repite', '🔁', 'Se repite', 'Ej.: cada mes, cada semana') +
         tile('una', '👤', 'Una sola vez, a una persona', 'Le encargas el formulario y ves si lo llenó') +
-        tile('turno', '🕒', 'En cada turno', !hayTurnos ? 'Primero define tus turnos' : !esAdmin ? 'Solo un administrador puede cambiarlo' : demo ? 'No disponible en el modo ejemplo' : 'Se espera en ' + _pwLista(st.turnos), !hayTurnos || !esAdmin || demo) + '</div>';
+        // Turnos salió del producto principal: solo si la empresa ya los usa (o para el super administrador).
+        ((hayTurnos || (typeof skfAvanzado === 'function' && skfAvanzado()))
+          ? tile('turno', '🕒', 'En cada turno', !hayTurnos ? 'Primero define tus turnos' : !esAdmin ? 'Solo un administrador puede cambiarlo' : demo ? 'No disponible en el modo ejemplo' : 'Se espera en ' + _pwLista(st.turnos), !hayTurnos || !esAdmin || demo)
+          : '') + '</div>';
       if (st.modo === 'turno' && !hayTurnos) html += '<a class="skf-sheet-mas" href="turnos.html">Definir mis turnos ›</a>';
       if (st.modo === 'repite') {
         html += '<div class="pw-sub">Frecuencia</div><div class="pw-chips">' + SKF_PW_FRECS.map(function (f) {

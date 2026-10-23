@@ -82,7 +82,7 @@
   <button type="button" class="skf-opt" onclick="skfPortalAdministrar(this)"><span class="so-ico">🔗</span><span class="so-txt"><b>Portal del cliente</b><small>Un enlace con su estado de cumplimiento siempre al día, sin cuenta</small></span><span class="so-arr">›</span></button>
 
   <div class="sec">Avisos</div>
-  <a class="skf-opt" href="llenar.html"><span class="so-ico">🔔</span><span class="so-txt"><b>Avisos de cumplimiento bajo</b><small>Correo cuando una inspección sale mal — se ajusta en cada formulario</small></span><span class="so-arr">›</span></a>
+  <a class="skf-opt skf-av" href="llenar.html"><span class="so-ico">🔔</span><span class="so-txt"><b>Avisos de cumplimiento bajo</b><small>Correo cuando una inspección sale mal — se ajusta en cada formulario</small></span><span class="so-arr">›</span></a>
   <button type="button" class="skf-opt" id="btnNotif"><span class="so-ico" id="notifIco">🔕</span><span class="so-txt"><b>Avisos en este celular</b><small id="notifS">Hallazgos críticos y encargos nuevos, aunque la app esté cerrada</small></span><span class="so-arr">›</span></button>
 
   <div class="sec">Tu cuenta</div>
@@ -162,12 +162,12 @@ const lee = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } c
     const sel = areasSel();
     $('areasList').innerHTML = sel.map(k => {
       const falta = skfKitFaltantes(k, pc).length;
-      const extra = k.extra && !falta ? ` · <a href="${k.extra.href}" style="color:var(--pri-txt)">${k.extra.label}</a>` : '';
+      const extra = k.extra && !falta ? ` · <a class="skf-av" href="${k.extra.href}" style="color:var(--pri-txt)">${k.extra.label}</a>` : '';
       return `<div class="skf-opt" data-id="${k.id}"><span class="so-ico">${k.ico}</span>
         <span class="so-txt"><b>${k.nombre}</b><small>${falta ? falta + ' formulario' + (falta !== 1 ? 's' : '') + ' por agregar' : 'Kit listo en «Mis formularios»'}${extra}</small></span>
         ${falta ? `<button class="area-btn" data-kit="${k.id}">Agregar</button>` : '<a class="area-btn ok" href="llenar.html">Abrir</a>'}</div>`;
     }).join('');
-    const libres = AREA_KITS.filter(k => !sel.some(s => s.id === k.id));
+    const libres = skfKitsVisibles().filter(k => !sel.some(s => s.id === k.id));
     $('areaAdd').hidden = !libres.length;
     $('areaPick').innerHTML = libres.map(k => `<button type="button" data-pick="${k.id}">${k.ico} ${k.nombre}</button>`).join('');
   }
