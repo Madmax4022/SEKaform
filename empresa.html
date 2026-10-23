@@ -51,7 +51,7 @@
   </div>
 
   <div class="sec">Tu empresa</div>
-  <a class="skf-opt" href="organizacion.html"><span class="so-ico">🏷️</span><span class="so-txt"><b>Nombre, país y logo</b><small>Lo que aparece en tus reportes</small></span><span class="so-arr">›</span></a>
+  <button type="button" class="skf-opt" id="btnDatos" style="width:100%"><span class="so-ico">🏷️</span><span class="so-txt"><b>Nombre, país y logo</b><small id="datosS">Lo que aparece en tus reportes y en el portal</small></span><span class="so-arr">›</span></button>
   <a class="skf-opt" href="bienvenida.html"><span class="so-ico">🧭</span><span class="so-txt"><b>Perfil de seguridad y salud</b><small id="perfilS">Tamaño y nivel de riesgo: definen lo que la ley te exige</small></span><span class="so-arr">›</span></a>
 
   <div id="multi" hidden>
@@ -229,6 +229,51 @@ const lee = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } c
   });
   $('btnSalir').addEventListener('click', () => sbSignOut().then(() => location.href = 'login.html'));
 })();
+
+// ── Nombre, país y logo (antes «Datos de la empresa», otra pantalla) ──────────
+// Aparecen en los PDF y en el portal del cliente. Se editan aquí mismo, en una hoja.
+const PAISES_ORG = [['', 'No especificar'], ['CO', '🇨🇴 Colombia'], ['PA', '🇵🇦 Panamá'], ['CR', '🇨🇷 Costa Rica'], ['SV', '🇸🇻 El Salvador'],
+  ['EC', '🇪🇨 Ecuador'], ['MX', '🇲🇽 México'], ['GT', '🇬🇹 Guatemala'], ['PE', '🇵🇪 Perú'], ['OTRO', '🌎 Otro']];
+async function datosEmpresa(origen) {
+  let o = null;
+  try { o = await sbLoadOrg(); } catch (e) {}
+  if (!o) { try { o = JSON.parse(localStorage.getItem('skf_org') || 'null'); } catch (e) {} }
+  o = o || {};
+  let logo = o.logo || null;
+  const e = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const vistaLogo = () => logo ? `<img src="${e(logo)}" alt="Logo" style="width:64px;height:64px;object-fit:contain;border-radius:12px;background:#fff">` : '<span style="font-size:2rem">🏢</span>';
+  skfSheet('Nombre, país y logo', `
+    <label class="pw-sub" for="dtNom" style="margin-top:4px">Nombre de la empresa</label>
+    <input class="pw-inp" id="dtNom" value="${e(o.nombre)}" autocomplete="organization">
+    <label class="pw-sub" for="dtPais">País (define la norma que aplica)</label>
+    <select class="pw-inp" id="dtPais">${PAISES_ORG.map(([v, t]) => `<option value="${v}" ${String(o.pais || '').toUpperCase() === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    <div class="pw-sub">Logo <span style="font-weight:400">(PNG, JPG o SVG, máx. 500 KB)</span></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span id="dtLogo">${vistaLogo()}</span>
+      <label class="pw-chip" style="cursor:pointer">📁 Subir logo<input type="file" id="dtFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></label>
+      <button type="button" class="pw-chip" id="dtQuitar" ${logo ? '' : 'hidden'}>Quitar</button>
+    </div>
+    <p class="pw-err" id="dtErr" hidden></p>
+    <button type="button" class="pw-sig pw-fin" id="dtOk" style="margin-top:16px">Guardar</button>`, origen);
+  const pinta = () => { $('dtLogo').innerHTML = vistaLogo(); $('dtQuitar').hidden = !logo; };
+  $('dtFile').onchange = ev => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    if (f.size > 500 * 1024) { $('dtErr').textContent = 'El logo supera 500 KB: usa una imagen más liviana.'; $('dtErr').hidden = false; return; }
+    const r = new FileReader(); r.onload = () => { logo = r.result; pinta(); }; r.readAsDataURL(f);
+  };
+  $('dtQuitar').onclick = () => { logo = null; pinta(); };
+  $('dtOk').onclick = async () => {
+    const nombre = $('dtNom').value.trim();
+    if (nombre.length < 2) { $('dtErr').textContent = 'Escribe el nombre de la empresa.'; $('dtErr').hidden = false; return; }
+    const d = { nombre, logo, pais: $('dtPais').value || null };
+    try { localStorage.setItem('skf_org', JSON.stringify(d)); } catch (x) {}
+    await skfSyncOrQueue('org', d);
+    skfSheetCerrar();
+    $('datosS').textContent = nombre + (d.pais ? ' · ' + d.pais : '');
+  };
+}
+$('btnDatos').addEventListener('click', ev => datosEmpresa(ev.currentTarget));
+if (location.hash === '#datos') setTimeout(() => datosEmpresa($('btnDatos')), 300);
 </script>
 </body>
 </html>

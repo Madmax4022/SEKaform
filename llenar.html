@@ -1942,7 +1942,7 @@ async function cierreSiguiente(envio) {
     const alDia = SST_PRINCIPIOS.filter(p => skfEstadoPrincipio(ev[p.id]) === 'ok').length;
     let html = '';
     if (nombres.length) html += '<div>Cuenta como evidencia de: <b>' + nombres.map(esc).join(', ') + '</b>.</div>';
-    html += '<div>Llevas <b>' + alDia + ' de 9</b> principios al día · <a href="cumplimiento.html">ver el Mapa</a></div>';
+    html += '<div>Llevas <b>' + alDia + ' de 9</b> principios al día · <a href="dashboard.html#principios">ver Cumplimiento</a></div>';
     const mias = JSON.parse(localStorage.getItem('skf_plantillas') || '[]');
     let sig = null;
     for (const p of SST_PRINCIPIOS) {
