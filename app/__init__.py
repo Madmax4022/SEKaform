@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+import re
 from pathlib import Path
 
 from flask import (Flask, Response, jsonify, redirect, request,
@@ -52,6 +53,7 @@ PAGINAS = {
     "personas.html": "personas.html",
     "clientes.html": "clientes.html",
     "portal.html": "portal.html",
+    "prueba.html": "prueba.html",
 }
 
 ESTATICOS = {
@@ -79,6 +81,7 @@ ACCESO_PUBLICO = {
     "llenar.html": "pub",       # formulario compartido por enlace / QR
     "dashboard.html": "panel",  # panel compartido de solo lectura
     "portal.html": "t",         # portal del cliente: resumen en vivo por enlace
+    "prueba.html": "c",         # prueba gratis por QR: registro con el código de la campaña
 }
 
 
@@ -177,6 +180,9 @@ def _registrar_frontend(app: Flask) -> None:
     @app.route("/")
     @app.route("/<path:ruta>")
     def frontend(ruta: str = ""):
+        # QR de prueba: /prueba/<código> es más corto (y su QR más fácil de leer) que la página.
+        if ruta.startswith("prueba/") and re.fullmatch(r"[A-Za-z0-9_-]{8,40}", ruta[7:]):
+            return redirect("/prueba.html?c=" + ruta[7:])
         if ruta in PAGINAS:
             # Las páginas de la aplicación exigen sesión. El acceso a SEKaform
             # lo concede un super administrador, así que un visitante anónimo

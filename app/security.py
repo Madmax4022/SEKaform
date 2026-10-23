@@ -46,6 +46,7 @@ class Usuario(UserMixin):
         debe_cambiar_password: bool = False,
         es_asesor: bool = False,
         n_empresas: int = 1,
+        prueba_hasta=None,
     ) -> None:
         self.id = str(user_id)
         self.email = email
@@ -57,10 +58,17 @@ class Usuario(UserMixin):
         self.debe_cambiar_password = bool(debe_cambiar_password)
         self.es_asesor = bool(es_asesor)
         self.n_empresas = int(n_empresas or 0)
+        self.prueba_hasta = prueba_hasta   # cuenta de prueba por QR (migración 016); None = normal
+
+    @property
+    def prueba_vencida(self) -> bool:
+        import datetime
+        return self.prueba_hasta is not None and self.prueba_hasta <= datetime.datetime.now(datetime.timezone.utc)
 
     @property
     def puede_escribir(self) -> bool:
-        return self.rol in ROLES_ESCRITURA
+        # Terminada la prueba, la cuenta queda en solo lectura: ve todo, no registra.
+        return self.rol in ROLES_ESCRITURA and not self.prueba_vencida
 
     @property
     def es_admin_org(self) -> bool:
@@ -78,6 +86,8 @@ class Usuario(UserMixin):
             "esSuper": self.es_super,
             "puedeEscribir": self.puede_escribir,
             "esAsesor": self.es_asesor,
+            "pruebaHasta": self.prueba_hasta.isoformat() if self.prueba_hasta else None,
+            "pruebaVencida": self.prueba_vencida,
             "nEmpresas": self.n_empresas,
         }
 
@@ -110,6 +120,13 @@ def cargar_usuario(user_id: str) -> Optional[Usuario]:
                 cur.execute("ROLLBACK TO SAVEPOINT sp_perfil")
                 cur.execute("SELECT * FROM skf_auth_perfil(%s)", (user_id,))
                 u = cur.fetchone()
+            prueba_hasta = None
+            cur.execute("SAVEPOINT sp_prueba")
+            try:
+                cur.execute("SELECT skf_prueba_estado(%s) AS h", (user_id,))
+                prueba_hasta = cur.fetchone()["h"]
+            except psycopg2.errors.UndefinedFunction:   # sin la 016: no hay cuentas de prueba
+                cur.execute("ROLLBACK TO SAVEPOINT sp_prueba")
 
         if not u or not u["is_active"]:
             return None
@@ -125,6 +142,7 @@ def cargar_usuario(user_id: str) -> Optional[Usuario]:
             debe_cambiar_password=u["debe_cambiar"],
             es_asesor=u.get("es_asesor", False),
             n_empresas=u.get("n_empresas", 1),
+            prueba_hasta=prueba_hasta,
         )
     except Exception:
         log.exception("No se pudo cargar el usuario %s", user_id)

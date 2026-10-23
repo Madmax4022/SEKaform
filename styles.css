@@ -540,3 +540,11 @@ html.skf-lector .btn-planear-pg { display: none; }
 /* Funciones avanzadas (skf-api.js · skfAvanzado): ocultas salvo para el super administrador
    o una empresa que ya las usa (a esa se le quita la clase skf-av al detectarlo). */
 html:not(.skf-avanzado) .skf-av { display: none !important; }
+
+/* Cuenta de prueba por QR (sidebar.js): días que quedan; al terminar, solo lectura. */
+.skf-prueba-bar { position: sticky; top: 0; z-index: 499; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 16px; background: linear-gradient(90deg, #1d4ed8, #2563eb); color: #fff; font-size: .84rem; line-height: 1.35; }
+.skf-prueba-bar.fin { background: linear-gradient(90deg, #92400e, #b45309); }
+.skf-prueba-bar b { font-weight: 800; }
+.skf-prueba-bar a { flex: none; min-height: 36px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 8px;
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.5); color: #fff; font-weight: 800; text-decoration: none; }

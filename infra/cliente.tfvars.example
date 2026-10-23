@@ -51,6 +51,11 @@ habilitar_correo = false
 habilitar_push = false
 vapid_publica  = ""
 
+# ── Pruebas por QR ───────────────────────────────────────────────────────
+# WhatsApp de ventas (con indicativo, solo números) para el botón «Hablar con
+# nosotros» de las cuentas de prueba. Vacío = sin botón.
+contacto_whatsapp = ""
+
 # ── Coste ────────────────────────────────────────────────────────────────
 # Aunque el entorno se llame "dev", la aplicación se despliega endurecida
 # (cookies Secure, SECRET_KEY obligatoria): se sirve por HTTPS a personas

@@ -212,6 +212,11 @@ function toast(m, tipo) {
   $('btnDemo').hidden = !(yo && yo.esAsesor);
   try { datos = await skfAsesorResumen(); } catch (e) { datos = null; $('lista').innerHTML = '<div class="aviso">Sin conexión: el resumen de tus clientes necesita señal.</div>'; return; }
   pintar();
+  // Recién llegado de la prueba por QR (prueba.html): sin empresas todavía, la demostración se arma sola.
+  if (new URLSearchParams(location.search).get('demo') === '1' && yo && yo.esAsesor && !((datos && datos.empresas) || []).length) {
+    history.replaceState(null, '', 'clientes.html');
+    demo(); $('dmOk').click();
+  }
 })();
 </script>
 </body>

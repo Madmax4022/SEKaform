@@ -432,6 +432,57 @@ class Uso(unittest.TestCase):
 
 
 @unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class PruebaQR(unittest.TestCase):
+    """Campaña por QR: el super la crea, alguien sin cuenta se registra y entra; al vencer, solo lectura."""
+    def test_flujo(self):
+        import psycopg2
+        sid, correo = str(uuid.uuid4()), f"prueba-{uuid.uuid4().hex[:8]}@sst.co"
+        with psycopg2.connect(OWNER_DB) as con, con.cursor() as cur:
+            cur.execute("INSERT INTO users (id, email, password_hash, nombre, is_super_admin) VALUES (%s, %s, crypt(%s, gen_salt('bf', 4)), 'Super', true)",
+                        (sid, f"super-{sid[:6]}@k.co", CLAVE))
+        try:
+            with APP.test_client() as c:
+                self.assertEqual(c.post("/login", data={"email": f"super-{sid[:6]}@k.co", "password": CLAVE}).status_code, 302)
+                r = c.post("/admin/api/pruebas", json={"nombre": "Congreso SST", "dias": 30, "max_usos": 5})
+                self.assertEqual(r.status_code, 201, r.get_json())
+                codigo, url = r.get_json()["codigo"], r.get_json()["url"]
+                self.assertTrue(url.endswith("/prueba/" + codigo))
+                c.post("/logout")
+                # quien escanea, sin cuenta
+                r = c.get("/prueba/" + codigo)
+                self.assertEqual((r.status_code, r.headers["Location"].endswith("/prueba.html?c=" + codigo)), (302, True))
+                self.assertEqual(c.get("/prueba.html?c=" + codigo).status_code, 200, "la página abre sin sesión")
+                self.assertEqual(c.get("/api/publico/prueba/" + codigo).get_json(), {"nombre": "Congreso SST", "dias": 30, "disponible": True})
+                datos = {"codigo": codigo, "nombre": "Ana SST", "email": correo, "password": "Clave-segura-1", "celular": "3001234567",
+                         "profesion": "Asesor o consultor SST", "acepto": True}
+                self.assertEqual(c.post("/api/publico/prueba", json=dict(datos, acepto=False)).status_code, 400, "sin autorización de datos, no")
+                self.assertEqual(c.post("/api/publico/prueba", json=dict(datos, password="corta")).status_code, 400)
+                r = c.post("/api/publico/prueba", json=datos)
+                self.assertEqual(r.status_code, 201, r.get_json())
+                yo = c.get("/api/yo").get_json()["usuario"]
+                self.assertTrue(yo["esAsesor"], "entra como asesor")
+                self.assertIsNotNone(yo["pruebaHasta"])
+                self.assertFalse(yo["pruebaVencida"])
+                r = c.post("/api/asesor/empresas", json={"nombre": "Constructora Andina (demo)", "pais": "CO"})
+                self.assertEqual(r.status_code, 201, r.get_json())
+                self.assertEqual(c.post("/api/publico/prueba", json=datos).status_code, 409, "el mismo correo no crea otra cuenta")
+                # la prueba vence → solo lectura
+                with psycopg2.connect(OWNER_DB) as con, con.cursor() as cur:
+                    cur.execute("UPDATE users SET prueba_hasta = NOW() - INTERVAL '1 day' WHERE email = %s", (correo,))
+                yo = c.get("/api/yo").get_json()["usuario"]
+                self.assertEqual((yo["pruebaVencida"], yo["puedeEscribir"]), (True, False))
+                r = c.post("/api/sync", json={"operaciones": [{"opId": "x", "tipo": "unidad", "datos": {"id": str(uuid.uuid4()), "nombre": "Sede", "tipo": "sede"}}]})
+                self.assertEqual(r.status_code, 403, "vencida: no registra")
+                self.assertEqual(c.post("/api/asesor/empresas", json={"nombre": "Otra (demo)", "pais": "CO"}).status_code, 403)
+                self.assertEqual(c.get("/api/bootstrap").status_code, 200, "pero sigue viendo lo suyo")
+        finally:
+            with psycopg2.connect(OWNER_DB) as con, con.cursor() as cur:
+                cur.execute("DELETE FROM organizations WHERE id IN (SELECT org_id FROM memberships m JOIN users u ON u.id = m.user_id WHERE u.email = %s)", (correo,))
+                cur.execute("DELETE FROM users WHERE email = %s OR id = %s", (correo, sid))
+                cur.execute("DELETE FROM campanas_prueba WHERE nombre = 'Congreso SST'")
+
+
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
 class Redireccion(unittest.TestCase):
     """Escanear el QR de un equipo sin sesión debe volver al mismo equipo tras entrar."""
     def test_login_conserva_la_consulta(self):

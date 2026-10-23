@@ -90,6 +90,9 @@ class Config:
         "SKF_CORREO_REMITENTE", "Kanan Sentinel <no-reply@kanansentinel.com>"
     )
     URL_PUBLICA = os.environ.get("SKF_URL_PUBLICA", "").rstrip("/")
+    # WhatsApp de ventas (solo dígitos, con indicativo: 573001234567) para el aviso de las
+    # cuentas de prueba. Opcional: sin él, el aviso no lleva botón de contacto.
+    CONTACTO_WHATSAPP = "".join(c for c in os.environ.get("SKF_CONTACTO_WHATSAPP", "") if c.isdigit())
 
     # ── Límites de acceso ────────────────────────────────────────────────
     MAX_INTENTOS_LOGIN = int(os.environ.get("SKF_MAX_INTENTOS", "5"))

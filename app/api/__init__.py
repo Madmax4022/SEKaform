@@ -333,6 +333,64 @@ def sync():
     return jsonify({"resultados": resultados, "aplicadas": aplicadas})
 
 
+# ── Pruebas gratis por QR (migración 016) ───────────────────────────────────
+# La página pública prueba.html?c=<código> crea la cuenta de prueba sin que un
+# super administrador autorice el correo: el código de la campaña es el permiso.
+_RE_CODIGO = re.compile(r"^[A-Za-z0-9_-]{8,40}$")
+_RE_CORREO = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$")
+
+
+@bp.route("/publico/prueba/<codigo>")
+@limiter.limit("60 per minute")
+def prueba_info(codigo):
+    if not _RE_CODIGO.match(codigo or ""):
+        return jsonify({"error": "Enlace no válido."}), 404
+    try:
+        with db.sesion_privilegiada() as cur:
+            cur.execute("SELECT * FROM skf_prueba_info(%s)", (codigo,))
+            f = cur.fetchone()
+    except psycopg2.errors.UndefinedFunction:
+        f = None
+    if not f:
+        return jsonify({"error": "Esta invitación no existe."}), 404
+    return jsonify({"nombre": f["nombre"], "dias": f["dias"], "disponible": f["disponible"]})
+
+
+@bp.route("/publico/prueba", methods=["POST"])
+@limiter.limit("10 per hour")
+def prueba_registro():
+    from flask_login import login_user
+    from ..auth.routes import _password_debil
+    from ..security import cargar_usuario
+    d = request.get_json(silent=True) or {}
+    codigo, email = str(d.get("codigo") or ""), str(d.get("email") or "").strip().lower()
+    nombre, password = str(d.get("nombre") or "").strip(), str(d.get("password") or "")
+    if not _RE_CODIGO.match(codigo) or not _RE_CORREO.match(email) or len(nombre) < 2:
+        return jsonify({"error": "Revisa tu nombre y tu correo."}), 400
+    if d.get("acepto") is not True:
+        return jsonify({"error": "Para crear la cuenta necesitamos tu autorización para tratar tus datos."}), 400
+    problema = _password_debil(password)
+    if problema:
+        return jsonify({"error": problema}), 400
+    try:
+        with db.sesion_privilegiada() as cur:
+            cur.execute("SELECT * FROM skf_prueba_registrar(%s, %s, %s, %s, %s, %s)",
+                        (codigo, email, password, nombre, str(d.get("celular") or "").strip()[:30],
+                         str(d.get("profesion") or "").strip()[:60]))
+            r = cur.fetchone()
+    except psycopg2.errors.UndefinedFunction:
+        return jsonify({"error": "Las pruebas todavía no están habilitadas."}), 503
+    if r["resultado"] == "campana_no_disponible":
+        return jsonify({"error": "Esta invitación ya no está disponible. Pide una nueva a quien te la compartió."}), 410
+    if r["resultado"] != "ok":
+        # Sin decir si el correo existe: se ofrece iniciar sesión.
+        return jsonify({"error": "No pudimos crear la cuenta con ese correo. Si ya tienes cuenta, inicia sesión."}), 409
+    usuario = cargar_usuario(str(r["user_id"]))
+    login_user(usuario, remember=True)
+    auditar("prueba_registro", entidad="user", entidad_id=usuario.id, detalle={"campana": codigo})
+    return jsonify({"ok": True, "destino": "clientes.html?demo=1"}), 201
+
+
 # ── Qué se usa (migración 015, app/uso.py) ─────────────────────────────────
 @bp.route("/uso", methods=["POST"])
 @limiter.limit("120 per minute")
@@ -1059,6 +1117,8 @@ def empresa_activa():
 @bp.route("/asesor/empresas", methods=["POST"])
 @requiere_sesion
 def asesor_crear_empresa():
+    if current_user.prueba_vencida:
+        return jsonify({"error": "Tu prueba terminó. Escríbenos para seguir usando SEKaform."}), 403
     d = request.get_json(silent=True) or {}
     try:
         with sesion_usuario() as cur:
@@ -1352,6 +1412,8 @@ def registrar_api(app, csrf) -> None:
     # CSRF. No hay nada que proteger: no existe sesión que suplantar, y la
     # única escritura posible es contra una plantilla marcada como pública.
     csrf.exempt(publico_envio)
+    # El registro de prueba llega de alguien sin sesión (sin token CSRF que traer).
+    csrf.exempt(prueba_registro)
     csrf.exempt(publico_hallazgo)
     # Igual que los envíos públicos: quien abre un panel compartido no tiene
     # sesión, así que no hay token CSRF que traer ni sesión que suplantar. Lo

@@ -78,6 +78,12 @@ variable "vapid_publica" {
   description = "Llave pública VAPID (la imprime scripts/generar_vapid.py). No es secreta."
 }
 
+variable "contacto_whatsapp" {
+  type        = string
+  default     = ""
+  description = "WhatsApp de ventas con indicativo (573001234567) para el botón de las cuentas de prueba por QR. Vacío = sin botón."
+}
+
 variable "desplegar_app" {
   type        = bool
   default     = false
