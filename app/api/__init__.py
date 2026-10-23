@@ -254,7 +254,7 @@ def _upsert(cur, tipo: str, payload: dict) -> dict:
             (getattr(current_user, "nombre", None) or current_user.email, fila["id"]))
     r = {"ok": True, "id": fila["id"] if fila else registro_id, "tipo": tipo}
     # xmax = 0 solo en una fila INSERTADA ahora: un reintento de la cola (UPDATE) no cuenta como nuevo.
-    if tipo == "envio" and fila and fila.get("nuevo"):
+    if fila and fila.get("nuevo"):
         r["_nuevo"] = True
     return r
 
@@ -285,6 +285,7 @@ def sync():
     resultados = []
     aplicadas = 0
     avisos = []   # envíos nuevos con puntaje bajo: se avisa UNA vez por destinatario al final
+    pushes = []   # hallazgos críticos y encargos nuevos: aviso al celular, al final
 
     for op in operaciones:
         op_id = op.get("opId")
@@ -296,11 +297,17 @@ def sync():
             aviso = None
             with sesion_usuario() as cur:
                 r = _upsert(cur, tipo, datos)
-                if r.pop("_nuevo", False):
+                nuevo = r.pop("_nuevo", False)
+                if nuevo and r.get("tipo") == "envio":
                     aviso = correo_avisos.evaluar(cur, datos)
             # Solo si la transacción se confirmó: un envío revertido no debe avisar.
             if aviso:
                 avisos.append(aviso)
+            if nuevo and r.get("ok"):
+                if r.get("tipo") == "hallazgo" and datos.get("severidad") == "critico":
+                    pushes.append(("hallazgo", r["id"]))
+                elif r.get("tipo") == "asignacion" and datos.get("correo"):
+                    pushes.append(("encargo", r["id"]))
             r["opId"] = op_id
             resultados.append(r)
             if r.get("ok"):
@@ -320,8 +327,111 @@ def sync():
     if avisos:
         salieron = correo_avisos.enviar(avisos)
         auditar("aviso_puntaje_bajo", detalle={"inspecciones": len(avisos), "correos": salieron})
+    if pushes:
+        _enviar_pushes(pushes, excluir=current_user.id)
 
     return jsonify({"resultados": resultados, "aplicadas": aplicadas})
+
+
+# ── Avisos push al celular (migración 014, app/push.py) ─────────────────────
+def _enviar_pushes(eventos, excluir=None) -> None:
+    """Hallazgo crítico → dueños y administradores de la empresa (menos quien lo reportó).
+    Encargo nuevo → la persona encargada. Nunca rompe la petición que lo origina."""
+    from .. import push
+    if not push.disponible():
+        return
+    for tipo, rid in eventos:
+        try:
+            with db.sesion_privilegiada(timeout_ms=3000) as cur:
+                if tipo == "hallazgo":
+                    cur.execute("SELECT * FROM skf_push_hallazgo_critico(%s, %s)", (rid, excluir))
+                else:
+                    cur.execute("SELECT * FROM skf_push_encargo(%s)", (rid,))
+                subs = cur.fetchall()
+        except Exception as e:   # sin la 014 o la base ocupada: sin aviso, nada más
+            log.info("Push omitido (%s %s): %s", tipo, rid, e)
+            continue
+        if not subs:
+            continue
+        f = subs[0]
+        if tipo == "hallazgo":
+            aviso = {"titulo": f"🔴 Hallazgo crítico · {f['org']}",
+                     "cuerpo": " · ".join(x for x in (f["descripcion"] or "Sin descripción", f["formulario"], f["lugar"]) if x)[:180],
+                     "url": "/hallazgos.html", "tag": f"hz-{rid}"}
+        else:
+            limite = f" — antes del {f['fecha_limite']:%d/%m}" if f.get("fecha_limite") else ""
+            aviso = {"titulo": f"👤 Te encargaron un formulario · {f['org']}",
+                     "cuerpo": f"{f['formulario'] or 'Formulario'}{limite}",
+                     "url": f"/llenar.html?tmpl={f['plantilla_id']}" if f.get("plantilla_id") else "/plan.html",
+                     "tag": f"enc-{rid}"}
+        enviados = push.enviar_a(subs, aviso)
+        auditar("push_" + tipo, detalle={"id": str(rid), "dispositivos": len(subs), "enviados": enviados})
+
+
+_RE_ENDPOINT = re.compile(r"^https://[A-Za-z0-9.\-]+(:\d+)?/\S{1,900}$")
+
+
+@bp.route("/push/clave")
+@requiere_sesion
+def push_clave():
+    from .. import push
+    return jsonify({"disponible": push.disponible(), "clave": push.clave_publica() if push.disponible() else None})
+
+
+@bp.route("/push/suscribir", methods=["POST"])
+@requiere_sesion
+def push_suscribir():
+    d = request.get_json(silent=True) or {}
+    llaves = d.get("keys") or {}
+    endpoint, p256dh, auth = str(d.get("endpoint") or ""), str(llaves.get("p256dh") or ""), str(llaves.get("auth") or "")
+    if not _RE_ENDPOINT.match(endpoint) or not (40 <= len(p256dh) <= 200) or not (10 <= len(auth) <= 60):
+        return jsonify({"error": "Suscripción inválida."}), 400
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT skf_push_suscribir(%s, %s, %s, %s) AS r",
+                        (endpoint, p256dh, auth, (request.headers.get("User-Agent") or "")[:200]))
+            r = cur.fetchone()["r"]
+    except psycopg2.errors.UndefinedFunction:
+        return jsonify({"error": "Falta preparar la base (migración 014) para los avisos."}), 503
+    if r != "ok":
+        return jsonify({"error": "Necesitas iniciar sesión."}), 401
+    auditar("push_activado")
+    return jsonify({"ok": True}), 201
+
+
+@bp.route("/push/suscribir", methods=["DELETE"])
+@requiere_sesion
+def push_quitar():
+    endpoint = str((request.get_json(silent=True) or {}).get("endpoint") or "")
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("DELETE FROM push_suscripciones WHERE endpoint = %s", (endpoint,))
+    except psycopg2.errors.UndefinedTable:
+        pass
+    return jsonify({"ok": True})
+
+
+@bp.route("/push/probar", methods=["POST"])
+@limiter.limit("6 per minute")
+@requiere_sesion
+def push_probar():
+    """Un aviso de prueba a mis celulares (o solo a este, si manda su endpoint)."""
+    from .. import push
+    if not push.disponible():
+        return jsonify({"error": "Los avisos al celular no están activados en este servidor."}), 503
+    endpoint = (request.get_json(silent=True) or {}).get("endpoint")
+    try:
+        with sesion_usuario(solo_lectura=True) as cur:
+            cur.execute("SELECT endpoint, p256dh, auth FROM push_suscripciones" + (" WHERE endpoint = %s" if endpoint else ""),
+                        (endpoint,) if endpoint else None)
+            subs = cur.fetchall()
+    except psycopg2.errors.UndefinedTable:
+        return jsonify({"error": "Falta preparar la base (migración 014)."}), 503
+    if not subs:
+        return jsonify({"error": "Este celular no tiene los avisos activados."}), 404
+    n = push.enviar_a(subs, {"titulo": "✅ Avisos activados", "cuerpo": "Así te llegará un hallazgo crítico o un encargo nuevo.",
+                             "url": "/index.html", "tag": "prueba"})
+    return jsonify({"ok": n > 0, "enviados": n, "dispositivos": len(subs)})
 
 
 # ── Lectura ────────────────────────────────────────────────────────────────
@@ -560,6 +670,8 @@ def publico_hallazgo():
 
     if r != "ok":
         return jsonify({"error": "No se pudo registrar el hallazgo."}), 403
+    if d.get("severidad") == "critico":   # reportado por alguien sin cuenta: igual se avisa
+        _enviar_pushes([("hallazgo", hz_id)])
     return jsonify({"ok": True}), 201
 
 

@@ -290,9 +290,21 @@ resource "google_secret_manager_secret" "resend" {
   depends_on = [google_project_service.apis]
 }
 
+# La llave privada VAPID (avisos push) sigue el mismo camino: contenedor vacío aquí,
+# versión subida a mano (scripts/generar_vapid.py imprime el comando).
+resource "google_secret_manager_secret" "vapid" {
+  secret_id = "skf-vapid-private-key"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.apis]
+}
+
 resource "google_secret_manager_secret_iam_member" "acceso" {
-  for_each  = merge(local.secretos, { "skf-resend-api-key" = "" })
-  secret_id = each.key == "skf-resend-api-key" ? google_secret_manager_secret.resend.secret_id : google_secret_manager_secret.s[each.key].secret_id
+  for_each = merge(local.secretos, { "skf-resend-api-key" = "", "skf-vapid-private-key" = "" })
+  secret_id = (each.key == "skf-resend-api-key" ? google_secret_manager_secret.resend.secret_id
+    : each.key == "skf-vapid-private-key" ? google_secret_manager_secret.vapid.secret_id
+  : google_secret_manager_secret.s[each.key].secret_id)
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.run.email}"
 }
@@ -355,6 +367,10 @@ resource "google_cloud_run_v2_service" "app" {
         name  = "SKF_URL_PUBLICA"
         value = var.url_publica
       }
+      env {
+        name  = "VAPID_PUBLIC_KEY"
+        value = var.habilitar_push ? var.vapid_publica : ""
+      }
 
       # RESEND_API_KEY solo se monta si habilitar_correo = true. Terraform crea
       # el contenedor del secreto pero no su versión (la clave no debe entrar
@@ -365,7 +381,8 @@ resource "google_cloud_run_v2_service" "app" {
             DATABASE_URL = "skf-database-url"
             SECRET_KEY   = "skf-secret-key"
           },
-          var.habilitar_correo ? { RESEND_API_KEY = "skf-resend-api-key" } : {}
+          var.habilitar_correo ? { RESEND_API_KEY = "skf-resend-api-key" } : {},
+          var.habilitar_push ? { VAPID_PRIVATE_KEY = "skf-vapid-private-key" } : {}
         )
         content {
           name = env.key

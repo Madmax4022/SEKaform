@@ -60,6 +60,24 @@ variable "habilitar_correo" {
   TXT
 }
 
+variable "habilitar_push" {
+  type        = bool
+  default     = false
+  description = <<-TXT
+    Activa los avisos push al celular: monta VAPID_PRIVATE_KEY y publica
+    VAPID_PUBLIC_KEY. Igual que el correo, ponlo en true SOLO después de subir la
+    llave privada; las dos llaves se generan con:
+      python3 scripts/generar_vapid.py
+    Mientras esté en false la app funciona igual, solo que sin avisos push.
+  TXT
+}
+
+variable "vapid_publica" {
+  type        = string
+  default     = ""
+  description = "Llave pública VAPID (la imprime scripts/generar_vapid.py). No es secreta."
+}
+
 variable "desplegar_app" {
   type        = bool
   default     = false

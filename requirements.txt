@@ -14,5 +14,6 @@ google-cloud-storage==2.18.2    # fotos y firmas fuera de la base de datos
 google-cloud-logging==3.11.3    # logs estructurados en Cloud Logging
 
 requests==2.32.3
+cryptography==43.0.3            # avisos push: firma VAPID y cifrado aes128gcm (app/push.py)
 python-dateutil==2.9.0.post0
 gunicorn==23.0.0

@@ -7,7 +7,7 @@
 // skf-api.js ya las encola para reintentarlas al volver la conexión (ver
 // SKF_QUEUE_KEY).
 
-const CACHE_VERSION = 'skf-shell-v72';
+const CACHE_VERSION = 'skf-shell-v74';
 
 const SHELL_ASSETS = [
   'index.html',
@@ -104,4 +104,30 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     cacheado().then((c) => c || fetch(req).then(guardar)).catch(() => caches.match('index.html'))
   );
+});
+
+// ── Avisos push (app/push.py) ────────────────────────────────────────────
+// Llegan cifrados; el navegador los descifra y aquí solo se muestran. Al tocar el
+// aviso se abre (o se enfoca) la app en la página del aviso.
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { cuerpo: event.data && event.data.text() }; }
+  event.waitUntil(self.registration.showNotification(d.titulo || 'SEKaform', {
+    body: d.cuerpo || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    data: { url: (typeof d.url === 'string' && d.url.startsWith('/')) ? d.url : '/index.html' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const destino = new URL((event.notification.data && event.notification.data.url) || '/index.html', self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
+    const abierta = ventanas.find((v) => v.url.startsWith(self.location.origin));
+    if (abierta) return abierta.focus().then((v) => (v && v.navigate ? v.navigate(destino) : null)).catch(() => self.clients.openWindow(destino));
+    return self.clients.openWindow(destino);
+  }));
 });
