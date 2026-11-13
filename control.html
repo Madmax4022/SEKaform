@@ -32,7 +32,8 @@
 // aquí solo se pinta y se pregunta.
 document.getElementById('logo').innerHTML = ctIco('escudo');
 const $ = s => document.querySelector(s);
-const E = { cat: null, tab: null, sitio: null, trabajo: null, cola: [], t: null, nuevo: {}, timer: null };
+const E = { cat: null, tab: null, sitio: null, trabajo: null, cola: [], t: null, nuevo: {}, timer: null,
+            conf: { nombre: '', quien: 'yo', email: '', hecho: null } };
 const recordar = (k, v) => { try { sessionStorage.setItem('ct_' + k, v || ''); } catch (e) {} };
 const recordado = k => { try { return sessionStorage.getItem('ct_' + k) || null; } catch (e) { return null; } };
 const tipoDe = id => (E.cat.tipos.find(t => t.id === id)) || E.cat.tipos[0];
@@ -47,10 +48,11 @@ function estadoEdificio(e) {
   if (e.pendientes && sinComite) return ['bad', 'Sin comité'];
   if (e.criticosPendientes) return ['warn', 'Crítico en espera'];
   if (e.relevoMio) return ['ok', 'Cubierto por ti'];
-  if (sinComite) return ['warn', 'Sin comité'];
+  if (sinComite) return ['warn', (e.invitados || []).length ? 'Invitación pendiente' : 'Sin comité'];
   return ['ok', 'Cubierto'];
 }
-const comiteTxt = e => e.relevoPor ? 'En relevo: ' + (e.relevoMio ? 'tú' : e.relevoNombre) : e.encargados.length ? e.encargados.map(x => x.nombre).join(', ') : 'Sin encargados nombrados';
+const comiteTxt = e => e.relevoPor ? 'En relevo: ' + (e.relevoMio ? 'tú' : e.relevoNombre) : e.encargados.length ? e.encargados.map(x => x.nombre).join(', ')
+  : (e.invitados || []).length ? 'Invitado, aún sin entrar: ' + e.invitados.join(', ') : 'Sin encargados nombrados';
 
 async function cargarTablero() {
   E.tab = await skfFetch('/api/trabajos/tablero?hoy=' + ctHoy());
@@ -72,7 +74,8 @@ function vTablero() {
     <div class="fecha">${f.charAt(0).toUpperCase() + f.slice(1)}</div>
     <h1>${eds.length} edificio${eds.length !== 1 ? 's' : ''}, ${hoyN} trabajo${hoyN !== 1 ? 's' : ''} en cola u hoy</h1>
     <p class="sub">${T.soyAdmin ? 'Cada comité responde por su edificio. Aquí solo llega lo que no se atendió.' : 'Los edificios por los que respondes.'}</p>
-    ${T.soyAdmin ? `<div class="acciones"><a class="btn pri" style="flex:1" href="plan.html?nuevo=1">${ctIco('mas')} Delegar una tarea</a></div>
+    ${T.soyAdmin ? `<div class="acciones"><a class="btn pri" style="flex:1" href="plan.html?nuevo=1">${ctIco('mas')} Delegar una tarea</a>
+      <button type="button" class="btn" data-acc="agregarEdificio">${ctIco('edificio')} Agregar edificio</button></div>
     <h2 class="${subio.length ? 'alerta' : ''}">${ctIco('alerta')} Subió hasta ti <span class="cnt">${subio.length}</span></h2>
     ${subio.length ? subio.map(e => `<button type="button" class="fila" data-acc="abrirSitio" data-id="${e.id}">
         <span class="tile bad">${ctIco('alerta')}</span><span class="t">${e.criticosPendientes ? e.criticosPendientes + ' trabajo' + (e.criticosPendientes !== 1 ? 's' : '') + ' crítico' + (e.criticosPendientes !== 1 ? 's' : '') + ' sin atender' : e.pendientes + ' solicitud' + (e.pendientes !== 1 ? 'es' : '') + ' sin quien las atienda'}</span>
@@ -126,7 +129,7 @@ function vEdificio() {
   return `
     ${T.edificios.length > 1 || T.soyAdmin ? '<button type="button" class="volver" data-ir="tablero">‹ Edificios</button>' : ''}
     <h1>${ctEsc(e.nombre)}</h1>
-    <p class="sub">${ctIco('personas')} ${ctEsc(e.encargados.length ? e.encargados.map(x => x.nombre).join(', ') : 'Sin encargados nombrados')}</p>
+    <p class="sub">${ctIco('personas')} ${ctEsc(e.encargados.length ? e.encargados.map(x => x.nombre).join(', ') : 'Sin encargados nombrados')}${(e.invitados || []).length ? ' · invitado, aún sin entrar: ' + ctEsc(e.invitados.join(', ')) : ''}</p>
     ${barra}
     <div class="acciones">
       ${e.atiendo ? `<button type="button" class="btn chico pri" data-acc="nuevo">${ctIco('mas')} Abrir un trabajo</button>` : ''}
@@ -220,6 +223,45 @@ function vNuevo() {
     <div style="margin-top:18px"><button type="button" class="btn pri full" data-acc="crear">Abrir y revisar requisitos</button></div>`;
 }
 
+// ── Vista: alta guiada de un edificio ───────────────────────────────────────
+// Un edificio queda listo en un paso: su nombre, quién responde por él y el enlace por el
+// que le van a solicitar trabajos. Es lo primero que ve un director sin edificios.
+function vConfigurar() {
+  const C = E.conf, primera = !E.tab.edificios.length;
+  if (C.hecho) {
+    const r = C.hecho, inv = r.invitacion;
+    return `
+    <div class="pasos"><span class="hecho">Edificio</span><span class="hecho">Encargado</span><span class="aqui">Compartir</span></div>
+    <h1>${ctEsc(r.edificio.nombre)} ya está listo</h1>
+    <p class="sub">Falta que la gente sepa por dónde pedir permiso para trabajar.</p>
+    <h2>Enlace de solicitudes del edificio</h2>
+    <div class="qr"><div class="cod">${ctQR(r.solicitudUrl)}</div><div><b>Contratistas y locales solicitan aquí, sin cuenta</b>
+      <div class="url">${ctEsc(r.solicitudUrl)}</div><button type="button" class="btn chico pri" data-acc="copiar" data-txt="${ctEsc(r.solicitudUrl)}">${ctIco('enlace')} Copiar enlace</button></div></div>
+    <p class="nota">Imprime el código y pégalo en portería, o envía el enlace por WhatsApp a tus contratistas y locales.</p>
+    ${inv ? `<h2>Invitación para el encargado</h2>
+    <div class="qr"><div><b>${ctEsc(inv.email)}</b>
+      <p class="nota" style="margin-top:4px">${inv.correoEnviado ? 'Ya le enviamos un correo con este enlace.' : 'Envíale este enlace por WhatsApp o correo.'} Con él crea su contraseña y, al entrar, ya responde por ${ctEsc(r.edificio.nombre)}.</p>
+      <div class="url">${ctEsc(inv.enlace)}</div><button type="button" class="btn chico pri" data-acc="copiar" data-txt="${ctEsc(inv.enlace)}">${ctIco('enlace')} Copiar invitación</button></div></div>
+    <p class="nota">Mientras esa persona no entre, el edificio aparece sin comité. Si llega una solicitud, puedes cubrirlo tú.</p>`
+    : `<p class="nota">${C.quien === 'yo' ? 'Tú respondes por este edificio. Cuando quieras nombrar a alguien más, ábrelo y pulsa «Comité».' : 'El encargado ya quedó nombrado.'}</p>`}
+    <div class="fila-btn"><button type="button" class="btn" data-acc="otroEdificio">${ctIco('mas')} Agregar otro edificio</button><button type="button" class="btn pri" data-acc="irTablero">Ir a mi tablero</button></div>`;
+  }
+  return `
+    ${primera ? '' : '<button type="button" class="volver" data-ir="tablero">‹ Edificios</button>'}
+    <div class="pasos"><span class="aqui">Edificio</span><span class="aqui">Encargado</span><span>Compartir</span></div>
+    <h1>${primera ? 'Preparemos tu primer edificio' : 'Agregar un edificio'}</h1>
+    <p class="sub">${primera ? 'En ' + ctEsc(E.tab.empresa || 'tu empresa') + ', cada edificio tiene quien responde por los trabajos que se hacen dentro. Toma un minuto.' : 'Su nombre y quién responde por los trabajos que se hagan ahí.'}</p>
+    <div class="campo"><label for="cNombre">1 · ¿Cómo se llama el edificio o sitio?</label>
+      <input type="text" id="cNombre" data-c="nombre" maxlength="80" value="${ctEsc(C.nombre)}" placeholder="Ej.: Plaza Central" autocomplete="off"></div>
+    <div class="campo"><span class="lb">2 · ¿Quién autoriza los trabajos ahí?</span>
+      <div class="seg"><button type="button" data-quien="yo" aria-pressed="${C.quien === 'yo'}">Yo, por ahora</button><button type="button" data-quien="otro" aria-pressed="${C.quien === 'otro'}">Otra persona</button></div>
+      ${C.quien === 'otro' ? `<input type="email" id="cEmail" data-c="email" maxlength="254" value="${ctEsc(C.email)}" placeholder="correo@empresa.com" autocomplete="off" style="margin-top:8px">
+      <small>Si ya es de tu equipo, queda nombrada de una vez. Si no, la invitamos y el edificio la espera.</small>` : '<small>Podrás nombrar a alguien más cuando quieras.</small>'}</div>
+    <div id="cErr" class="aviso" hidden></div>
+    <div style="margin-top:18px"><button type="button" class="btn pri full" data-acc="crearEdificio">Crear edificio</button></div>
+    ${primera ? '<p class="nota">Después podrás agregar los demás edificios, uno por uno.</p>' : ''}`;
+}
+
 // ── Hojas: comité, enlace, no autorizar, foto ───────────────────────────────
 const cerrarHoja = () => { $('#capa').innerHTML = ''; };
 function hoja(titulo, cuerpo) {
@@ -231,8 +273,11 @@ async function hojaComite() {
   const gente = (eq.miembros || []).filter(m => m.rol !== 'lector'), ya = new Set(e.encargados.map(x => x.id));
   hoja('Comité de ' + e.nombre, `<p class="sub">Los encargados ven la cola de este edificio y deciden qué trabajos pueden iniciar.</p>
     ${gente.map(m => `<label class="persona" for="cm_${m.id}"><input type="checkbox" id="cm_${m.id}" data-cm="${m.id}" ${ya.has(m.id) ? 'checked' : ''}><span><b>${ctEsc(m.nombre || m.email)}</b><small>${ctEsc(m.email)} · ${ctEsc(m.rol)}</small></span></label>`).join('')}
-    <p class="nota">¿Falta alguien? Invítalo primero en <a href="personas.html">Personas</a>, con permiso para editar.</p>
-    <div class="fila-btn"><button type="button" class="btn" data-acc="cerrarHoja">Cancelar</button><button type="button" class="btn pri" data-acc="guardarComite">Guardar comité</button></div>`);
+    <div class="fila-btn"><button type="button" class="btn" data-acc="cerrarHoja">Cancelar</button><button type="button" class="btn pri" data-acc="guardarComite">Guardar comité</button></div>
+    <div class="campo"><label for="cmEmail">¿Falta alguien? Nómbralo por su correo</label>
+      <input type="email" id="cmEmail" maxlength="254" placeholder="correo@empresa.com" autocomplete="off">
+      <small>Si aún no tiene cuenta, lo invitamos y el edificio lo espera.</small></div>
+    <div class="acciones"><button type="button" class="btn chico" data-acc="invitarEncargado">${ctIco('mas')} Nombrar por correo</button></div>`);
 }
 async function hojaEnlace(renovar) {
   const e = edificio(E.sitio);
@@ -289,13 +334,16 @@ async function abrirTrabajo(id, mantener) {
   try { E.t = (await skfFetch('/api/trabajos/' + id)).trabajo; } catch (x) { E.t = null; fallo(x); }
   if (location.hash === '#trabajo') pintar(mantener); else location.hash = 'trabajo';
 }
-const VISTAS = { tablero: vTablero, edificio: vEdificio, trabajo: vTrabajo, nuevo: vNuevo };
+const VISTAS = { tablero: vTablero, edificio: vEdificio, trabajo: vTrabajo, nuevo: vNuevo, configurar: vConfigurar };
 async function pintar(mantener) {
   let v = location.hash.slice(1); if (!VISTAS[v]) v = 'tablero';
   const y = window.scrollY;
   clearInterval(E.timer); E.timer = null;
   if (!E.sitio) { E.sitio = recordado('sitio'); }
   if ((v === 'edificio' || v === 'nuevo') && !edificio(E.sitio)) v = 'tablero';
+  if (v === 'configurar' && !E.tab.soyAdmin) v = 'tablero';
+  // Director sin edificios: lo primero es crear uno, guiado.
+  if (v === 'tablero' && E.tab.soyAdmin && !E.tab.edificios.length) v = 'configurar';
   if (v === 'tablero' && !E.tab.soyAdmin && E.tab.edificios.length === 1) { E.sitio = E.tab.edificios[0].id; v = 'edificio'; }
   if (v === 'trabajo' && !E.t) {
     const id = E.trabajo || recordado('trabajo');
@@ -317,6 +365,7 @@ document.addEventListener('click', async ev => {
   const nav = ev.target.closest('[data-ir]'); if (nav) { if (nav.dataset.ir === 'tablero' || nav.dataset.ir === 'edificio') await cargarTablero().catch(() => {}); ir(nav.dataset.ir); return; }
   const tp = ev.target.closest('[data-tipo]'); if (tp) { E.nuevo.tipo = tp.dataset.tipo; pintar(true); return; }
   const og = ev.target.closest('[data-origen]'); if (og) { E.nuevo.origen = og.dataset.origen; pintar(true); return; }
+  const qn = ev.target.closest('[data-quien]'); if (qn) { E.conf.quien = qn.dataset.quien; await pintar(true); if (qn.dataset.quien === 'otro' && $('#cEmail')) $('#cEmail').focus(); return; }
   const b = ev.target.closest('[data-acc]'); if (!b) return;
   const a = b.dataset.acc, e = edificio(E.sitio);
   if (a === 'velo') { if (ev.target === b) cerrarHoja(); }
@@ -326,6 +375,28 @@ document.addEventListener('click', async ev => {
   else if (a === 'copiar') ctCopiar(b.dataset.txt);
   else if (a === 'nuevo') { E.nuevo = {}; ir('nuevo'); }
   else if (a === 'comite') hojaComite();
+  else if (a === 'agregarEdificio' || a === 'otroEdificio') { E.conf = { nombre: '', quien: 'yo', email: '', hecho: null }; if (location.hash === '#configurar') pintar(); else ir('configurar'); }
+  else if (a === 'irTablero') { E.conf = { nombre: '', quien: 'yo', email: '', hecho: null }; await cargarTablero().catch(() => {}); ir('tablero'); }
+  else if (a === 'crearEdificio') {
+    const C = E.conf, err = $('#cErr'); err.hidden = true; b.disabled = true;
+    try {
+      const r = await skfFetch('/api/trabajos/edificios', { method: 'POST', body: JSON.stringify({ nombre: C.nombre, encargado: C.quien === 'yo' ? 'yo' : C.email }) });
+      // El primer edificio se crea desde el tablero (sin #configurar en la dirección): hay que ir
+      // a la vista de forma explícita o, al dejar de estar vacío, el tablero taparía el paso final.
+      await cargarTablero(); C.hecho = r; ir('configurar');
+    } catch (x) { err.textContent = x.message || 'No se pudo crear el edificio.'; err.hidden = false; b.disabled = false; }
+  }
+  else if (a === 'invitarEncargado') {
+    const correo = ($('#cmEmail') || {}).value || '';
+    try {
+      const r = await skfFetch('/api/unidades/' + e.id + '/invitar-encargado', { method: 'POST', body: JSON.stringify({ encargado: correo }) });
+      await cargarTablero(); pintar(true);
+      if (r.invitacion) hoja('Invitación lista', `<p class="sub">${ctEsc(r.invitacion.email)} ${r.invitacion.correoEnviado ? 'ya recibió un correo con este enlace.' : 'aún no tiene cuenta. Envíale este enlace:'} Al entrar responderá por ${ctEsc(e.nombre)}.</p>
+        <div class="qr" style="margin-top:14px"><div><div class="url">${ctEsc(r.invitacion.enlace)}</div><button type="button" class="btn chico pri" data-acc="copiar" data-txt="${ctEsc(r.invitacion.enlace)}">${ctIco('enlace')} Copiar invitación</button></div></div>
+        <div class="acciones"><button type="button" class="btn pri" style="flex:1" data-acc="cerrarHoja">Listo</button></div>`);
+      else { cerrarHoja(); ctToast('Encargado nombrado.'); }
+    } catch (x) { fallo(x); }
+  }
   else if (a === 'enlace') hojaEnlace(false);
   else if (a === 'renovarEnlace') hojaEnlace(true);
   else if (a === 'guardarComite') {
@@ -362,7 +433,10 @@ document.addEventListener('change', async ev => {
     pintar(true); guardarRequisitos(); return;
   }
 });
-document.addEventListener('input', ev => { const n = ev.target.closest('[data-n]'); if (n) E.nuevo[n.dataset.n] = n.value; });
+document.addEventListener('input', ev => {
+  const n = ev.target.closest('[data-n]'); if (n) E.nuevo[n.dataset.n] = n.value;
+  const c = ev.target.closest('[data-c]'); if (c) E.conf[c.dataset.c] = c.value;
+});
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrarHoja(); });
 window.addEventListener('hashchange', () => pintar());
 window.addEventListener('skf:sin-sesion', () => { location.href = '/login?next=' + encodeURIComponent('/control.html'); });

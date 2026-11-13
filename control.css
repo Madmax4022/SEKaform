@@ -141,7 +141,7 @@ button.fila:hover { border-color: var(--pri-txt); }
 /* Formularios */
 .campo { margin-top: 14px; }
 .campo > label, .campo > .lb { display: block; font-size: .73rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--mut); margin-bottom: 6px; }
-.campo input[type=text], .campo input[type=date], .campo input[type=tel], .campo select, .campo textarea {
+.campo input[type=text], .campo input[type=date], .campo input[type=tel], .campo input[type=email], .campo select, .campo textarea {
   width: 100%; min-height: 48px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--bor); background: var(--inp); color: var(--txt); font: inherit; }
 .campo textarea { min-height: 84px; resize: vertical; }
 .campo small { color: var(--mut); font-size: .78rem; display: block; margin-top: 4px; }

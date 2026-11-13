@@ -40,6 +40,42 @@ CREATE POLICY unidad_encargados_sel ON unidad_encargados FOR SELECT USING (skf_p
 CREATE POLICY unidad_encargados_ins ON unidad_encargados FOR INSERT WITH CHECK (skf_es_admin_org(org_id));
 CREATE POLICY unidad_encargados_del ON unidad_encargados FOR DELETE USING (skf_es_admin_org(org_id));
 
+-- Encargados invitados que todavía no tienen cuenta. Al nombrar al comité de un edificio
+-- lo normal es que la persona aún no exista en la app: se la invita por correo y aquí
+-- queda anotado de qué edificio se va a encargar. Cuando entra por primera vez,
+-- skf_encargos_reclamar() la convierte en encargada de verdad.
+CREATE TABLE IF NOT EXISTS unidad_invitados (
+  unidad_id UUID NOT NULL REFERENCES unidades(id) ON DELETE CASCADE,
+  org_id    UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  email     CITEXT NOT NULL CHECK (length(email) BETWEEN 5 AND 254),
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (unidad_id, email)
+);
+ALTER TABLE unidad_invitados ENABLE ROW LEVEL SECURITY;
+ALTER TABLE unidad_invitados NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS unidad_invitados_sel ON unidad_invitados;
+DROP POLICY IF EXISTS unidad_invitados_ins ON unidad_invitados;
+DROP POLICY IF EXISTS unidad_invitados_del ON unidad_invitados;
+CREATE POLICY unidad_invitados_sel ON unidad_invitados FOR SELECT USING (skf_es_admin_org(org_id));
+CREATE POLICY unidad_invitados_ins ON unidad_invitados FOR INSERT WITH CHECK (skf_es_admin_org(org_id));
+CREATE POLICY unidad_invitados_del ON unidad_invitados FOR DELETE USING (skf_es_admin_org(org_id));
+
+-- Quien entra reclama los edificios para los que fue invitado en la empresa activa.
+-- Solo con SU correo (el de la sesión) y solo si ya puede escribir en esa empresa.
+CREATE OR REPLACE FUNCTION skf_encargos_reclamar()
+RETURNS INTEGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE o UUID := skf_org_id(); yo UUID := skf_user_id(); correo CITEXT; n INTEGER;
+BEGIN
+  IF o IS NULL OR yo IS NULL OR NOT skf_puede_escribir(o) THEN RETURN 0; END IF;
+  SELECT email INTO correo FROM users WHERE id = yo;
+  INSERT INTO unidad_encargados (unidad_id, user_id, org_id)
+  SELECT i.unidad_id, yo, o FROM unidad_invitados i WHERE i.org_id = o AND i.email = correo
+  ON CONFLICT DO NOTHING;
+  DELETE FROM unidad_invitados i WHERE i.org_id = o AND i.email = correo;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RETURN n;
+END $$;
+
 -- ¿Quien pregunta responde hoy por este edificio? Encargado que sigue siendo
 -- miembro, o administrador con el relevo tomado.
 CREATE OR REPLACE FUNCTION skf_atiende_unidad(u UUID)
@@ -116,6 +152,7 @@ CREATE POLICY trabajos_upd ON trabajos FOR UPDATE
 -- Sin policy de borrado: un trabajo no se borra, se rechaza o se cierra.
 
 GRANT SELECT, INSERT, DELETE ON unidad_encargados TO skf_app;
+GRANT SELECT, INSERT, DELETE ON unidad_invitados TO skf_app;
 GRANT SELECT, INSERT, UPDATE ON trabajos TO skf_app;
 
 -- ── Enlace público de solicitudes ───────────────────────────────────────────
@@ -165,6 +202,7 @@ RETURNS JSONB LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $
 $$;
 
 GRANT EXECUTE ON FUNCTION skf_atiende_unidad(UUID) TO skf_app;
+GRANT EXECUTE ON FUNCTION skf_encargos_reclamar() TO skf_app;
 GRANT EXECUTE ON FUNCTION skf_solicitud_info(TEXT) TO skf_app;
 GRANT EXECUTE ON FUNCTION skf_solicitud_crear(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, DATE, TEXT, TEXT) TO skf_app;
 GRANT EXECUTE ON FUNCTION skf_trabajo_publico(TEXT) TO skf_app;

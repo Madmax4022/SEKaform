@@ -26,13 +26,14 @@ import psycopg2.extras
 from flask import jsonify, request
 from flask_login import current_user
 
-from .. import db, limiter
+from .. import alertas as correo_avisos, db, limiter
 from .. import trabajos as cat
 from ..security import (auditar, requiere_admin_org, requiere_escritura,
                         requiere_organizacion, sesion_usuario)
 from . import _uuid_valido, bp
 
 _RE_TOKEN = re.compile(r"^[A-Za-z0-9_\-]{24,128}$")
+_RE_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 _RE_FOTO = re.compile(r"^data:image/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$")
 _MAX_FOTO = 700_000          # ~500 KB de imagen ya comprimida por el teléfono
 _COLS = ("id, unidad_id, numero, token, titulo, tipo, criticidad, origen, quien, lugar, contacto, fecha, estado, "
@@ -117,6 +118,10 @@ def trabajos_tablero():
     hoy = _fecha(request.args.get("hoy")) or datetime.date.today().isoformat()
     admin = bool(current_user.es_admin_org)
     try:
+        # Quien fue invitado como encargado y entra por primera vez recibe aquí sus edificios.
+        if current_user.puede_escribir:
+            with sesion_usuario() as cur:
+                cur.execute("SELECT skf_encargos_reclamar()")
         with sesion_usuario(solo_lectura=True) as cur:
             cur.execute("""
                 SELECT u.id, u.nombre, u.relevo_por, u.relevo_desde, (u.token_solicitud IS NOT NULL) AS enlace,
@@ -125,7 +130,9 @@ def trabajos_tablero():
                        COALESCE((SELECT jsonb_agg(jsonb_build_object('id', e.user_id,
                                    'nombre', COALESCE(NULLIF(us.nombre, ''), us.email::text)) ORDER BY us.nombre)
                                  FROM unidad_encargados e JOIN users us ON us.id = e.user_id
-                                 WHERE e.unidad_id = u.id), '[]'::jsonb) AS encargados
+                                 WHERE e.unidad_id = u.id), '[]'::jsonb) AS encargados,
+                       COALESCE((SELECT jsonb_agg(i.email::text ORDER BY i.email) FROM unidad_invitados i
+                                 WHERE i.unidad_id = u.id), '[]'::jsonb) AS invitados
                   FROM unidades u LEFT JOIN users ru ON ru.id = u.relevo_por
                  WHERE u.org_id = %s AND u.activa AND u.tipo = 'sede'
                  ORDER BY u.nombre""", (current_user.org_id,))
@@ -159,11 +166,13 @@ def trabajos_tablero():
         n = por_unidad.get(str(u["id"]), {})
         edificios.append({
             "id": u["id"], "nombre": u["nombre"], "encargados": u["encargados"], "atiendo": u["atiendo"],
+            "invitados": u["invitados"],
             "relevoPor": u["relevo_por"], "relevoNombre": u["relevo_nombre"], "relevoDesde": u["relevo_desde"],
             "relevoMio": str(u["relevo_por"]) == str(current_user.id), "tieneEnlace": u["enlace"],
             "pendientes": n.get("pendientes", 0), "criticosPendientes": n.get("criticos_pendientes", 0),
             "criticoDesde": n.get("critico_desde"), "enCurso": n.get("en_curso", 0), "hoy": n.get("hoy", 0)})
     return jsonify({"disponible": True, "soyAdmin": admin, "yo": {"id": current_user.id, "nombre": _yo()},
+                    "empresa": current_user.org_nombre,
                     "edificios": edificios,
                     "porTipo": [{"tipo": f["tipo"], "total": f["total"], "autorizados": f["autorizados"],
                                  "rechazados": f["rechazados"], "sinAtender": f["sin_atender"]} for f in por_tipo]})
@@ -392,6 +401,115 @@ def unidad_encargados(unidad_id: str):
         raise
     auditar("unidad_encargados", entidad="unidades", entidad_id=uid, detalle={"encargados": validos})
     return jsonify({"ok": True, "encargados": validos})
+
+
+def _nombrar(cur, unidad_id: str, quien: Any) -> tuple[Optional[dict], Optional[str]]:
+    """Nombra al encargado de un edificio dentro de la transacción abierta.
+
+    `quien` es "yo" o un correo. Si el correo ya es de alguien del equipo que puede editar,
+    queda encargado de inmediato; si no, se le invita a la empresa y el edificio le espera
+    hasta que entre (unidad_invitados). Devuelve (invitación o None, error o None).
+    """
+    if quien == "yo":
+        cur.execute("""INSERT INTO unidad_encargados (unidad_id, user_id, org_id) VALUES (%s, %s, %s)
+                       ON CONFLICT DO NOTHING""", (unidad_id, current_user.id, current_user.org_id))
+        return None, None
+    email = str(quien or "").strip().lower()
+    if not _RE_CORREO.match(email) or len(email) > 254:
+        return None, "Escribe un correo válido para el encargado."
+    cur.execute("""SELECT u.id, m.rol FROM users u JOIN memberships m ON m.user_id = u.id
+                    WHERE m.org_id = %s AND u.email = %s""", (current_user.org_id, email))
+    miembro = cur.fetchone()
+    if miembro:
+        if miembro["rol"] == "lector":
+            return None, "Esa persona solo puede leer. Dale permiso para editar en Personas y vuelve a nombrarla."
+        cur.execute("""INSERT INTO unidad_encargados (unidad_id, user_id, org_id) VALUES (%s, %s, %s)
+                       ON CONFLICT DO NOTHING""", (unidad_id, miembro["id"], current_user.org_id))
+        return None, None
+    cur.execute("SELECT * FROM skf_equipo_invitar(%s, 'editor', 14)", (email,))
+    r = cur.fetchone()
+    if r["resultado"] not in ("ok", "renovada"):
+        return None, "No se pudo invitar a ese correo. Revisa que esté bien escrito."
+    cur.execute("""INSERT INTO unidad_invitados (unidad_id, org_id, email) VALUES (%s, %s, %s)
+                   ON CONFLICT DO NOTHING""", (unidad_id, current_user.org_id, email))
+    from ..config import Config
+    return {"email": email, "enlace": f"{Config.URL_PUBLICA or request.host_url.rstrip('/')}/registro?email={email}"}, None
+
+
+def _avisar(inv: Optional[dict]) -> Optional[dict]:
+    """Manda el correo de invitación (si hay servicio de correo) y dice si salió."""
+    if inv:
+        inv["correoEnviado"] = correo_avisos.enviar_invitacion(
+            inv["email"], current_user.org_nombre or "tu empresa", _yo(), "editor", inv["enlace"])
+    return inv
+
+
+class _Deshacer(Exception):
+    """Corta la transacción para que no quede un edificio a medias; lleva el mensaje al usuario."""
+
+
+@bp.route("/trabajos/edificios", methods=["POST"])
+@requiere_organizacion
+@requiere_admin_org
+def edificio_crear():
+    """Alta guiada: un edificio, quién responde por él y su enlace de solicitudes, en un paso."""
+    d = request.get_json(silent=True) or {}
+    nombre = _texto(d.get("nombre"), 80)
+    if not nombre or len(nombre) < 2:
+        return jsonify({"error": "Escribe el nombre del edificio."}), 400
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("""SELECT 1 FROM unidades WHERE org_id = %s AND tipo = 'sede' AND activa
+                              AND lower(nombre) = lower(%s)""", (current_user.org_id, nombre))
+            if cur.fetchone():
+                return jsonify({"error": "Ya tienes un edificio con ese nombre."}), 409
+            cur.execute("""INSERT INTO unidades (id, org_id, nombre, tipo, token_solicitud)
+                           VALUES (gen_random_uuid(), %s, %s, 'sede',
+                                   translate(encode(gen_random_bytes(24), 'base64'), '+/=', '-_'))
+                           RETURNING id, token_solicitud""", (current_user.org_id, nombre))
+            u = cur.fetchone()
+            inv = None
+            if d.get("encargado"):
+                inv, error = _nombrar(cur, str(u["id"]), d.get("encargado"))
+                if error:
+                    raise _Deshacer(error)
+    except _Deshacer as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        if _sin_017(e):
+            return jsonify({"error": _FALTA_017}), 503
+        raise
+    auditar("edificio_crear", entidad="unidades", entidad_id=str(u["id"]), detalle={"invitado": bool(inv)})
+    return jsonify({"ok": True, "edificio": {"id": u["id"], "nombre": nombre},
+                    "solicitudUrl": _url("solicitud.html", "e", u["token_solicitud"]),
+                    "invitacion": _avisar(inv)}), 201
+
+
+@bp.route("/unidades/<unidad_id>/invitar-encargado", methods=["POST"])
+@requiere_organizacion
+@requiere_admin_org
+def unidad_invitar_encargado(unidad_id: str):
+    """Nombrar encargado a alguien por su correo, tenga cuenta o no."""
+    uid = _uuid_valido(unidad_id)
+    quien = (request.get_json(silent=True) or {}).get("encargado")
+    if not uid:
+        return jsonify({"error": "No encontrado."}), 404
+    try:
+        with sesion_usuario() as cur:
+            cur.execute("SELECT 1 FROM unidades WHERE id = %s AND org_id = %s", (uid, current_user.org_id))
+            if not cur.fetchone():
+                return jsonify({"error": "No encontrado."}), 404
+            inv, error = _nombrar(cur, uid, quien)
+            if error:
+                raise _Deshacer(error)
+    except _Deshacer as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        if _sin_017(e):
+            return jsonify({"error": _FALTA_017}), 503
+        raise
+    auditar("unidad_invitar_encargado", entidad="unidades", entidad_id=uid, detalle={"invitado": bool(inv)})
+    return jsonify({"ok": True, "invitacion": _avisar(inv)})
 
 
 @bp.route("/unidades/<unidad_id>/relevo", methods=["POST"])

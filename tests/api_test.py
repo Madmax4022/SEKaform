@@ -46,7 +46,7 @@ def limpiar():
     with psycopg2.connect(OWNER_DB) as con, con.cursor() as cur:
         cur.execute("DELETE FROM authorized_emails WHERE org_id IN (SELECT org_id FROM memberships WHERE user_id = %s) OR org_id = %s", (ASESOR, ORG))
         cur.execute("DELETE FROM organizations WHERE id = %s OR id IN (SELECT org_id FROM memberships WHERE user_id = %s)", (ORG, ASESOR))
-        cur.execute("DELETE FROM users WHERE id IN (%s, %s, %s)", (DUENO, EDITOR, ASESOR))
+        cur.execute("DELETE FROM users WHERE id IN (%s, %s, %s) OR email LIKE %s", (DUENO, EDITOR, ASESOR, f"%-{SUF}@api-test.co"))
 
 
 APP = None
@@ -544,7 +544,9 @@ class Trabajos(unittest.TestCase):
             # El encargado ve solo su edificio y decide.
             self.entrar(c, MAIL_E)
             t = c.get("/api/trabajos/tablero").get_json()
-            self.assertEqual([e["nombre"] for e in t["edificios"]], ["Plaza Central"], "el encargado no ve otros edificios")
+            vistos = [e["nombre"] for e in t["edificios"]]
+            self.assertIn("Plaza Central", vistos)
+            self.assertNotIn("Bodega Sur", vistos, "el encargado no ve edificios que no son suyos")
             self.assertEqual(c.get(f"/api/trabajos?unidad={otro}").get_json()["trabajos"], [], "ni sus trabajos")
             cola = c.get(f"/api/trabajos?unidad={edificio}").get_json()["trabajos"]
             self.assertEqual(len(cola), 1)
@@ -575,7 +577,7 @@ class Trabajos(unittest.TestCase):
             # El director ve todo, pero para decidir toma el relevo.
             self.entrar(c, MAIL_D)
             t = c.get("/api/trabajos/tablero").get_json()
-            self.assertEqual(sorted(e["nombre"] for e in t["edificios"]), ["Bodega Sur", "Plaza Central"])
+            self.assertLessEqual({"Bodega Sur", "Plaza Central"}, {e["nombre"] for e in t["edificios"]}, "el director ve todos")
             bodega = next(e for e in t["edificios"] if e["id"] == otro)
             self.assertEqual((bodega["pendientes"], bodega["encargados"], bodega["atiendo"]), (1, [], False))
             tid2 = c.get(f"/api/trabajos?unidad={otro}").get_json()["trabajos"][0]["id"]
@@ -594,6 +596,54 @@ class Trabajos(unittest.TestCase):
             c.post("/logout")
             self.assertEqual(c.get("/api/trabajos/tablero").status_code, 401)
             self.assertEqual(c.get("/control.html").status_code, 302, "el control exige sesión")
+
+    def test_alta_guiada_de_edificios(self):
+        """El director crea sus edificios y nombra encargados, tengan cuenta o no."""
+        nuevo = f"encargada-{SUF}@api-test.co"
+        with APP.test_client() as c:
+            self.entrar(c, MAIL_E)
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": "Torre Editor"}).status_code, 403, "solo quien dirige crea edificios")
+            c.post("/logout")
+            self.entrar(c, MAIL_D)
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": " "}).status_code, 400)
+            # 1 · «yo, por ahora»: queda encargado y con enlace, sin más pasos
+            r = c.post("/api/trabajos/edificios", json={"nombre": "Torre Norte", "encargado": "yo"})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            j = r.get_json()
+            self.assertIn("/solicitud.html?e=", j["solicitudUrl"])
+            self.assertIsNone(j["invitacion"])
+            torre = next(e for e in c.get("/api/trabajos/tablero").get_json()["edificios"] if e["id"] == j["edificio"]["id"])
+            self.assertEqual((torre["atiendo"], torre["tieneEnlace"], [x["nombre"] for x in torre["encargados"]]), (True, True, ["Diana"]))
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": "torre norte"}).status_code, 409, "sin nombres repetidos")
+            # 2 · alguien del equipo: queda nombrado de una vez, sin invitación
+            r = c.post("/api/trabajos/edificios", json={"nombre": "Sede Sur", "encargado": MAIL_E.upper()}).get_json()
+            self.assertIsNone(r["invitacion"])
+            # 3 · un correo mal escrito no deja el edificio a medias
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": "Local Fantasma", "encargado": "sin-arroba"}).status_code, 400)
+            nombres = [e["nombre"] for e in c.get("/api/trabajos/tablero").get_json()["edificios"]]
+            self.assertNotIn("Local Fantasma", nombres)
+            # 4 · alguien sin cuenta: se le invita y el edificio le espera
+            r = c.post("/api/trabajos/edificios", json={"nombre": "Galería Este", "encargado": nuevo})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            inv, galeria = r.get_json()["invitacion"], r.get_json()["edificio"]["id"]
+            self.assertEqual(inv["email"], nuevo)
+            self.assertIn("/registro?email=", inv["enlace"])
+            e = next(x for x in c.get("/api/trabajos/tablero").get_json()["edificios"] if x["id"] == galeria)
+            self.assertEqual((e["invitados"], e["encargados"], e["atiendo"]), ([nuevo], [], False))
+            r = c.post(f"/api/unidades/{galeria}/invitar-encargado", json={"encargado": nuevo})
+            self.assertEqual(r.status_code, 200, "invitar dos veces no falla")
+            c.post("/logout")
+
+            # La invitada se registra con ese correo y, al entrar, ya responde por su edificio.
+            r = c.post("/registro", data={"email": nuevo, "password": CLAVE, "nombre": "Nora"})
+            self.assertEqual(r.status_code, 302, "el registro de la invitada debe entrar")
+            t = c.get("/api/trabajos/tablero").get_json()
+            self.assertEqual(([x["nombre"] for x in t["edificios"]], t["soyAdmin"]), (["Galería Este"], False))
+            self.assertTrue(t["edificios"][0]["atiendo"])
+            c.post("/logout")
+            self.entrar(c, MAIL_D)
+            e = next(x for x in c.get("/api/trabajos/tablero").get_json()["edificios"] if x["id"] == galeria)
+            self.assertEqual((e["invitados"], [x["nombre"] for x in e["encargados"]]), ([], ["Nora"]))
 
 
 if __name__ == "__main__":

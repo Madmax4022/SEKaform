@@ -99,6 +99,21 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   ASSERT n = 0, 'Al devolver el relevo deja de decidir';
 
+  -- 5b · invitado sin cuenta: el edificio lo espera y solo él lo reclama, con su correo
+  INSERT INTO unidad_invitados (unidad_id, org_id, email) VALUES (bodega, org_a, 'OTRO@trab-a.co');
+  PERFORM set_config('app.user_id', enc_a::text, true);
+  SELECT count(*) INTO n FROM unidad_invitados;
+  ASSERT n = 0, 'Las invitaciones pendientes las ve quien dirige, no los encargados';
+  ASSERT skf_encargos_reclamar() = 0, 'Nadie reclama la invitación de otro correo';
+  ASSERT NOT skf_atiende_unidad(bodega), 'Y sigue sin atender ese edificio';
+  PERFORM set_config('app.user_id', otro_a::text, true);
+  ASSERT skf_encargos_reclamar() = 1, 'El invitado reclama su edificio (el correo no distingue mayúsculas)';
+  ASSERT skf_atiende_unidad(bodega), 'Y ya responde por él';
+  ASSERT skf_encargos_reclamar() = 0, 'Reclamar dos veces no hace nada';
+  PERFORM set_config('app.user_id', admin_a::text, true);
+  SELECT count(*) INTO n FROM unidad_invitados;
+  ASSERT n = 0, 'La invitación se consume al reclamarla';
+
   -- 6 · quien dejó de ser miembro pierde el edificio aunque siga en la lista de encargados
   PERFORM set_config('app.user_id', super::text, true);
   PERFORM set_config('app.is_super_admin', 'on', true);
@@ -115,6 +130,12 @@ BEGIN
   ASSERT n = 0, 'B no ve los trabajos de A';
   SELECT count(*) INTO n FROM unidad_encargados;
   ASSERT n = 0, 'B no ve el comité de A';
+  BEGIN
+    INSERT INTO unidad_invitados (unidad_id, org_id, email) VALUES (plaza, org_a, 'adm@trab-b.co');
+    ASSERT false, 'B no se invita a sí mismo a un edificio de A';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  ASSERT skf_encargos_reclamar() = 0, 'Ni reclama nada en su empresa por invitaciones de otra';
   UPDATE unidades SET relevo_por = admin_b WHERE id = plaza;
   GET DIAGNOSTICS n = ROW_COUNT;
   ASSERT n = 0, 'B no toma el relevo de un edificio de A';
