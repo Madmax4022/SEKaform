@@ -16,6 +16,15 @@ set -euo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RAIZ"
 
+# Git Bash en Windows reescribe todo argumento que parezca ruta Unix («/tmp/x»
+# pasa a ser «C:/Users/…/Temp/x») antes de entregárselo a docker.exe, y las
+# rutas de DENTRO del contenedor dejan de existir. Esto lo apaga; en Linux y
+# macOS la variable no significa nada.
+export MSYS_NO_PATHCONV=1
+# En Windows Python lee y escribe en cp1252 salvo que se le pida UTF-8, y el
+# catálogo tiene tildes y símbolos que cp1252 no sabe representar.
+export PYTHONUTF8=1
+
 CONTENEDOR=skf-dev-pg
 PUERTO=${PUERTO:-55432}
 DB=skf
@@ -46,10 +55,16 @@ levantar_pg(){
     -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB="$DB" \
     -p "${PUERTO}:5432" postgres:15-alpine >/dev/null
 
-  for _ in $(seq 1 40); do
-    en_pg pg_isready -U postgres >/dev/null 2>&1 && break
+  # Se pregunta por TCP (-h 127.0.0.1) y no por el socket: en el primer
+  # arranque la imagen levanta un servidor provisional que solo escucha en el
+  # socket, lo apaga y arranca el definitivo. Por el socket pg_isready dice
+  # «listo» durante ese provisional y el psql de abajo cae justo en el hueco.
+  local listo=0
+  for _ in $(seq 1 60); do
+    if en_pg pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then listo=1; break; fi
     sleep 1
   done
+  [ "$listo" -eq 1 ] || { rojo "Postgres no respondió a tiempo. Revisa: docker logs $CONTENEDOR"; return 1; }
 
   info "Instalando extensiones y creando los roles skf_owner y skf_app…"
   en_pg psql -U postgres -d "$DB" -q -v ON_ERROR_STOP=1 <<SQL
@@ -69,7 +84,13 @@ SQL
 
 migrar(){
   info "Aplicando migraciones como skf_owner…"
-  for f in migrations/001_core.sql migrations/002_auth_functions.sql migrations/003_super_admin_invitacion.sql migrations/004_publico.sql migrations/005_paneles.sql; do
+  # Todas las numeradas, en orden, sin lista escrita a mano: la lista se quedó
+  # en la 005 mientras el esquema llegaba a la 016, y la app arrancaba contra
+  # una base a medias. 000_roles.sql se salta: sus roles y extensiones ya los
+  # creó levantar_pg como superusuario, que es quien puede hacerlo.
+  local f
+  for f in migrations/[0-9][0-9][0-9]_*.sql; do
+    [ "$(basename "$f")" = "000_roles.sql" ] && continue
     docker cp "$f" "$CONTENEDOR:/tmp/$(basename "$f")" >/dev/null
     psql_owner -q -v ON_ERROR_STOP=1 -f "/tmp/$(basename "$f")"
   done
@@ -134,12 +155,30 @@ Todo en verde." || { rojo "
 Hay fallos: revísalos antes de desplegar."; return 1; }
 }
 
+# El intérprete de Python que de verdad funciona. En Windows «python3» suele ser
+# un acceso directo a la tienda que existe en el PATH pero no ejecuta nada, así
+# que no basta con que el nombre exista: hay que probarlo.
+python_local(){
+  local candidato
+  for candidato in python3 python py; do
+    if "$candidato" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
+      echo "$candidato"
+      return
+    fi
+  done
+  rojo "No encontré Python 3. Instálalo y vuelve a intentar." >&2
+  return 1
+}
+
 sembrar(){
-  info "Sembrando el catálogo de 69 plantillas…"
-  python3 scripts/seed_catalogo.py > /tmp/skf_catalogo.sql
-  docker cp /tmp/skf_catalogo.sql "$CONTENEDOR:/tmp/catalogo.sql" >/dev/null
-  psql_owner -q -v ON_ERROR_STOP=1 -f /tmp/catalogo.sql
-  rm -f /tmp/skf_catalogo.sql
+  info "Sembrando el catálogo de plantillas…"
+  local py sql
+  py=$(python_local)
+  # Se genera primero y se envía después por la entrada estándar: sin archivo
+  # temporal en el equipo (su ruta no es la misma para bash que para docker en
+  # Windows) y, si el generador falla, a la base no llega nada a medias.
+  sql=$("$py" scripts/seed_catalogo.py)
+  psql_owner -q -v ON_ERROR_STOP=1 <<<"$sql"
 }
 
 arrancar_app(){
