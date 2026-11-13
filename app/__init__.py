@@ -54,11 +54,15 @@ PAGINAS = {
     "clientes.html": "clientes.html",
     "portal.html": "portal.html",
     "prueba.html": "prueba.html",
+    "control.html": "control.html",      # control de trabajos: director y comité
+    "solicitud.html": "solicitud.html",  # solicitar un trabajo por enlace
+    "porteria.html": "porteria.html",    # ¿este trabajo puede iniciar?
 }
 
 ESTATICOS = {
     "styles.css", "field-types.js", "form-library.js", "sidebar.js", "agenda.js", "planear.js", "portal-admin.js",
     "chart.min.js", "qrcode.js", "etiquetas.js", "demo-sembrar.js", "sw.js", "manifest.json", "skf-api.js",
+    "control.css", "control.js",   # control de trabajos (control.html, solicitud.html, porteria.html)
     # login.html ya no es una pantalla: es un desvío a /login, que es donde
     # Flask sirve el formulario de verdad. Va aquí y no en PAGINAS porque no
     # puede exigir sesión — la pide justo quien no la tiene. Además el service
@@ -82,6 +86,8 @@ ACCESO_PUBLICO = {
     "dashboard.html": "panel",  # panel compartido de solo lectura
     "portal.html": "t",         # portal del cliente: resumen en vivo por enlace
     "prueba.html": "c",         # prueba gratis por QR: registro con el código de la campaña
+    "solicitud.html": "e",      # contratista o local que solicita un trabajo en un edificio
+    "porteria.html": "t",       # vigilante que consulta si un trabajo puede iniciar
 }
 
 

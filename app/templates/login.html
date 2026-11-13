@@ -34,7 +34,7 @@
 
       {# ── Iniciar sesión ── #}
       {% if modo == 'login' %}
-        <form method="post" action="{{ url_for('auth.login') }}" autocomplete="on">
+        <form method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}" autocomplete="on">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="k-field">
             <label for="email">Correo corporativo</label>

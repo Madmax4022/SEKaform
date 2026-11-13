@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>Control de trabajos — SEKaform</title>
+  <link rel="stylesheet" href="control.css">
+</head>
+<body>
+<script src="skf-api.js"></script>
+<script src="qrcode.js"></script>
+<script src="control.js"></script>
+
+<div class="wrap">
+  <header class="marca">
+    <span class="logo" id="logo"></span>
+    <span><b>Control de trabajos</b><small id="quienSoy">SEKaform</small></span>
+    <span class="der"><a href="index.html">Ir a SEKaform</a></span>
+  </header>
+  <main id="vista"><p class="nota">Cargando…</p></main>
+</div>
+<div id="capa"></div>
+<input type="file" id="camara" accept="image/*" capture="environment" hidden>
+
+<script>
+// Control de trabajos: el director ve todos sus edificios; el comité, la cola del suyo.
+// Tres vistas por #hash (tablero, edificio, trabajo) más «nuevo» para abrir un trabajo a mano.
+// El servidor decide todo lo que importa (quién puede decidir, qué falta para autorizar);
+// aquí solo se pinta y se pregunta.
+document.getElementById('logo').innerHTML = ctIco('escudo');
+const $ = s => document.querySelector(s);
+const E = { cat: null, tab: null, sitio: null, trabajo: null, cola: [], t: null, nuevo: {}, timer: null };
+const recordar = (k, v) => { try { sessionStorage.setItem('ct_' + k, v || ''); } catch (e) {} };
+const recordado = k => { try { return sessionStorage.getItem('ct_' + k) || null; } catch (e) { return null; } };
+const tipoDe = id => (E.cat.tipos.find(t => t.id === id)) || E.cat.tipos[0];
+const edificio = id => (E.tab.edificios.find(e => e.id === id)) || null;
+const ir = v => { if (location.hash === '#' + v) pintar(); else location.hash = v; };
+const fallo = e => ctToast(e && e.message ? e.message : 'No se pudo completar. Intenta de nuevo.');
+
+function estadoEdificio(e) {
+  const espera = ctMinutos(e.criticoDesde);
+  const sinComite = !e.encargados.length && !e.relevoPor;
+  if (e.criticosPendientes && (espera >= 30 || sinComite)) return ['bad', 'Descubierto'];
+  if (e.pendientes && sinComite) return ['bad', 'Sin comité'];
+  if (e.criticosPendientes) return ['warn', 'Crítico en espera'];
+  if (e.relevoMio) return ['ok', 'Cubierto por ti'];
+  if (sinComite) return ['warn', 'Sin comité'];
+  return ['ok', 'Cubierto'];
+}
+const comiteTxt = e => e.relevoPor ? 'En relevo: ' + (e.relevoMio ? 'tú' : e.relevoNombre) : e.encargados.length ? e.encargados.map(x => x.nombre).join(', ') : 'Sin encargados nombrados';
+
+async function cargarTablero() {
+  E.tab = await skfFetch('/api/trabajos/tablero?hoy=' + ctHoy());
+  return E.tab;
+}
+
+// ── Vista: tablero del director ─────────────────────────────────────────────
+function vTablero() {
+  const T = E.tab, eds = T.edificios;
+  if (!eds.length) return `<h1>Control de trabajos</h1>
+    <div class="vacio" style="margin-top:16px">${T.soyAdmin
+      ? '<b>Aún no tienes edificios</b>Crea cada edificio o sitio como un lugar de tipo «Sede» y vuelve aquí para nombrar a su comité.<div class="acciones"><a class="btn pri chico" href="unidades.html">Crear mis edificios</a></div>'
+      : '<b>Aún no respondes por ningún edificio</b>Pídele al director que te nombre encargado de tu edificio.'}</div>`;
+  const subio = T.soyAdmin ? eds.filter(e => estadoEdificio(e)[0] === 'bad') : [];
+  const hoyN = eds.reduce((a, e) => a + e.hoy + e.pendientes, 0);
+  const f = new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+  const k = T.porTipo.reduce((a, x) => ({ total: a.total + x.total, aut: a.aut + x.autorizados, rech: a.rech + x.rechazados, sin: a.sin + x.sinAtender }), { total: 0, aut: 0, rech: 0, sin: 0 });
+  return `
+    <div class="fecha">${f.charAt(0).toUpperCase() + f.slice(1)}</div>
+    <h1>${eds.length} edificio${eds.length !== 1 ? 's' : ''}, ${hoyN} trabajo${hoyN !== 1 ? 's' : ''} en cola u hoy</h1>
+    <p class="sub">${T.soyAdmin ? 'Cada comité responde por su edificio. Aquí solo llega lo que no se atendió.' : 'Los edificios por los que respondes.'}</p>
+    ${T.soyAdmin ? `<div class="acciones"><a class="btn pri" style="flex:1" href="plan.html?nuevo=1">${ctIco('mas')} Delegar una tarea</a></div>
+    <h2 class="${subio.length ? 'alerta' : ''}">${ctIco('alerta')} Subió hasta ti <span class="cnt">${subio.length}</span></h2>
+    ${subio.length ? subio.map(e => `<button type="button" class="fila" data-acc="abrirSitio" data-id="${e.id}">
+        <span class="tile bad">${ctIco('alerta')}</span><span class="t">${e.criticosPendientes ? e.criticosPendientes + ' trabajo' + (e.criticosPendientes !== 1 ? 's' : '') + ' crítico' + (e.criticosPendientes !== 1 ? 's' : '') + ' sin atender' : e.pendientes + ' solicitud' + (e.pendientes !== 1 ? 'es' : '') + ' sin quien las atienda'}</span>
+        ${e.criticoDesde ? `<span class="cuando tarde">${ctEspera(ctMinutos(e.criticoDesde))}</span>` : '<span></span>'}
+        <span class="d">${ctEsc(e.nombre)} · ${ctEsc(comiteTxt(e))}</span></button>`).join('')
+      : `<div class="fila"><span class="tile ok">${ctIco('ok')}</span><span class="t">Nada pendiente de tu parte</span><span></span><span class="d">Ningún edificio tiene trabajos críticos esperando de más.</span></div>`}` : ''}
+
+    <h2>${T.soyAdmin ? 'Mis edificios' : 'Edificios'}</h2>
+    ${eds.map(e => { const [c, txt] = estadoEdificio(e);
+      return `<button type="button" class="fila" data-acc="abrirSitio" data-id="${e.id}">
+        <span class="tile ${c}">${ctIco('edificio')}</span><span class="t">${ctEsc(e.nombre)}</span><span class="cuando ${c}">${txt}</span>
+        <span class="d">${e.pendientes} por autorizar · ${e.enCurso} en curso · ${ctEsc(comiteTxt(e))}</span></button>`; }).join('')}
+
+    <h2>Últimos 30 días</h2>
+    ${k.total ? `<div class="kpis">
+      <div class="kpi"><div class="v">${k.total}</div><div class="l">trabajos solicitados</div></div>
+      <div class="kpi bien"><div class="v">${k.aut}</div><div class="l">autorizados con todo cumplido</div></div>
+      <div class="kpi ${k.rech ? 'ojo' : ''}"><div class="v">${k.rech}</div><div class="l">no autorizados</div></div>
+      <div class="kpi ${k.sin ? 'mal' : ''}"><div class="v">${k.sin}</div><div class="l">vencieron sin que nadie decidiera</div></div>
+    </div>
+    <h2>Por tipo de trabajo</h2>
+    <div class="tabla">${T.porTipo.slice().sort((a, b) => b.total - a.total).map(x => { const t = tipoDe(x.tipo);
+      return `<div class="r"><span style="color:var(--mut)">${ctIco(x.tipo)}</span><span>${ctEsc(t.nombre)}</span>
+        <span class="barra"><i class="${x.sinAtender ? 'bajo' : ''}" style="width:${Math.round((x.autorizados + x.rechazados) / x.total * 100)}%"></i></span><span class="num">${x.autorizados + x.rechazados}/${x.total}</span></div>`; }).join('')}</div>
+    <p class="nota">La barra muestra cuántos trabajos recibieron una decisión. Cada decisión guarda quién, cuándo y con qué evidencia.</p>`
+    : '<div class="vacio"><b>Todavía no hay trabajos registrados</b>Cuando llegue la primera solicitud, aquí verás cuántas se autorizaron, cuántas no y cuáles nadie atendió.</div>'}`;
+}
+
+// ── Vista: la cola de un edificio ───────────────────────────────────────────
+function tarjeta(t, ed) {
+  const reqs = ctRequisitos(tipoDe(t.tipo)), c = reqs.filter(r => r.critico).length, min = ctMinutos(t.creadoEn);
+  const der = t.estado === 'pendiente' ? `<span class="cuando ${t.criticidad === 'critico' && min >= 20 ? 'tarde' : ''}">espera ${ctEspera(min)}</span>`
+    : t.estado === 'rechazado' ? '<span class="cuando bad">No autorizado</span>' : t.estado === 'cerrado' ? '<span class="cuando">Cerrado</span>' : '<span class="cuando ok">Autorizado</span>';
+  return `<button type="button" class="fila" data-acc="abrirTrabajo" data-id="${t.id}">
+    <span class="tile ${t.criticidad}">${ctIco(t.tipo)}</span><span class="t">${ctEsc(t.titulo)}</span>${der}
+    <span class="d">${ctEsc(t.lugar || 'Sin lugar indicado')} · ${ctEsc(t.quien)}${t.fecha !== ctHoy() ? ' · ' + ctFecha(t.fecha) : ''}</span>
+    <span class="chips"><span class="chip ${t.criticidad}">${CT_CRIT[t.criticidad]}</span><span class="chip">${ctEsc(E.cat.origenes[t.origen])}</span>
+      <span class="chip">${reqs.length} requisitos${c ? ' · ' + c + ' críticos' : ''}</span><span class="folio">${ctFolio(ed.nombre, t.numero)}</span></span></button>`;
+}
+function vEdificio() {
+  const e = edificio(E.sitio); if (!e) return '<p class="nota">Edificio no encontrado.</p>';
+  const T = E.tab, cola = E.cola.slice().sort((a, b) => ({ critico: 0, medio: 1, bajo: 2 }[a.criticidad] - { critico: 0, medio: 1, bajo: 2 }[b.criticidad]) || new Date(a.creadoEn) - new Date(b.creadoEn));
+  const pend = cola.filter(t => t.estado === 'pendiente'), curso = cola.filter(t => t.estado === 'autorizado'), fin = cola.filter(t => t.estado === 'cerrado' || t.estado === 'rechazado');
+  const [c] = estadoEdificio(e);
+  let barra;
+  if (T.soyAdmin) barra = `<div class="relevo ${e.relevoMio ? 'activo' : c === 'bad' ? 'falta' : ''}">
+      <div><div class="rt">${e.relevoMio ? 'Estás cubriendo este edificio' : e.relevoPor ? 'En relevo: ' + ctEsc(e.relevoNombre) : e.encargados.length ? 'El comité está a cargo' : 'Este edificio no tiene comité'}</div>
+        <div class="rs">${e.relevoMio ? 'Lo que decidas queda registrado a tu nombre, en relevo del comité.' : e.encargados.length ? 'Puedes entrar a cubrirlo si hace falta.' : 'Nombra a sus encargados, o cúbrelo tú mientras tanto.'}</div></div>
+      <button type="button" class="btn ${e.relevoMio ? '' : 'pri'}" data-acc="relevo">${ctIco('relevo')} ${e.relevoMio ? 'Devolver al comité' : 'Cubrir este edificio'}</button></div>`;
+  else barra = `<div class="relevo"><div><div class="rt">Respondes por este edificio</div><div class="rs">${e.relevoPor ? 'El director lo está cubriendo también: ' + ctEsc(e.relevoNombre) + '.' : 'Tú decides qué trabajos pueden iniciar.'}</div></div></div>`;
+  return `
+    ${T.edificios.length > 1 || T.soyAdmin ? '<button type="button" class="volver" data-ir="tablero">‹ Edificios</button>' : ''}
+    <h1>${ctEsc(e.nombre)}</h1>
+    <p class="sub">${ctIco('personas')} ${ctEsc(e.encargados.length ? e.encargados.map(x => x.nombre).join(', ') : 'Sin encargados nombrados')}</p>
+    ${barra}
+    <div class="acciones">
+      ${e.atiendo ? `<button type="button" class="btn chico pri" data-acc="nuevo">${ctIco('mas')} Abrir un trabajo</button>` : ''}
+      ${T.soyAdmin ? `<button type="button" class="btn chico" data-acc="comite">${ctIco('personas')} Comité</button>
+      <button type="button" class="btn chico" data-acc="enlace">${ctIco('enlace')} Enlace de solicitudes</button>` : ''}
+      <a class="btn chico" href="hallazgos.html">${ctIco('alerta')} Hallazgos</a>
+    </div>
+    <h2 class="${pend.some(t => t.criticidad === 'critico') ? 'alerta' : ''}">Por autorizar <span class="cnt">${pend.length}</span></h2>
+    ${pend.map(t => tarjeta(t, e)).join('') || '<div class="vacio">Nada espera autorización.</div>'}
+    <p class="nota">Lo crítico va primero y se verifica en el sitio. Lo de nivel medio y bajo se autoriza con el formulario.</p>
+    <h2>Autorizados hoy <span class="cnt">${curso.length}</span></h2>
+    ${curso.map(t => tarjeta(t, e)).join('') || '<div class="vacio">Ningún trabajo en curso.</div>'}
+    ${fin.length ? `<h2>Terminados hoy <span class="cnt">${fin.length}</span></h2>` + fin.map(t => tarjeta(t, e)).join('') : ''}`;
+}
+
+// ── Vista: el portón de un trabajo ──────────────────────────────────────────
+function vTrabajo() {
+  const t = E.t; if (!t) return '<p class="nota">Trabajo no encontrado.</p>';
+  const e = edificio(t.unidadId) || { nombre: '', encargados: [] }, tipo = tipoDe(t.tipo), reqs = ctRequisitos(tipo);
+  const okT = reqs.filter(r => t.requisitos[r.id]).length, crit = reqs.filter(r => r.critico), okC = crit.filter(r => t.requisitos[r.id]).length;
+  const editable = t.estado === 'pendiente' && t.puedoDecidir, puede = okT === reqs.length && (t.criticidad !== 'critico' || t.verificadoEnSitio);
+  const paso = { pendiente: 1, autorizado: 3, cerrado: 5, rechazado: 2 }[t.estado];
+  const pasos = ['Solicitud', 'Requisitos', 'Decisión', 'En curso', 'Cierre'].map((n, i) => `<span class="${t.estado === 'rechazado' && i === 2 ? 'cortado' : i < paso ? 'hecho' : i === paso ? 'aqui' : ''}">${n}</span>`).join('');
+  const evid = { foto: 'Foto', firma: 'Firma', doc: 'Documento' };
+  const lista = tipo.grupos.map(g => `<div class="grupo">${ctEsc(g.nombre)}</div>` + g.items.map(r => { const ok = !!t.requisitos[r.id], foto = skfFotoSegura((t.fotos || {})[r.id]);
+    return `<div class="req ${ok ? 'hecho' : r.critico ? 'c' : ''}">
+      <input type="checkbox" id="rq_${r.id}" data-req="${r.id}" ${ok ? 'checked' : ''} ${editable ? '' : 'disabled'}>
+      <label for="rq_${r.id}">${ctEsc(r.texto)}</label>
+      ${r.evidencia === 'foto' && (editable || foto) ? `<button type="button" class="cam" data-acc="foto" data-id="${r.id}" aria-label="${foto ? 'Ver o cambiar la foto' : 'Tomar foto'}" ${editable || foto ? '' : 'disabled'}>${foto ? `<img src="${foto}" alt="">` : ctIco('foto')}</button>` : '<span></span>'}
+      <span class="meta">${r.critico ? '<span class="chip critico">Control crítico</span>' : ''}<span class="chip">${ctIco(r.evidencia)} ${evid[r.evidencia]}</span><span class="norma">${ctEsc(r.norma)}</span></span></div>`; }).join('')).join('');
+  const estadoComite = t.estado === 'pendiente' ? '<span class="falta">Pendiente</span>' : t.estado === 'rechazado' ? '<span class="nego">No autorizó</span>' : `<span class="si">Autorizó ${ctHora(t.decididoEn)}</span>`;
+  const firmas = `<div class="firmas">
+    <div class="f"><span style="color:var(--ok)">${ctIco('firma')}</span><span>${ctEsc(t.firmaEjecuta || t.quien)}<small>Quien ejecuta</small></span>${t.firmaEjecuta ? '<span class="si">Firmó</span>' : '<span class="falta">Sin firma</span>'}</div>
+    <div class="f"><span style="color:var(--ok)">${ctIco('firma')}</span><span>${ctEsc(t.firmaResponsable || '—')}<small>${ctEsc(E.cat.responsables[t.origen])} · responde junto con el edificio</small></span>${t.firmaResponsable ? '<span class="si">Firmó</span>' : '<span class="falta">Sin firma</span>'}</div>
+    <div class="f"><span style="color:var(--mut)">${ctIco('escudo')}</span><span>${ctEsc(t.decididoPor || (e.relevoPor ? (e.relevoMio ? 'Tú' : e.relevoNombre) + ', en relevo' : 'Comité del edificio'))}<small>${t.enRelevo ? 'Decidió en relevo del comité' : 'Autoriza o no autoriza'}</small></span>${estadoComite}</div></div>`;
+  const consulta = location.origin + '/porteria.html?t=' + t.token;
+  let cierre;
+  if (t.estado === 'pendiente' && !t.puedoDecidir) cierre = `<div class="aviso">No respondes por este edificio, así que no puedes decidir. ${E.tab.soyAdmin ? 'Vuelve al edificio y pulsa «Cubrir este edificio».' : ''}</div>`;
+  else if (t.estado === 'pendiente') cierre = `
+    ${t.criticidad === 'critico' ? `<label class="sitio-chk" for="rqSitio"><input type="checkbox" id="rqSitio" data-req="__sitio" ${t.verificadoEnSitio ? 'checked' : ''}><span><b>Lo verifiqué en el sitio</b><small>Obligatorio en trabajos críticos: no se autoriza solo con el formulario.</small></span></label>` : ''}
+    <div class="fila-btn"><button type="button" class="btn no" data-acc="rechazar">${ctIco('no')} No autorizar</button><button type="button" class="btn ok" data-acc="autorizar" ${puede ? '' : 'disabled'}>${ctIco('ok')} Autorizar</button></div>
+    <p class="nota">${puede ? 'Todo cumple. Al autorizar, el vigilante lo verá de inmediato con el código del trabajo.' : 'Autorizar se activa con todos los requisitos cumplidos' + (t.criticidad === 'critico' ? ' y la verificación en el sitio.' : '.')}</p>`;
+  else if (t.estado === 'autorizado') cierre = `
+    <div class="estado-final ok">${ctIco('escudo')}<span>Autorizado para ${ctFecha(t.fecha).toLowerCase()}<small>Por ${ctEsc(t.decididoPor)}${t.enRelevo ? ', en relevo del comité' : ''}. Si cambian las condiciones, se cierra y se solicita de nuevo.</small></span></div>
+    ${t.puedoDecidir ? `<div class="fila-btn"><a class="btn" href="hallazgos.html">${ctIco('alerta')} Reportar hallazgo</a><button type="button" class="btn pri" data-acc="cerrar">${ctIco('ok')} Cerrar trabajo</button></div>` : ''}`;
+  else if (t.estado === 'cerrado') cierre = `<div class="estado-final ok">${ctIco('ok')}<span>Trabajo cerrado<small>${ctFechaHora(t.cerradoEn)} · la evidencia queda guardada.</small></span></div>`;
+  else cierre = `<div class="estado-final no">${ctIco('no')}<span>No autorizado · no puede iniciar<small>${ctEsc(t.motivo || '')}</small></span></div>`;
+  return `
+    <button type="button" class="volver" data-ir="edificio">‹ ${ctEsc(e.nombre)}</button>
+    <h1>${ctEsc(t.titulo)}</h1>
+    <div class="pasos" aria-label="Avance del trabajo">${pasos}</div>
+    <div class="permiso">
+      <div class="cab"><span class="tile ${t.criticidad}">${ctIco(t.tipo)}</span><div><b>${ctEsc(tipo.nombre)}</b><div class="folio">${ctFolio(e.nombre, t.numero)}</div></div><span class="chip ${t.criticidad}">${CT_CRIT[t.criticidad]}</span></div>
+      <dl><dt>Quién</dt><dd>${ctEsc(t.quien)} · ${ctEsc(E.cat.origenes[t.origen])}</dd>
+        <dt>Dónde</dt><dd>${ctEsc(e.nombre)}${t.lugar ? ' · ' + ctEsc(t.lugar) : ''}</dd>
+        <dt>Día</dt><dd>${ctFecha(t.fecha)} · el permiso vale solo ese día</dd>
+        ${t.contacto ? `<dt>Contacto</dt><dd>${ctEsc(t.contacto)}</dd>` : ''}
+        <dt>Se apoya en</dt><dd>${ctEsc(tipo.base)}</dd></dl>
+    </div>
+    <div class="avance"><div class="${okT === reqs.length ? 'listo' : ''}"><b>${okT} de ${reqs.length}</b><small>requisitos cumplidos</small></div>
+      <div class="${okC === crit.length ? 'listo' : 'crit'}"><b>${okC} de ${crit.length}</b><small>controles críticos</small></div></div>
+    <h2>Lo que se exige</h2>${lista}
+    <h2>Firmas</h2>${firmas}
+    ${cierre}
+    <h2>Código para portería</h2>
+    <div class="qr"><div class="cod">${ctQR(consulta)}</div><div><b>El vigilante lo escanea y ve si puede iniciar</b>
+      <div class="url">${ctEsc(consulta)}</div><button type="button" class="btn chico" data-acc="copiar" data-txt="${ctEsc(consulta)}">${ctIco('enlace')} Copiar enlace</button></div></div>
+    <h2>Registro del permiso</h2>
+    <ol class="bitacora">${t.registro.map((l, i) => `<li class="${i === t.registro.length - 1 ? 'ult' : ''}"><time>${ctFechaHora(l.en)}</time>${ctEsc(l.que)}${l.por ? ' · ' + ctEsc(l.por) : ''}</li>`).join('')}</ol>
+    <p class="nota">Las normas citadas son la referencia de cada requisito. La lista de cada tipo de trabajo la aprueba tu profesional de salud ocupacional.</p>`;
+}
+
+// ── Vista: abrir un trabajo a mano ──────────────────────────────────────────
+function vNuevo() {
+  const e = edificio(E.sitio), n = E.nuevo;
+  if (!n.fecha) n.fecha = ctHoy();
+  if (!n.origen) n.origen = 'propio';
+  return `
+    <button type="button" class="volver" data-ir="edificio">‹ ${ctEsc(e.nombre)}</button>
+    <h1>Abrir un trabajo</h1>
+    <p class="sub">Para personal propio o para alguien que llegó sin haber solicitado por el enlace.</p>
+    <div class="campo"><span class="lb">Tipo de trabajo</span><div class="opciones">${E.cat.tipos.map(t => `
+      <button type="button" class="opcion" data-tipo="${t.id}" aria-pressed="${n.tipo === t.id}"><span class="tile ${t.criticidad}">${ctIco(t.id)}</span><b>${ctEsc(t.nombre)}</b><span class="chip ${t.criticidad}">${CT_CRIT[t.criticidad]}</span><small>${ctEsc(t.ejemplo)}</small></button>`).join('')}</div></div>
+    <div class="campo"><label for="nTitulo">Qué se va a hacer</label><input type="text" id="nTitulo" data-n="titulo" maxlength="140" value="${ctEsc(n.titulo || '')}" placeholder="Ej.: Cambio de luminarias en mezanine"></div>
+    <div class="campo"><span class="lb">Quién lo hace</span><div class="seg">${Object.keys(E.cat.origenes).map(k => `<button type="button" data-origen="${k}" aria-pressed="${n.origen === k}">${ctEsc(E.cat.origenes[k])}</button>`).join('')}</div></div>
+    <div class="campo"><label for="nQuien">Empresa o personas</label><input type="text" id="nQuien" data-n="quien" maxlength="140" value="${ctEsc(n.quien || '')}" placeholder="Ej.: Clima Total, 2 técnicos"></div>
+    <div class="campo"><label for="nLugar">Lugar dentro del edificio</label><input type="text" id="nLugar" data-n="lugar" maxlength="140" value="${ctEsc(n.lugar || '')}" placeholder="Ej.: Local 214, azotea, pasillo 4"></div>
+    <div class="campo"><label for="nFecha">Día del trabajo</label><input type="date" id="nFecha" data-n="fecha" value="${ctEsc(n.fecha)}"></div>
+    <div class="campo"><label for="nFE">Nombre de quien ejecuta</label><input type="text" id="nFE" data-n="firmaEjecuta" maxlength="120" value="${ctEsc(n.firmaEjecuta || '')}"></div>
+    <div class="campo"><label for="nFR">${ctEsc(E.cat.responsables[n.origen])}</label><input type="text" id="nFR" data-n="firmaResponsable" maxlength="120" value="${ctEsc(n.firmaResponsable || '')}"><small>Quien responde por el trabajo junto con el edificio.</small></div>
+    <div style="margin-top:18px"><button type="button" class="btn pri full" data-acc="crear">Abrir y revisar requisitos</button></div>`;
+}
+
+// ── Hojas: comité, enlace, no autorizar, foto ───────────────────────────────
+const cerrarHoja = () => { $('#capa').innerHTML = ''; };
+function hoja(titulo, cuerpo) {
+  $('#capa').innerHTML = `<div class="velo" data-acc="velo"><div class="hoja" role="dialog" aria-modal="true" aria-label="${ctEsc(titulo)}"><h3>${ctEsc(titulo)}</h3>${cuerpo}</div></div>`;
+}
+async function hojaComite() {
+  const e = edificio(E.sitio);
+  let eq; try { eq = await skfEquipo(); } catch (x) { return fallo(x); }
+  const gente = (eq.miembros || []).filter(m => m.rol !== 'lector'), ya = new Set(e.encargados.map(x => x.id));
+  hoja('Comité de ' + e.nombre, `<p class="sub">Los encargados ven la cola de este edificio y deciden qué trabajos pueden iniciar.</p>
+    ${gente.map(m => `<label class="persona" for="cm_${m.id}"><input type="checkbox" id="cm_${m.id}" data-cm="${m.id}" ${ya.has(m.id) ? 'checked' : ''}><span><b>${ctEsc(m.nombre || m.email)}</b><small>${ctEsc(m.email)} · ${ctEsc(m.rol)}</small></span></label>`).join('')}
+    <p class="nota">¿Falta alguien? Invítalo primero en <a href="personas.html">Personas</a>, con permiso para editar.</p>
+    <div class="fila-btn"><button type="button" class="btn" data-acc="cerrarHoja">Cancelar</button><button type="button" class="btn pri" data-acc="guardarComite">Guardar comité</button></div>`);
+}
+async function hojaEnlace(renovar) {
+  const e = edificio(E.sitio);
+  let r; try { r = await skfFetch('/api/unidades/' + e.id + '/enlace', { method: 'POST', body: JSON.stringify({ renovar: !!renovar }) }); } catch (x) { return fallo(x); }
+  e.tieneEnlace = true;
+  hoja('Enlace de solicitudes', `<p class="sub">Contratistas y locales de ${ctEsc(e.nombre)} solicitan sus trabajos aquí, sin necesitar cuenta. Imprímelo en portería o envíalo por WhatsApp.</p>
+    <div class="qr" style="margin-top:14px"><div class="cod">${ctQR(r.url)}</div><div><div class="url">${ctEsc(r.url)}</div>
+      <button type="button" class="btn chico pri" data-acc="copiar" data-txt="${ctEsc(r.url)}">${ctIco('enlace')} Copiar enlace</button></div></div>
+    <div class="fila-btn"><button type="button" class="btn" data-acc="renovarEnlace">Generar uno nuevo</button><button type="button" class="btn pri" data-acc="cerrarHoja">Listo</button></div>
+    <p class="nota">Generar uno nuevo deja sin efecto el anterior: úsalo si el enlace circuló donde no debía.</p>`);
+}
+function hojaRechazar() {
+  const t = E.t, falta = ctRequisitos(tipoDe(t.tipo)).filter(r => !t.requisitos[r.id]);
+  hoja('No autorizar este trabajo', `<p class="sub">Quien lo solicitó verá el motivo al consultar su código.</p>
+    ${falta.length ? `<p class="nota">Faltan ${falta.length} requisito${falta.length !== 1 ? 's' : ''}. Si no escribes nada, el motivo será esa lista.</p>` : ''}
+    <div class="campo"><label for="rzMotivo">Motivo</label><textarea id="rzMotivo" maxlength="300" placeholder="${falta.length ? 'Opcional' : 'Explica por qué no puede iniciar'}"></textarea></div>
+    <div class="fila-btn"><button type="button" class="btn" data-acc="cerrarHoja">Cancelar</button><button type="button" class="btn no" data-acc="confirmarRechazo">No autorizar</button></div>`);
+}
+function hojaFoto(id) {
+  const t = E.t, foto = skfFotoSegura((t.fotos || {})[id]), editable = t.estado === 'pendiente' && t.puedoDecidir;
+  hoja('Evidencia', `<img src="${foto}" alt="Foto de evidencia" style="width:100%;border-radius:14px;margin-top:12px">
+    <div class="fila-btn">${editable ? `<button type="button" class="btn" data-acc="cambiarFoto" data-id="${id}">Cambiar foto</button>` : '<span></span>'}<button type="button" class="btn pri" data-acc="cerrarHoja">Cerrar</button></div>`);
+}
+
+// ── Guardar requisitos (con pequeña espera para no enviar un toque a la vez) ─
+let _pend = null, _fotosPend = {};
+function guardarRequisitos() {
+  clearTimeout(_pend);
+  _pend = setTimeout(async () => {
+    const t = E.t, fotos = _fotosPend; _fotosPend = {};
+    try {
+      const r = await skfFetch('/api/trabajos/' + t.id + '/requisitos', { method: 'POST', body: JSON.stringify({ requisitos: t.requisitos, verificadoEnSitio: t.verificadoEnSitio, fotos }) });
+      if (E.t && E.t.id === r.trabajo.id) { E.t = r.trabajo; if (Object.keys(fotos).length) pintar(true); }
+    } catch (x) { fallo(x); await abrirTrabajo(t.id, true); }
+  }, 500);
+}
+async function decidir(accion, cuerpo) {
+  clearTimeout(_pend);
+  const t = E.t;
+  try {
+    if (accion === 'autorizar') await skfFetch('/api/trabajos/' + t.id + '/requisitos', { method: 'POST', body: JSON.stringify({ requisitos: t.requisitos, verificadoEnSitio: t.verificadoEnSitio, fotos: _fotosPend }) });
+    _fotosPend = {};
+    const r = await skfFetch('/api/trabajos/' + t.id + '/' + accion, { method: 'POST', body: JSON.stringify(cuerpo || {}) });
+    E.t = r.trabajo; cerrarHoja(); pintar(true);
+    ctToast({ autorizar: 'Autorizado. Puede iniciar.', rechazar: 'No autorizado. Lo verá al consultar su código.', cerrar: 'Trabajo cerrado.' }[accion]);
+    cargarTablero().catch(() => {});
+  } catch (x) { fallo(x); await abrirTrabajo(t.id, true); }
+}
+
+// ── Navegación ──────────────────────────────────────────────────────────────
+async function abrirSitio(id) { E.sitio = id; recordar('sitio', id); E.cola = []; ir('edificio'); }
+async function abrirTrabajo(id, mantener) {
+  E.trabajo = id; recordar('trabajo', id);
+  try { E.t = (await skfFetch('/api/trabajos/' + id)).trabajo; } catch (x) { E.t = null; fallo(x); }
+  if (location.hash === '#trabajo') pintar(mantener); else location.hash = 'trabajo';
+}
+const VISTAS = { tablero: vTablero, edificio: vEdificio, trabajo: vTrabajo, nuevo: vNuevo };
+async function pintar(mantener) {
+  let v = location.hash.slice(1); if (!VISTAS[v]) v = 'tablero';
+  const y = window.scrollY;
+  clearInterval(E.timer); E.timer = null;
+  if (!E.sitio) { E.sitio = recordado('sitio'); }
+  if ((v === 'edificio' || v === 'nuevo') && !edificio(E.sitio)) v = 'tablero';
+  if (v === 'tablero' && !E.tab.soyAdmin && E.tab.edificios.length === 1) { E.sitio = E.tab.edificios[0].id; v = 'edificio'; }
+  if (v === 'trabajo' && !E.t) {
+    const id = E.trabajo || recordado('trabajo');
+    if (id) { try { E.t = (await skfFetch('/api/trabajos/' + id)).trabajo; E.trabajo = id; } catch (x) {} }
+    if (!E.t) v = edificio(E.sitio) ? 'edificio' : 'tablero';
+  }
+  if (v === 'edificio') {
+    const leer = async () => { try { E.cola = (await skfFetch('/api/trabajos?unidad=' + E.sitio + '&hoy=' + ctHoy())).trabajos; } catch (x) { fallo(x); } };
+    await leer();
+    // La cola se refresca sola: una solicitud nueva debe aparecer sin que nadie recargue.
+    E.timer = setInterval(async () => { await Promise.all([leer(), cargarTablero().catch(() => {})]); if (location.hash.slice(1) === 'edificio' && !$('#capa').innerHTML) { const yy = window.scrollY; $('#vista').innerHTML = vEdificio(); window.scrollTo(0, yy); } }, 30000);
+  }
+  if (v === 'tablero') E.timer = setInterval(async () => { try { await cargarTablero(); if ((location.hash.slice(1) || 'tablero') === 'tablero') { const yy = window.scrollY; $('#vista').innerHTML = vTablero(); window.scrollTo(0, yy); } } catch (x) {} }, 30000);
+  $('#vista').innerHTML = VISTAS[v]();
+  window.scrollTo(0, mantener ? y : 0);
+}
+
+document.addEventListener('click', async ev => {
+  const nav = ev.target.closest('[data-ir]'); if (nav) { if (nav.dataset.ir === 'tablero' || nav.dataset.ir === 'edificio') await cargarTablero().catch(() => {}); ir(nav.dataset.ir); return; }
+  const tp = ev.target.closest('[data-tipo]'); if (tp) { E.nuevo.tipo = tp.dataset.tipo; pintar(true); return; }
+  const og = ev.target.closest('[data-origen]'); if (og) { E.nuevo.origen = og.dataset.origen; pintar(true); return; }
+  const b = ev.target.closest('[data-acc]'); if (!b) return;
+  const a = b.dataset.acc, e = edificio(E.sitio);
+  if (a === 'velo') { if (ev.target === b) cerrarHoja(); }
+  else if (a === 'cerrarHoja') cerrarHoja();
+  else if (a === 'abrirSitio') abrirSitio(b.dataset.id);
+  else if (a === 'abrirTrabajo') abrirTrabajo(b.dataset.id);
+  else if (a === 'copiar') ctCopiar(b.dataset.txt);
+  else if (a === 'nuevo') { E.nuevo = {}; ir('nuevo'); }
+  else if (a === 'comite') hojaComite();
+  else if (a === 'enlace') hojaEnlace(false);
+  else if (a === 'renovarEnlace') hojaEnlace(true);
+  else if (a === 'guardarComite') {
+    const ids = Array.from(document.querySelectorAll('[data-cm]:checked')).map(x => x.dataset.cm);
+    try { await skfFetch('/api/unidades/' + e.id + '/encargados', { method: 'POST', body: JSON.stringify({ userIds: ids }) }); await cargarTablero(); cerrarHoja(); pintar(true); ctToast('Comité guardado.'); } catch (x) { fallo(x); }
+  }
+  else if (a === 'relevo') {
+    try { await skfFetch('/api/unidades/' + e.id + '/relevo', { method: 'POST', body: JSON.stringify({ activo: !e.relevoMio }) }); await cargarTablero(); pintar(true); ctToast(edificio(E.sitio).relevoMio ? 'Ahora cubres ' + e.nombre + '.' : 'Devuelto al comité.'); } catch (x) { fallo(x); }
+  }
+  else if (a === 'crear') {
+    const n = E.nuevo;
+    try { const r = await skfFetch('/api/trabajos', { method: 'POST', body: JSON.stringify({ ...n, unidadId: E.sitio }) }); E.nuevo = {}; await abrirTrabajo(r.trabajo.id); } catch (x) { fallo(x); }
+  }
+  else if (a === 'autorizar') { b.disabled = true; decidir('autorizar'); }
+  else if (a === 'rechazar') hojaRechazar();
+  else if (a === 'confirmarRechazo') { b.disabled = true; decidir('rechazar', { motivo: ($('#rzMotivo') || {}).value || '' }); }
+  else if (a === 'cerrar') { b.disabled = true; decidir('cerrar'); }
+  else if (a === 'foto') { const id = b.dataset.id; if (skfFotoSegura((E.t.fotos || {})[id])) hojaFoto(id); else { $('#camara').dataset.id = id; $('#camara').click(); } }
+  else if (a === 'cambiarFoto') { cerrarHoja(); $('#camara').dataset.id = b.dataset.id; $('#camara').click(); }
+});
+document.addEventListener('change', async ev => {
+  const cam = ev.target.closest('#camara');
+  if (cam) {
+    const f = cam.files && cam.files[0], id = cam.dataset.id; cam.value = '';
+    if (!f || !E.t) return;
+    try { const img = await skfComprimirFoto(f, 1024, 0.6); E.t.fotos = { ...(E.t.fotos || {}), [id]: img }; _fotosPend[id] = img; pintar(true); guardarRequisitos(); }
+    catch (x) { ctToast('No se pudo leer la foto. Intenta de nuevo.'); }
+    return;
+  }
+  const r = ev.target.closest('[data-req]');
+  if (r && E.t) {
+    if (r.dataset.req === '__sitio') E.t.verificadoEnSitio = r.checked;
+    else if (r.checked) E.t.requisitos[r.dataset.req] = true; else delete E.t.requisitos[r.dataset.req];
+    pintar(true); guardarRequisitos(); return;
+  }
+});
+document.addEventListener('input', ev => { const n = ev.target.closest('[data-n]'); if (n) E.nuevo[n.dataset.n] = n.value; });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrarHoja(); });
+window.addEventListener('hashchange', () => pintar());
+window.addEventListener('skf:sin-sesion', () => { location.href = '/login?next=' + encodeURIComponent('/control.html'); });
+
+(async function iniciar() {
+  try {
+    const [cat, tab] = await Promise.all([skfFetch('/api/trabajos/catalogo'), cargarTablero()]);
+    E.cat = cat;
+    if (!tab.disponible) { $('#vista').innerHTML = '<h1>Control de trabajos</h1><div class="aviso">Esta función todavía no está activada en el servidor (falta la migración 017).</div>'; return; }
+    $('#quienSoy').textContent = tab.yo.nombre + ' · ' + (tab.soyAdmin ? 'director' : 'comité');
+    pintar();
+  } catch (x) { $('#vista').innerHTML = '<h1>Control de trabajos</h1><div class="aviso">' + ctEsc(x.message || 'No se pudo cargar.') + '</div>'; }
+})();
+</script>
+</body>
+</html>

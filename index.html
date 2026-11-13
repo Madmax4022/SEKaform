@@ -60,6 +60,7 @@
     .ag-item { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; min-height: 66px; padding: 10px 12px; margin-bottom: 8px;
       border-radius: 16px; background: var(--card); border: 1px solid var(--bor); color: var(--txt); text-decoration: none; }
     .ag-item:active { transform: scale(.985); }
+    .ag-item[hidden] { display: none; }   /* su display:grid le ganaba a [hidden] */
     .ag-item.vencido { border-left: 4px solid var(--err); }
     .ag-item.hoy { border-left: 4px solid var(--pri); }
     .ag-ico { width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; background: rgba(110,168,254,.12); }
@@ -129,6 +130,13 @@
       <span class="ns-arr">→</span>
     </a>
 
+    <!-- Control de trabajos: solo aparece si la empresa ya lo usa (comité nombrado, enlace o solicitudes) -->
+    <a class="ag-item" id="ctAcceso" href="control.html" hidden style="margin-bottom:14px">
+      <span class="ag-ico" aria-hidden="true">🛡️</span>
+      <span><span class="ag-t">Control de trabajos</span><span class="ag-d" id="ctAccesoD">Quién trabaja hoy en cada edificio y quién lo autorizó</span></span>
+      <span class="ag-cuando" id="ctAccesoN" hidden></span>
+    </a>
+
     <!-- Lo que toca hoy (rutinas, encargos y turnos) -->
     <div class="bloque-h"><h2>Para hoy</h2><a href="plan.html">Ver el plan ›</a></div>
     <div id="hoyLista"><div class="esqueleto"></div><div class="esqueleto"></div></div>
@@ -164,6 +172,20 @@
         a.textContent = '🏢 ' + yo.orgNombre + ' · cambiar';
         a.hidden = false;
       }
+    })();
+
+    (async function controlDeTrabajos() {
+      let t = null; try { t = await skfFetch('/api/trabajos/tablero'); } catch (e) { return; }
+      const eds = (t && t.disponible && t.edificios) || [];
+      if (!eds.some(e => e.atiendo || e.encargados.length || e.relevoPor || e.tieneEnlace || e.pendientes || e.hoy)) return;
+      const pend = eds.reduce((a, e) => a + e.pendientes, 0), crit = eds.reduce((a, e) => a + e.criticosPendientes, 0);
+      const a = document.getElementById('ctAcceso'), n = document.getElementById('ctAccesoN');
+      if (pend) {
+        document.getElementById('ctAccesoD').textContent = pend + ' trabajo' + (pend !== 1 ? 's' : '') + ' por autorizar' + (crit ? ' · ' + crit + ' crítico' + (crit !== 1 ? 's' : '') : '');
+        n.textContent = pend; n.hidden = false;
+        if (crit) a.classList.add('vencido');
+      }
+      a.hidden = false;
     })();
 
     (async function hoy() {

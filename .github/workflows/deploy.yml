@@ -87,6 +87,7 @@ jobs:
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/014_push.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/015_uso.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/016_pruebas.sql
+          PGPASSWORD=o psql -h localhost -U skf_owner -d skf -v ON_ERROR_STOP=1 -f migrations/017_trabajos.sql
           PGPASSWORD=o psql -h localhost -U skf_owner -d skf -q -c "
             GRANT USAGE ON SCHEMA public TO skf_app;
             GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO skf_app;
@@ -148,6 +149,10 @@ jobs:
       - name: Pruebas por QR (código con límites, contacto solo para el super)
         env: { PGPASSWORD: a }
         run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/pruebas_test.sql
+
+      - name: Control de trabajos (comité decide, relevo explícito, aislamiento)
+        env: { PGPASSWORD: a }
+        run: psql -h localhost -U skf_app -d skf -v ON_ERROR_STOP=1 -f tests/trabajos_test.sql
 
       # La unión de todo: Flask + Postgres + RLS por las rutas reales. Detecta lo que las
       # pruebas de cada pieza no ven (p. ej. un nombre que tapa a otro y rompe los envíos).

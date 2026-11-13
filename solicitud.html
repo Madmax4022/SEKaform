@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>Solicitar un trabajo — SEKaform</title>
+  <link rel="stylesheet" href="control.css">
+</head>
+<body>
+<script src="qrcode.js"></script>
+<script src="control.js"></script>
+
+<div class="wrap">
+  <header class="marca">
+    <span class="logo" id="logo"></span>
+    <span><b id="mEdificio">Solicitud de trabajo</b><small id="mEmpresa">SEKaform</small></span>
+  </header>
+  <main id="vista"><p class="nota">Cargando…</p></main>
+</div>
+
+<script>
+// Solicitud de trabajo por enlace: la llena el contratista o el local, sin cuenta.
+// El enlace identifica el edificio; la criticidad y los requisitos los decide el servidor.
+document.getElementById('logo').innerHTML = ctIco('escudo');
+const $ = s => document.querySelector(s);
+const ENLACE = new URLSearchParams(location.search).get('e') || '';
+let INFO = null, enviando = false;
+const N = { fecha: ctHoy(), origen: 'contratista_local' };
+const tipoDe = id => INFO.tipos.find(t => t.id === id);
+
+function formulario() {
+  const t = tipoDe(N.tipo), reqs = ctRequisitos(t);
+  return `
+    <h1>Solicitar un trabajo</h1>
+    <p class="sub">El comité de ${ctEsc(INFO.edificio)} lo revisa y decide si puede iniciar. Solicítalo con tiempo: sin autorización no se puede trabajar.</p>
+
+    <div class="campo"><span class="lb">1 · Qué tipo de trabajo es</span><div class="opciones">${INFO.tipos.map(x => `
+      <button type="button" class="opcion" data-tipo="${x.id}" aria-pressed="${N.tipo === x.id}"><span class="tile ${x.criticidad}">${ctIco(x.id)}</span><b>${ctEsc(x.nombre)}</b><span class="chip ${x.criticidad}">${CT_CRIT[x.criticidad]}</span><small>${ctEsc(x.ejemplo)}</small></button>`).join('')}</div>
+      <small>Si el trabajo combina varios, elige el de mayor riesgo.</small></div>
+
+    ${t ? `<div class="campo"><span class="lb">Esto se te va a revisar antes de iniciar</span>
+      <ul class="lista-req">${reqs.map(r => `<li>${ctEsc(r.texto)} ${r.critico ? '<span class="chip critico">Control crítico</span>' : ''}</li>`).join('')}</ul>
+      <small>${t.criticidad === 'critico' ? 'Es un trabajo crítico: el comité lo verifica en el sitio. Ten todo listo cuando llegue.' : 'Ten esto listo el día del trabajo.'}</small></div>` : ''}
+
+    <div class="campo"><label for="nTitulo">2 · Qué se va a hacer</label><input type="text" id="nTitulo" data-n="titulo" maxlength="140" value="${ctEsc(N.titulo || '')}" placeholder="Ej.: Montar pared de tablayeso con andamio"></div>
+    <div class="campo"><label for="nLugar">Dónde, dentro del edificio</label><input type="text" id="nLugar" data-n="lugar" maxlength="140" value="${ctEsc(N.lugar || '')}" placeholder="Ej.: Local 118"></div>
+    <div class="campo"><label for="nFecha">Qué día</label><input type="date" id="nFecha" data-n="fecha" min="${ctHoy()}" value="${ctEsc(N.fecha)}"><small>El permiso vale solo para ese día.</small></div>
+
+    <div class="campo"><span class="lb">3 · Quién lo hace</span><div class="seg">${['contratista_local', 'personal_local', 'contratista', 'propio'].map(k => `<button type="button" data-origen="${k}" aria-pressed="${N.origen === k}">${ctEsc({ contratista_local: 'Contratista de un local', personal_local: 'Personal del propio local', contratista: 'Contratista del edificio', propio: 'Personal del edificio' }[k])}</button>`).join('')}</div></div>
+    <div class="campo"><label for="nQuien">Empresa o local, y cuántas personas</label><input type="text" id="nQuien" data-n="quien" maxlength="140" value="${ctEsc(N.quien || '')}" placeholder="Ej.: Acabados Rivas, 3 personas, para Local 118"></div>
+    <div class="campo"><label for="nContacto">Teléfono de contacto</label><input type="tel" id="nContacto" data-n="contacto" maxlength="80" value="${ctEsc(N.contacto || '')}"></div>
+
+    <div class="campo"><label for="nFE">4 · Nombre de quien ejecuta el trabajo</label><input type="text" id="nFE" data-n="firmaEjecuta" maxlength="120" value="${ctEsc(N.firmaEjecuta || '')}" autocomplete="name"></div>
+    <div class="campo"><label for="nFR">${ctEsc(INFO.responsables[N.origen])}</label><input type="text" id="nFR" data-n="firmaResponsable" maxlength="120" value="${ctEsc(N.firmaResponsable || '')}">
+      <small>Al escribir su nombre, esta persona responde por el trabajo y por que se cumplan las reglas del edificio.</small></div>
+
+    <div id="error" class="aviso" hidden></div>
+    <div style="margin-top:18px"><button type="button" class="btn pri full" id="enviar">Enviar solicitud</button></div>`;
+}
+function pintar() { const y = window.scrollY; $('#vista').innerHTML = formulario(); window.scrollTo(0, y); }
+
+function recibida(r) {
+  $('#vista').innerHTML = `
+    <div class="estado-final ok" style="margin-top:0">${ctIco('ok')}<span>Solicitud recibida · ${ctFolio(r.edificio, r.numero)}<small>El comité de ${ctEsc(r.edificio)} la revisará. Todavía NO puedes iniciar.</small></span></div>
+    <h2>Tu código</h2>
+    <div class="qr"><div class="cod">${ctQR(r.consulta)}</div><div><b>Guárdalo: lo vas a necesitar</b>
+      <p class="nota" style="margin-top:4px">Con este código tú y el vigilante ven si el trabajo ya fue autorizado. Toma una captura de pantalla o copia el enlace.</p>
+      <div class="acciones"><a class="btn chico pri" href="${ctEsc(r.consulta)}">Ver el estado</a><button type="button" class="btn chico" id="copiar">${ctIco('enlace')} Copiar enlace</button></div></div></div>
+    <div class="acciones"><button type="button" class="btn chico" id="otra">Solicitar otro trabajo</button></div>`;
+  $('#copiar').onclick = () => ctCopiar(r.consulta);
+  $('#otra').onclick = () => { N.tipo = null; N.titulo = ''; N.lugar = ''; pintar(); window.scrollTo(0, 0); };
+  window.scrollTo(0, 0);
+}
+
+document.addEventListener('click', async ev => {
+  const tp = ev.target.closest('[data-tipo]'); if (tp) { N.tipo = tp.dataset.tipo; pintar(); return; }
+  const og = ev.target.closest('[data-origen]'); if (og) { N.origen = og.dataset.origen; pintar(); return; }
+  if (ev.target.closest('#enviar') && !enviando) {
+    const err = $('#error'), b = $('#enviar');
+    enviando = true; b.disabled = true; err.hidden = true;
+    try { recibida(await ctPublico('/api/publico/solicitud', { ...N, enlace: ENLACE })); }
+    catch (x) { err.textContent = x.message; err.hidden = false; b.disabled = false; err.scrollIntoView({ block: 'center' }); }
+    enviando = false;
+  }
+});
+document.addEventListener('input', ev => { const n = ev.target.closest('[data-n]'); if (n) N[n.dataset.n] = n.value; });
+
+(async function iniciar() {
+  try {
+    INFO = await ctPublico('/api/publico/solicitud/' + encodeURIComponent(ENLACE));
+    $('#mEdificio').textContent = INFO.edificio; $('#mEmpresa').textContent = INFO.empresa + ' · solicitud de trabajo';
+    pintar();
+  } catch (x) { $('#vista').innerHTML = '<h1>Enlace no disponible</h1><div class="aviso">' + ctEsc(x.message) + '</div>'; }
+})();
+</script>
+</body>
+</html>
