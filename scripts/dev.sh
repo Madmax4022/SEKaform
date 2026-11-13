@@ -144,8 +144,11 @@ pruebas(){
   fi
 
   info "Idempotencia de migraciones (segunda pasada)…"
-  if psql_owner -q -v ON_ERROR_STOP=1 -f /tmp/001_core.sql >/dev/null 2>&1; then
-    verde "  ✓ re-ejecutable sin errores"
+  # Se repiten TODAS y en orden, no solo la 001: las migraciones posteriores redefinen
+  # funciones de la 001 (la 010 hace que solo se lean datos de la empresa activa), y
+  # volver a correr la 001 suelta dejaba la base local con esas reglas deshechas.
+  if migrar >/dev/null 2>&1; then
+    verde "  ✓ re-ejecutables sin errores"
   else
     rojo "  ✗ las migraciones no son idempotentes"; fallos=1
   fi

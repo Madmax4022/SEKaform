@@ -46,7 +46,7 @@ def limpiar():
     with psycopg2.connect(OWNER_DB) as con, con.cursor() as cur:
         cur.execute("DELETE FROM authorized_emails WHERE org_id IN (SELECT org_id FROM memberships WHERE user_id = %s) OR org_id = %s", (ASESOR, ORG))
         cur.execute("DELETE FROM organizations WHERE id = %s OR id IN (SELECT org_id FROM memberships WHERE user_id = %s)", (ORG, ASESOR))
-        cur.execute("DELETE FROM users WHERE id IN (%s, %s, %s)", (DUENO, EDITOR, ASESOR))
+        cur.execute("DELETE FROM users WHERE id IN (%s, %s, %s) OR email LIKE %s", (DUENO, EDITOR, ASESOR, f"%-{SUF}@api-test.co"))
 
 
 APP = None
@@ -496,6 +496,154 @@ class Redireccion(unittest.TestCase):
             self.assertEqual(parse_qs(urlparse(r.headers["Location"]).query)["next"][0], "/plan.html")
             r = c.post("/login?next=" + nxt, data={"email": "x@nadie.co", "password": "malamala1!"})
             self.assertNotIn("//", urlparse(r.headers.get("Location", "")).path or "")
+
+
+@unittest.skipUnless(APP_DB and OWNER_DB, "sin base de pruebas (SKF_TEST_DB_APP / SKF_TEST_DB_OWNER)")
+class Trabajos(unittest.TestCase):
+    """El portón de punta a punta: solicitud por enlace, comité que decide, relevo y portería."""
+
+    def entrar(self, c, email):
+        self.assertEqual(c.post("/login", data={"email": email, "password": CLAVE}).status_code, 302)
+
+    def test_porton_completo(self):
+        edificio, otro = str(uuid.uuid4()), str(uuid.uuid4())
+        sol = {"tipo": "alturas", "origen": "personal_local", "titulo": "Cambio de luminarias", "quien": "Local 214",
+               "lugar": "Mezanine", "fecha": "2026-11-12", "firmaEjecuta": "Ana", "firmaResponsable": "Luis"}
+        with APP.test_client() as c:
+            self.entrar(c, MAIL_D)
+            r = c.post("/api/sync", json={"operaciones": [
+                {"opId": "u1", "tipo": "unidad", "datos": {"id": edificio, "nombre": "Plaza Central", "tipo": "sede"}},
+                {"opId": "u2", "tipo": "unidad", "datos": {"id": otro, "nombre": "Bodega Sur", "tipo": "sede"}}]})
+            self.assertTrue(all(x["ok"] for x in r.get_json()["resultados"]), r.get_json())
+            self.assertEqual(c.post(f"/api/unidades/{edificio}/encargados", json={"userIds": [EDITOR, str(uuid.uuid4())]}).get_json()["encargados"], [EDITOR],
+                             "solo se nombra a gente de la empresa")
+            url = c.post(f"/api/unidades/{edificio}/enlace", json={}).get_json()["url"]
+            self.assertEqual(c.post(f"/api/unidades/{edificio}/enlace", json={}).get_json()["url"], url, "el enlace es estable")
+            url2 = c.post(f"/api/unidades/{otro}/enlace", json={}).get_json()["url"]
+            c.post("/logout")
+            enlace, enlace2 = url.split("e=")[1], url2.split("e=")[1]
+
+            # Sin cuenta: se abre el formulario y se solicita.
+            self.assertEqual(c.get("/solicitud.html?e=" + enlace).status_code, 200, "la página abre sin sesión")
+            info = c.get("/api/publico/solicitud/" + enlace).get_json()
+            self.assertEqual(info["edificio"], "Plaza Central")
+            self.assertEqual(c.get("/api/publico/solicitud/" + "x" * 32).status_code, 404)
+            self.assertEqual(c.post("/api/publico/solicitud", json={**sol, "enlace": enlace, "tipo": "volar"}).status_code, 400)
+            self.assertEqual(c.post("/api/publico/solicitud", json={**sol, "enlace": enlace, "firmaResponsable": ""}).status_code, 400)
+            r = c.post("/api/publico/solicitud", json={**sol, "enlace": enlace, "criticidad": "bajo"})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            self.assertEqual(r.get_json()["numero"], 1)
+            codigo = r.get_json()["consulta"].split("t=")[1]
+            r = c.post("/api/publico/solicitud", json={**sol, "enlace": enlace2, "tipo": "rutinario", "titulo": "Limpieza"})
+            self.assertEqual(r.get_json()["numero"], 1, "el folio es por edificio")
+            self.assertEqual(c.get("/porteria.html?t=" + codigo).status_code, 200)
+            p = c.get("/api/publico/trabajo/" + codigo).get_json()
+            self.assertEqual((p["estado"], p["criticidad"]), ("pendiente", "critico"), "la criticidad la pone el servidor, no quien solicita")
+            self.assertNotIn("contacto", p)
+
+            # El encargado ve solo su edificio y decide.
+            self.entrar(c, MAIL_E)
+            t = c.get("/api/trabajos/tablero").get_json()
+            vistos = [e["nombre"] for e in t["edificios"]]
+            self.assertIn("Plaza Central", vistos)
+            self.assertNotIn("Bodega Sur", vistos, "el encargado no ve edificios que no son suyos")
+            self.assertEqual(c.get(f"/api/trabajos?unidad={otro}").get_json()["trabajos"], [], "ni sus trabajos")
+            cola = c.get(f"/api/trabajos?unidad={edificio}").get_json()["trabajos"]
+            self.assertEqual(len(cola), 1)
+            tid = cola[0]["id"]
+            r = c.post(f"/api/trabajos/{tid}/autorizar", json={})
+            self.assertEqual(r.status_code, 409)
+            self.assertEqual(len(r.get_json()["faltan"]), 7, "sin requisitos no se autoriza")
+            todos = {k: True for k in ["apto", "seguro", "acceso", "anclaje", "electrico", "zona", "rescate"]}
+            foto = "data:image/png;base64,iVBORw0KGgo="
+            r = c.post(f"/api/trabajos/{tid}/requisitos", json={"requisitos": {**todos, "inventado": True}, "fotos": {"acceso": foto, "inventado": foto}})
+            self.assertEqual(sorted(r.get_json()["trabajo"]["requisitos"]), sorted(todos), "solo requisitos de la lista oficial")
+            self.assertEqual(list(r.get_json()["trabajo"]["fotos"]), ["acceso"])
+            self.assertEqual(c.post(f"/api/trabajos/{tid}/requisitos", json={"requisitos": todos, "fotos": {"acceso": "javascript:alert(1)"}}).status_code, 400)
+            self.assertEqual(c.post(f"/api/trabajos/{tid}/autorizar", json={}).status_code, 409, "crítico sin verificar en sitio")
+            c.post(f"/api/trabajos/{tid}/requisitos", json={"requisitos": todos, "verificadoEnSitio": True})
+            r = c.post(f"/api/trabajos/{tid}/autorizar", json={})
+            self.assertEqual(r.status_code, 200, r.get_json())
+            j = r.get_json()["trabajo"]
+            self.assertEqual((j["estado"], j["decididoPor"], j["enRelevo"]), ("autorizado", "Edgar", False))
+            self.assertEqual(len(j["registro"]), 2)
+            self.assertEqual(c.post(f"/api/trabajos/{tid}/autorizar", json={}).status_code, 409, "no se decide dos veces")
+            self.assertEqual(c.get("/api/publico/trabajo/" + codigo).get_json()["estado"], "autorizado")
+            self.assertEqual(c.post(f"/api/unidades/{edificio}/relevo", json={"activo": True}).status_code, 403, "el relevo es del director")
+            self.assertEqual(c.post("/api/trabajos", json={**sol, "unidadId": otro}).status_code, 403, "no abre trabajos en edificio ajeno")
+            self.assertEqual(c.post(f"/api/trabajos/{tid}/cerrar", json={}).get_json()["trabajo"]["estado"], "cerrado")
+            c.post("/logout")
+
+            # El director ve todo, pero para decidir toma el relevo.
+            self.entrar(c, MAIL_D)
+            t = c.get("/api/trabajos/tablero").get_json()
+            self.assertLessEqual({"Bodega Sur", "Plaza Central"}, {e["nombre"] for e in t["edificios"]}, "el director ve todos")
+            bodega = next(e for e in t["edificios"] if e["id"] == otro)
+            self.assertEqual((bodega["pendientes"], bodega["encargados"], bodega["atiendo"]), (1, [], False))
+            tid2 = c.get(f"/api/trabajos?unidad={otro}").get_json()["trabajos"][0]["id"]
+            self.assertEqual(c.post(f"/api/trabajos/{tid2}/rechazar", json={"motivo": "x"}).status_code, 403, "sin relevo no decide")
+            self.assertEqual(c.post(f"/api/unidades/{otro}/relevo", json={"activo": True}).status_code, 200)
+            self.assertTrue(c.get(f"/api/trabajos/{tid2}").get_json()["trabajo"]["puedoDecidir"])
+            r = c.post(f"/api/trabajos/{tid2}/rechazar", json={})
+            j = r.get_json()["trabajo"]
+            self.assertEqual((j["estado"], j["enRelevo"]), ("rechazado", True))
+            self.assertTrue(j["motivo"].startswith("Faltan: "), "sin motivo escrito, el motivo es lo que falta")
+            r = c.post("/api/trabajos", json={**sol, "unidadId": otro, "tipo": "general", "origen": "propio"})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            self.assertEqual((r.get_json()["trabajo"]["numero"], r.get_json()["trabajo"]["criticidad"]), (2, "medio"))
+            c.post(f"/api/unidades/{otro}/relevo", json={"activo": False})
+            self.assertFalse(c.get(f"/api/trabajos/{tid2}").get_json()["trabajo"]["puedoDecidir"], "al devolver el relevo deja de decidir")
+            c.post("/logout")
+            self.assertEqual(c.get("/api/trabajos/tablero").status_code, 401)
+            self.assertEqual(c.get("/control.html").status_code, 302, "el control exige sesión")
+
+    def test_alta_guiada_de_edificios(self):
+        """El director crea sus edificios y nombra encargados, tengan cuenta o no."""
+        nuevo = f"encargada-{SUF}@api-test.co"
+        with APP.test_client() as c:
+            self.entrar(c, MAIL_E)
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": "Torre Editor"}).status_code, 403, "solo quien dirige crea edificios")
+            c.post("/logout")
+            self.entrar(c, MAIL_D)
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": " "}).status_code, 400)
+            # 1 · «yo, por ahora»: queda encargado y con enlace, sin más pasos
+            r = c.post("/api/trabajos/edificios", json={"nombre": "Torre Norte", "encargado": "yo"})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            j = r.get_json()
+            self.assertIn("/solicitud.html?e=", j["solicitudUrl"])
+            self.assertIsNone(j["invitacion"])
+            torre = next(e for e in c.get("/api/trabajos/tablero").get_json()["edificios"] if e["id"] == j["edificio"]["id"])
+            self.assertEqual((torre["atiendo"], torre["tieneEnlace"], [x["nombre"] for x in torre["encargados"]]), (True, True, ["Diana"]))
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": "torre norte"}).status_code, 409, "sin nombres repetidos")
+            # 2 · alguien del equipo: queda nombrado de una vez, sin invitación
+            r = c.post("/api/trabajos/edificios", json={"nombre": "Sede Sur", "encargado": MAIL_E.upper()}).get_json()
+            self.assertIsNone(r["invitacion"])
+            # 3 · un correo mal escrito no deja el edificio a medias
+            self.assertEqual(c.post("/api/trabajos/edificios", json={"nombre": "Local Fantasma", "encargado": "sin-arroba"}).status_code, 400)
+            nombres = [e["nombre"] for e in c.get("/api/trabajos/tablero").get_json()["edificios"]]
+            self.assertNotIn("Local Fantasma", nombres)
+            # 4 · alguien sin cuenta: se le invita y el edificio le espera
+            r = c.post("/api/trabajos/edificios", json={"nombre": "Galería Este", "encargado": nuevo})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            inv, galeria = r.get_json()["invitacion"], r.get_json()["edificio"]["id"]
+            self.assertEqual(inv["email"], nuevo)
+            self.assertIn("/registro?email=", inv["enlace"])
+            e = next(x for x in c.get("/api/trabajos/tablero").get_json()["edificios"] if x["id"] == galeria)
+            self.assertEqual((e["invitados"], e["encargados"], e["atiendo"]), ([nuevo], [], False))
+            r = c.post(f"/api/unidades/{galeria}/invitar-encargado", json={"encargado": nuevo})
+            self.assertEqual(r.status_code, 200, "invitar dos veces no falla")
+            c.post("/logout")
+
+            # La invitada se registra con ese correo y, al entrar, ya responde por su edificio.
+            r = c.post("/registro", data={"email": nuevo, "password": CLAVE, "nombre": "Nora"})
+            self.assertEqual(r.status_code, 302, "el registro de la invitada debe entrar")
+            t = c.get("/api/trabajos/tablero").get_json()
+            self.assertEqual(([x["nombre"] for x in t["edificios"]], t["soyAdmin"]), (["Galería Este"], False))
+            self.assertTrue(t["edificios"][0]["atiendo"])
+            c.post("/logout")
+            self.entrar(c, MAIL_D)
+            e = next(x for x in c.get("/api/trabajos/tablero").get_json()["edificios"] if x["id"] == galeria)
+            self.assertEqual((e["invitados"], [x["nombre"] for x in e["encargados"]]), ([], ["Nora"]))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>¿Puede trabajar? — SEKaform</title>
+  <link rel="stylesheet" href="control.css">
+</head>
+<body>
+<script src="control.js"></script>
+
+<div class="wrap">
+  <header class="marca">
+    <span class="logo" id="logo"></span>
+    <span><b id="mEdificio">Control de trabajos</b><small id="mEmpresa">SEKaform</small></span>
+    <span class="der"><button type="button" id="refrescar">Actualizar</button></span>
+  </header>
+  <main id="vista"><p class="nota">Consultando…</p></main>
+</div>
+
+<script>
+// Portería: con el código de un trabajo, una sola respuesta que se lee de lejos.
+// La abren el vigilante (escaneando el QR) y quien solicitó el trabajo. No muestra
+// requisitos, fotos ni teléfonos: solo si puede iniciar y por qué.
+document.getElementById('logo').innerHTML = ctIco('escudo');
+const $ = s => document.querySelector(s);
+const CODIGO = new URLSearchParams(location.search).get('t') || '';
+
+function veredicto(d) {
+  const hoy = ctHoy(), f = String(d.fecha).slice(0, 10);
+  if (d.estado === 'rechazado') return ['no', 'no', 'NO PUEDE TRABAJAR', 'No fue autorizado.'];
+  if (d.estado === 'cerrado') return ['gris', 'ok', 'TRABAJO CERRADO', 'Este permiso ya terminó. Un trabajo nuevo necesita otra solicitud.'];
+  if (d.estado === 'pendiente') return f < hoy
+    ? ['no', 'no', 'NO PUEDE TRABAJAR', 'La solicitud venció sin que se autorizara. Hay que solicitarlo de nuevo.']
+    : ['espera', 'reloj', 'AÚN NO PUEDE TRABAJAR', 'El comité del edificio todavía no lo ha autorizado.'];
+  if (f < hoy) return ['no', 'no', 'PERMISO VENCIDO', 'Se autorizó para ' + ctFecha(d.fecha) + '. Hoy necesita una solicitud nueva.'];
+  if (f > hoy) return ['espera', 'reloj', 'HOY NO PUEDE TRABAJAR', 'Está autorizado, pero para ' + ctFecha(d.fecha) + '.'];
+  return ['si', 'ok', 'PUEDE TRABAJAR', 'Autorizado para hoy.'];
+}
+
+function pintar(d) {
+  $('#mEdificio').textContent = d.unidad; $('#mEmpresa').textContent = d.org + ' · control de trabajos';
+  const [cls, ic, titulo, texto] = veredicto(d);
+  $('#vista').innerHTML = `
+    <div class="veredicto ${cls}" role="status"><div class="ic">${ctIco(ic)}</div><div class="v">${titulo}</div><div class="p">${ctEsc(texto)}</div></div>
+    ${d.estado === 'rechazado' && d.motivo ? `<div class="aviso">Motivo: ${ctEsc(d.motivo)}</div>` : ''}
+    <div class="permiso">
+      <div class="cab"><span class="tile ${d.criticidad}">${ctIco(d.tipo)}</span><div><b>${ctEsc(d.titulo)}</b><div class="folio">${ctFolio(d.unidad, d.numero)}</div></div><span class="chip ${d.criticidad}">${CT_CRIT[d.criticidad]}</span></div>
+      <dl><dt>Tipo</dt><dd>${ctEsc(d.tipoNombre || '')}</dd>
+        <dt>Quién</dt><dd>${ctEsc(d.quien)}</dd>
+        <dt>Dónde</dt><dd>${ctEsc(d.unidad)}${d.lugar ? ' · ' + ctEsc(d.lugar) : ''}</dd>
+        <dt>Día</dt><dd>${ctFecha(d.fecha)}</dd>
+        ${d.decididoEn ? `<dt>${d.estado === 'rechazado' ? 'Decidió' : 'Autorizó'}</dt><dd>${ctEsc(d.decididoPor || 'Comité del edificio')} · ${ctFechaHora(d.decididoEn)}</dd>` : ''}</dl>
+    </div>
+    <p class="nota">Consultado a las ${ctHora(new Date().toISOString())}. Esta pantalla se actualiza sola cada 20 segundos.</p>`;
+}
+
+let _t = null;
+async function consultar() {
+  try { pintar(await ctPublico('/api/publico/trabajo/' + encodeURIComponent(CODIGO))); }
+  catch (x) {
+    clearInterval(_t);
+    $('#vista').innerHTML = `<div class="veredicto no" role="alert"><div class="ic">${ctIco('no')}</div><div class="v">CÓDIGO NO VÁLIDO</div><div class="p">${ctEsc(x.message)}</div></div>
+      <p class="nota">Sin un código válido no hay permiso que mostrar. Pide a quien va a trabajar el enlace que recibió al solicitar.</p>`;
+  }
+}
+$('#refrescar').onclick = consultar;
+consultar();
+_t = setInterval(() => { if (!document.hidden) consultar(); }, 20000);
+</script>
+</body>
+</html>

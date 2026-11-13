@@ -1406,8 +1406,16 @@ def portal_publico(token: str):
     return resp
 
 
+# Control de trabajos (migración 017). Vive en su propio módulo y se importa aquí, al
+# final, porque registra sus rutas sobre este mismo `bp` y usa los ayudantes de arriba.
+from . import trabajos as _trabajos  # noqa: E402
+
+
 def registrar_api(app, csrf) -> None:
     app.register_blueprint(bp)
+    # Quien solicita un trabajo por enlace no tiene sesión ni token CSRF; lo único que
+    # puede hacer es dejar una solicitud en el edificio dueño de ese enlace.
+    csrf.exempt(_trabajos.publico_solicitud_crear)
     # Los envíos públicos llegan de gente sin sesión y, por tanto, sin token
     # CSRF. No hay nada que proteger: no existe sesión que suplantar, y la
     # única escritura posible es contra una plantilla marcada como pública.

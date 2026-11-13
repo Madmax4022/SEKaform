@@ -138,7 +138,8 @@ BEGIN
 
   -- ...pero con modo soporte activo (ruta auditada) sí puede dar apoyo.
   PERFORM set_config('app.support_mode', 'on', true);
-  SELECT count(*) INTO n FROM unidades;
+  -- Solo las de esta prueba: en una base con datos reales el modo soporte ve tambien las demas.
+  SELECT count(*) INTO n FROM unidades WHERE org_id IN (org_a, org_b);
   ASSERT n = 2, format('El modo soporte deberia ver las 2 unidades, vio %s', n);
 
   -- ══ 8 · Sin contexto de sesion, no se ve nada ════════════════════════
